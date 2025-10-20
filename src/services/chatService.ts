@@ -36,10 +36,11 @@ export function subscribeToUserChats(
   onError?: (error: Error) => void
 ): () => void {
   const chatsRef = collection(firestore, 'chats');
+  // Note: orderBy removed to avoid index requirement
+  // Sorting is done client-side below
   const q = query(
     chatsRef,
-    where('participants', 'array-contains', userId),
-    orderBy('lastMessageTime', 'desc')
+    where('participants', 'array-contains', userId)
   );
 
   const unsubscribe = onSnapshot(
@@ -69,6 +70,13 @@ export function subscribeToUserChats(
           } as Chat);
         }
       }
+      
+      // Sort chats by lastMessageTime (descending) - client-side
+      chats.sort((a, b) => {
+        const timeA = a.lastMessageTime?.toMillis?.() || 0;
+        const timeB = b.lastMessageTime?.toMillis?.() || 0;
+        return timeB - timeA;
+      });
       
       onChatsUpdate(chats);
     },
