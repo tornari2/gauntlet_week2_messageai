@@ -19,9 +19,11 @@ import {
   serverTimestamp,
   orderBy,
   Timestamp,
+  addDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import { firestore } from './firebase';
-import { Chat, User } from '../types';
+import { Chat, User, Message } from '../types';
 
 /**
  * Subscribe to a user's chats in real-time
@@ -36,11 +38,10 @@ export function subscribeToUserChats(
   onError?: (error: Error) => void
 ): () => void {
   const chatsRef = collection(firestore, 'chats');
-  // Note: orderBy removed to avoid index requirement
-  // Sorting is done client-side below
   const q = query(
     chatsRef,
-    where('participants', 'array-contains', userId)
+    where('participants', 'array-contains', userId),
+    orderBy('lastMessageTime', 'desc')
   );
 
   const unsubscribe = onSnapshot(
@@ -58,7 +59,11 @@ export function subscribeToUserChats(
             const participantName = await getUserDisplayName(otherUserId);
             chats.push({
               id: docSnap.id,
-              ...chatData,
+              type: chatData.type,
+              participants: chatData.participants,
+              lastMessage: chatData.lastMessage || '',
+              lastMessageTime: chatData.lastMessageTime,
+              createdAt: chatData.createdAt,
               participantName,
             } as Chat);
           }
@@ -66,17 +71,16 @@ export function subscribeToUserChats(
           // Group chat
           chats.push({
             id: docSnap.id,
-            ...chatData,
+            type: chatData.type,
+            participants: chatData.participants,
+            lastMessage: chatData.lastMessage || '',
+            lastMessageTime: chatData.lastMessageTime,
+            createdAt: chatData.createdAt,
+            groupName: chatData.groupName,
+            groupPhoto: chatData.groupPhoto,
           } as Chat);
         }
       }
-      
-      // Sort chats by lastMessageTime (descending) - client-side
-      chats.sort((a, b) => {
-        const timeA = a.lastMessageTime?.toMillis?.() || 0;
-        const timeB = b.lastMessageTime?.toMillis?.() || 0;
-        return timeB - timeA;
-      });
       
       onChatsUpdate(chats);
     },
@@ -170,7 +174,6 @@ export async function createOrGetDirectChat(
       lastMessage: '',
       lastMessageTime: serverTimestamp() as Timestamp,
       createdAt: serverTimestamp() as Timestamp,
-      unreadCount: 0,
     };
     
     await setDoc(newChatRef, newChat);
@@ -182,9 +185,134 @@ export async function createOrGetDirectChat(
   }
 }
 
+/**
+ * Send a message to a chat
+ * @param chatId - The chat ID
+ * @param text - The message text
+ * @param senderId - The sender's user ID
+ * @returns The message ID
+ */
+export async function sendMessage(
+  chatId: string,
+  text: string,
+  senderId: string
+): Promise<string> {
+  try {
+    // Create message in messages subcollection
+    const messagesRef = collection(firestore, 'chats', chatId, 'messages');
+    const newMessage = {
+      text,
+      senderId,
+      timestamp: serverTimestamp(),
+      readBy: [senderId], // Sender has read their own message
+    };
+    
+    const messageDoc = await addDoc(messagesRef, newMessage);
+    
+    // Update chat's lastMessage and lastMessageTime
+    const chatRef = doc(firestore, 'chats', chatId);
+    await updateDoc(chatRef, {
+      lastMessage: text,
+      lastMessageTime: serverTimestamp(),
+    });
+    
+    return messageDoc.id;
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw new Error('Failed to send message');
+  }
+}
+
+/**
+ * Subscribe to messages in a chat in real-time
+ * @param chatId - The chat ID
+ * @param onMessagesUpdate - Callback when messages change
+ * @param onError - Callback for errors
+ * @returns Unsubscribe function
+ */
+export function subscribeToMessages(
+  chatId: string,
+  onMessagesUpdate: (messages: Message[]) => void,
+  onError?: (error: Error) => void
+): () => void {
+  const messagesRef = collection(firestore, 'chats', chatId, 'messages');
+  const q = query(messagesRef, orderBy('timestamp', 'asc'));
+  
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const messages: Message[] = [];
+      
+      snapshot.forEach((docSnap) => {
+        const messageData = docSnap.data();
+        messages.push({
+          id: docSnap.id,
+          text: messageData.text || '',
+          senderId: messageData.senderId,
+          timestamp: messageData.timestamp || new Date(),
+          readBy: messageData.readBy || [],
+          pending: messageData.pending,
+          failed: messageData.failed,
+          tempId: messageData.tempId,
+        } as Message);
+      });
+      
+      onMessagesUpdate(messages);
+    },
+    (error) => {
+      console.error('Error in messages subscription:', error);
+      onError?.(error as Error);
+    }
+  );
+  
+  return unsubscribe;
+}
+
+/**
+ * Mark messages as read by a user
+ * @param chatId - The chat ID
+ * @param messageIds - Array of message IDs to mark as read
+ * @param userId - The user ID marking messages as read
+ */
+export async function markMessagesAsRead(
+  chatId: string,
+  messageIds: string[],
+  userId: string
+): Promise<void> {
+  try {
+    const batch: Promise<void>[] = [];
+    
+    for (const messageId of messageIds) {
+      const messageRef = doc(firestore, 'chats', chatId, 'messages', messageId);
+      const messageSnap = await getDoc(messageRef);
+      
+      if (messageSnap.exists()) {
+        const messageData = messageSnap.data() as Message;
+        
+        // Only update if user hasn't already read it
+        if (!messageData.readBy?.includes(userId)) {
+          batch.push(
+            updateDoc(messageRef, {
+              readBy: [...(messageData.readBy || []), userId],
+            })
+          );
+        }
+      }
+    }
+    
+    await Promise.all(batch);
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    throw new Error('Failed to mark messages as read');
+  }
+}
+
 export const chatService = {
   subscribeToUserChats,
   getChatParticipants,
   createOrGetDirectChat,
+  sendMessage,
+  subscribeToMessages,
+  markMessagesAsRead,
 };
 
