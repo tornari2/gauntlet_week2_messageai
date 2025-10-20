@@ -60,7 +60,7 @@ describe('LoginScreen', () => {
         <LoginScreen navigation={mockNavigation} />
       );
 
-      expect(getByTestID('login-button')).toBeTruthy();
+      expect(getByTestId('login-button')).toBeTruthy();
     });
 
     it('should render signup link', () => {
