@@ -17,9 +17,8 @@ export function createMockUser(overrides?: Partial<User>): User {
     email: 'test@example.com',
     displayName: 'Test User',
     isOnline: false,
-    lastSeen: Timestamp.now(),
-    photoURL: null,
-    pushToken: null,
+    lastSeen: Timestamp.fromDate(new Date()),
+    createdAt: Timestamp.fromDate(new Date()),
   };
 
   return { ...defaultUser, ...overrides };
@@ -34,10 +33,8 @@ export function createMockDirectChat(overrides?: Partial<Chat>): Chat {
     type: 'direct',
     participants: ['user1', 'user2'],
     lastMessage: 'Hey, how are you?',
-    lastMessageTime: Timestamp.now(),
-    createdAt: Timestamp.now(),
-    unreadCount: 0,
-    participantName: 'John Doe',
+    lastMessageTime: Timestamp.fromDate(new Date()),
+    createdAt: Timestamp.fromDate(new Date()),
   };
 
   return { ...defaultChat, ...overrides };
@@ -52,11 +49,9 @@ export function createMockGroupChat(overrides?: Partial<Chat>): Chat {
     type: 'group',
     participants: ['user1', 'user2', 'user3'],
     lastMessage: 'Welcome to the group!',
-    lastMessageTime: Timestamp.now(),
-    createdAt: Timestamp.now(),
+    lastMessageTime: Timestamp.fromDate(new Date()),
+    createdAt: Timestamp.fromDate(new Date()),
     groupName: 'Test Group',
-    groupPhoto: null,
-    unreadCount: 2,
   };
 
   return { ...defaultChat, ...overrides };
@@ -68,10 +63,9 @@ export function createMockGroupChat(overrides?: Partial<Chat>): Chat {
 export function createMockMessage(overrides?: Partial<Message>): Message {
   const defaultMessage: Message = {
     id: `msg_${Math.random().toString(36).substr(2, 9)}`,
-    chatId: 'chat_123',
     senderId: 'user_123',
     text: 'Hello, this is a test message!',
-    timestamp: Timestamp.now(),
+    timestamp: Timestamp.fromDate(new Date()),
     readBy: [],
     pending: false,
     failed: false,
@@ -108,8 +102,6 @@ export function createMockChats(count: number = 5): Chat[] {
       lastMessage: messages[i % messages.length],
       lastMessageTime: Timestamp.fromDate(timestamp),
       createdAt: Timestamp.fromDate(new Date(Date.now() - i * 24 * 60 * 60 * 1000)),
-      participantName: names[i],
-      unreadCount: i % 3 === 0 ? i : 0, // Some chats have unread messages
     });
   }
 
@@ -119,7 +111,7 @@ export function createMockChats(count: number = 5): Chat[] {
 /**
  * Create mock messages for a chat
  */
-export function createMockMessages(chatId: string, count: number = 10): Message[] {
+export function createMockMessages(count: number = 10): Message[] {
   const messages: Message[] = [];
   const sampleTexts = [
     'Hello!',
@@ -141,7 +133,6 @@ export function createMockMessages(chatId: string, count: number = 10): Message[
 
     messages.push({
       id: `msg_${i}`,
-      chatId,
       senderId: isOwnMessage ? 'currentUser' : 'otherUser',
       text: sampleTexts[i % sampleTexts.length],
       timestamp: Timestamp.fromDate(timestamp),

@@ -43,6 +43,19 @@ jest.mock('firebase/firestore', () => ({
   orderBy: jest.fn(),
   limit: jest.fn(),
   onSnapshot: jest.fn(),
+  addDoc: jest.fn(),
+  updateDoc: jest.fn(),
+  getDocs: jest.fn(),
+  Timestamp: {
+    fromDate: jest.fn((date) => ({
+      toDate: () => date,
+      toMillis: () => date.getTime(),
+    })),
+    now: jest.fn(() => ({
+      toDate: () => new Date(),
+      toMillis: () => Date.now(),
+    })),
+  },
 }));
 
 // Mock AsyncStorage
@@ -64,11 +77,20 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: 'StatusBar',
 }));
 
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Icon',
+  MaterialIcons: 'Icon',
+  FontAwesome: 'Icon',
+}));
+
 // Mock React Navigation
 jest.mock('@react-navigation/native', () => ({
   NavigationContainer: ({ children }) => children,
   useNavigation: jest.fn(),
   useFocusEffect: jest.fn(),
+  useRoute: jest.fn(() => ({
+    params: {},
+  })),
 }));
 
 jest.mock('@react-navigation/native-stack', () => ({
