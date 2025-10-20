@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "WK2 MessageAI",
+    "slug": "wk2-messageai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#25D366"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.michaeltornaritis.wk2messageai",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to take profile pictures.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select profile pictures.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for voice messages."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#25D366"
+      },
+      "package": "com.michaeltornaritis.wk2messageai",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#25D366",
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
+}
