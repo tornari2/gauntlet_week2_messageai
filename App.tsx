@@ -1,21 +1,16 @@
+/**
+ * App Entry Point
+ * Main application component with navigation
+ */
+
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { AppNavigator } from './src/navigation/AppNavigator';
 
 export default function App(): JSX.Element {
   return (
-    <View style={styles.container}>
-      <Text>WK2 MessageAI - WhatsApp Clone MVP</Text>
+    <>
+      <AppNavigator />
       <StatusBar style="auto" />
-    </View>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-
