@@ -50,7 +50,7 @@ const MainStack = () => {
  * Will be replaced with ChatsListScreen in PR #3
  */
 const PlaceholderScreen = () => {
-  const { logout, user } = useAuthStore();
+  // const { logout, user } = useAuthStore(); // Uncomment when implementing logout button
 
   return (
     <View style={styles.placeholder}>

@@ -16,7 +16,6 @@ import {
   setDoc,
   getDoc,
   serverTimestamp,
-  Timestamp,
 } from 'firebase/firestore';
 import { auth, firestore } from './firebase';
 import { User, AppError, ErrorCode } from '../types';
