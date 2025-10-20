@@ -1,0 +1,205 @@
+/**
+ * ChatListItem Component
+ * 
+ * Displays a single chat in the chat list
+ * Shows participant name, last message preview, timestamp, and online indicator
+ */
+
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Chat } from '../types';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { MainStackParamList } from '../navigation/AppNavigator';
+
+type ChatListItemNavigationProp = StackNavigationProp<MainStackParamList, 'ChatsList'>;
+
+interface ChatListItemProps {
+  chat: Chat;
+}
+
+export const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
+  const navigation = useNavigation<ChatListItemNavigationProp>();
+
+  const handlePress = () => {
+    navigation.navigate('Chat', { chatId: chat.id, chatName: getChatName() });
+  };
+
+  const getChatName = () => {
+    if (chat.type === 'direct') {
+      return chat.participantName || 'Unknown User';
+    }
+    return chat.groupName || 'Group Chat';
+  };
+
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return '';
+    
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+      
+      // Less than 24 hours - show time
+      if (diff < 24 * 60 * 60 * 1000) {
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      }
+      
+      // Less than 7 days - show day
+      if (diff < 7 * 24 * 60 * 60 * 1000) {
+        return date.toLocaleDateString('en-US', { weekday: 'short' });
+      }
+      
+      // Older - show date
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (error) {
+      console.error('Error formatting timestamp:', error);
+      return '';
+    }
+  };
+
+  const getLastMessagePreview = () => {
+    if (!chat.lastMessage) {
+      return 'No messages yet';
+    }
+    
+    // Truncate long messages
+    if (chat.lastMessage.length > 40) {
+      return chat.lastMessage.substring(0, 40) + '...';
+    }
+    
+    return chat.lastMessage;
+  };
+
+  return (
+    <TouchableOpacity
+      style={styles.container}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      testID="chat-list-item"
+    >
+      {/* Avatar placeholder */}
+      <View style={styles.avatarContainer}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {getChatName().charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        {/* Online indicator - placeholder for now */}
+        {chat.type === 'direct' && (
+          <View style={[styles.onlineIndicator, { opacity: 0.3 }]} />
+        )}
+      </View>
+
+      {/* Chat info */}
+      <View style={styles.contentContainer}>
+        <View style={styles.headerRow}>
+          <Text style={styles.chatName} numberOfLines={1}>
+            {getChatName()}
+          </Text>
+          <Text style={styles.timestamp}>
+            {formatTimestamp(chat.lastMessageTime)}
+          </Text>
+        </View>
+        
+        <View style={styles.messageRow}>
+          <Text style={styles.lastMessage} numberOfLines={1}>
+            {getLastMessagePreview()}
+          </Text>
+          {chat.unreadCount && chat.unreadCount > 0 ? (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>
+                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#25D366',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#34B7F1',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  chatName: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000',
+    flex: 1,
+  },
+  timestamp: {
+    fontSize: 13,
+    color: '#8e8e93',
+    marginLeft: 8,
+  },
+  messageRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  lastMessage: {
+    fontSize: 15,
+    color: '#8e8e93',
+    flex: 1,
+  },
+  unreadBadge: {
+    backgroundColor: '#25D366',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    marginLeft: 8,
+  },
+  unreadText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+});
+
