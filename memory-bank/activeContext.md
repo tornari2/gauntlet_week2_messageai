@@ -1,17 +1,30 @@
 # Active Context: WhatsApp Clone MVP
 
 ## Current Status
-**Phase:** Advanced Features - Group Chat Complete
+**Phase:** Advanced Features - Major Bug Fixes & Optimizations Complete
 **Date Updated:** October 21, 2025
-**Next Action:** Begin PR #10 - Push Notifications
+**Next Action:** Continue with PR #10 - Push Notifications (Setup Started)
 
 ## What We're Working On
+
+### Recently Completed: Bug Fixes & Optimizations ✅
+**Offline Message Status + Presence System + Performance**
+- Objective: Fix critical UX issues with offline messages and status updates
+- Actual Time: ~3 hours
+- Status: Complete, tested, and pushed to GitHub
+- Commit: 0c8bf08
+- Features: 
+  - Network-aware offline message handling (clock icon when offline)
+  - Firebase RTDB presence system for reliable online/offline detection
+  - Performance optimizations to eliminate chat list flickering
+  - Push notification infrastructure setup (partial)
 
 ### Recently Completed: PR #9 ✅
 **Group Chat - COMPLETE**
 - Objective: Implement group chat functionality with participant management
 - Actual Time: ~2 hours
 - Status: Complete and ready for testing
+- Commit: (previous)
 - Features: Create groups, send messages, sender names, group indicators
 
 ### Recently Completed: PR #8 ✅
@@ -49,7 +62,7 @@
 - Status: Complete with bug fixes
 - Commits: 31945c1, f36fdf1, 6acb029
 
-### Key Accomplishments from PR #1-9:
+### Key Accomplishments from PR #1-9 + Bug Fixes:
 1. ✅ **Project Foundation** - Expo + Firebase + TypeScript setup
 2. ✅ **Authentication** - Signup/Login with Firestore user profiles
 3. ✅ **Chat List** - Real-time chat list with navigation
@@ -60,7 +73,10 @@
 8. ✅ **Read Receipts** - WhatsApp-style checkmarks and unread badges
 9. ✅ **Message Persistence** - AsyncStorage caching and offline queue
 10. ✅ **Group Chat** - Create groups, multi-participant messaging, sender names
-11. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
+11. ✅ **Offline Message Status** - Clock icon when offline, network-aware sending
+12. ✅ **Robust Presence System** - Firebase RTDB with onDisconnect() for reliable status
+13. ✅ **Performance Optimizations** - Eliminated chat list flickering with memoization
+14. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
 
 ### Current Working Features:
 - ✅ User signup and login
@@ -69,50 +85,52 @@
 - ✅ Creating group chats with multiple users
 - ✅ Sending and receiving messages in real-time
 - ✅ Optimistic message updates (instant send)
-- ✅ Message status indicators (pending, sent, failed)
+- ✅ **Network-aware message status** (clock when offline, checkmark when sent)
+- ✅ Message status indicators (pending, sent, failed, read)
 - ✅ Failed message retry mechanism
-- ✅ Online/offline status indicators
+- ✅ **Offline message queue persists indefinitely** (AsyncStorage)
+- ✅ **Robust online/offline status** (Firebase RTDB with onDisconnect)
+- ✅ Online/offline status indicators (smooth transitions, no flicker)
 - ✅ Last seen timestamps ("Active X ago")
-- ✅ Real-time presence updates
-- ✅ AppState monitoring
+- ✅ **Real-time presence updates** (works even when force-closed)
+- ✅ **AppState monitoring** (background/foreground detection)
 - ✅ Read receipt checkmarks (✓, ✓✓, blue checks)
 - ✅ Auto-read messages on chat open
 - ✅ Unread count badges in chat list
 - ✅ Messages persist across app restarts
 - ✅ Instant message display from cache
-- ✅ Offline message queue with auto-retry
-- ✅ Connection status banner
+- ✅ **Connection status banner** (red when offline, auto-hides when online)
 - ✅ Proper display names in chat list
 - ✅ Group chat indicators (icon, participant count)
 - ✅ Sender names in group messages
 - ✅ Multi-select user interface with search
 - ✅ Message timestamps
 - ✅ Firestore security rules
+- ✅ **Firebase RTDB security rules**
+- ✅ **Performance optimized** (memoized components, no flicker)
 
 ### Immediate Next Steps
 
-**PR #10: Push Notifications (Recommended Next)**
-1. **Install Notification Dependencies**
-   - expo-notifications
-   - expo-device
-   
-2. **Create Notification Service**
-   - Request permissions
-   - Get Expo push token
-   - Store token in Firestore
-   
-3. **Set Up Notification Handlers**
-   - Foreground notifications
-   - Notification tap handling
-   - Deep linking to chats
-   
-4. **Integrate in App.tsx**
-   - Register on mount
-   - Set up listeners
-   
-5. **Optional: Cloud Function**
-   - Trigger on new message
-   - Send push via Expo API
+**PR #10: Push Notifications (Partially Complete)**
+**Status: Infrastructure Setup Complete, Testing Pending**
+
+✅ **Completed:**
+1. Installed notification dependencies (expo-notifications, expo-device)
+2. Created notificationService.ts with token registration
+3. Added push token storage in Firestore
+4. Implemented notification handlers (foreground/background)
+5. Set up deep linking to chats
+6. Configured Android notification channels
+7. Fixed projectId error in app.json
+
+🔄 **Remaining:**
+1. Test push notifications on physical device
+2. Send test notifications using Expo Push Tool
+3. Verify deep linking works from notification taps
+4. Test all states (foreground/background/quit)
+5. Document notification setup and testing
+
+📝 **Note:** Push notifications require physical device or development build (not fully testable in Expo Go for production)
 
 ## Recent Decisions
 
@@ -143,6 +161,24 @@
 - ✅ **Cache error handling:** Cache failures should never crash app, just log and continue
 - ✅ **NetInfo reliability:** Perfect for connection state monitoring and offline queue processing
 - ✅ **Offline queue pattern:** Store failed messages, retry on reconnection automatically
+- ✅ **Offline message status (NEW):** Fixed messages showing checkmark instead of clock when offline
+  - Created networkStore to track connection state globally
+  - Messages now show pending (clock) state when offline
+  - Queue persists indefinitely in AsyncStorage until sent
+- ✅ **Presence system reliability (NEW):** Fixed status not updating when app force-closed
+  - Integrated Firebase Realtime Database with onDisconnect() handlers
+  - Status automatically updates even when app crashes or network drops
+  - Mirrored presence data between RTDB and Firestore
+- ✅ **Chat list flickering (NEW):** Fixed entire chat item flickering when status changed
+  - Memoized ChatListItem with custom comparison function
+  - Memoized OnlineIndicator to prevent unnecessary re-renders
+  - Only the dot updates now, no full component re-render
+- ✅ **NetInfo listener issues (NEW):** Fixed connection status banner persisting after reconnect
+  - Removed isConnected from useEffect dependencies
+  - Used functional setState to avoid stale state issues
+- ✅ **AppState change detection (NEW):** Fixed AppState listener not triggering
+  - Wrapped handler in useCallback for proper memoization
+  - Reordered code to define function before useEffect
 
 ## Active Constraints
 
@@ -163,12 +199,15 @@
 ## Blockers & Dependencies
 
 ### Current Blockers
-- None (group chat complete, ready for push notifications)
+- **None** - All major bugs fixed, system is stable and performant
+  - ✅ Offline message status working correctly
+  - ✅ Presence system reliable (survives force-close)
+  - ✅ Chat list performance optimized (no flicker)
+  - Ready for push notification testing on physical device
 
 ### Items Needing Cleanup
 - Duplicate files in repo (`MessageBubble 2.tsx`, `MessageInput 2.tsx`, `messageStore 2.ts`, `dateHelpers 2.ts`, `firestore 2.rules`)
 - Should remove these duplicate files
-- Uncommitted changes in working directory
 
 ### Upcoming Dependencies
 - **PR #10 (Push Notifications)** - Depends on PR #4 ✅ (complete)
