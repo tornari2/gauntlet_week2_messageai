@@ -6,7 +6,7 @@
  */
 
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 // Firebase configuration from environment variables
@@ -55,8 +55,14 @@ try {
   // Initialize Firebase app
   firebaseApp = initializeApp(firebaseConfig);
 
-  // Initialize Auth - Firebase Auth automatically handles persistence in React Native
+  // Initialize Auth
   auth = getAuth(firebaseApp);
+  
+  // Set persistence to LOCAL for React Native/Expo
+  // This ensures auth state persists across app reloads
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.warn('Could not enable auth persistence:', error);
+  });
 
   // Initialize Firestore - use default for React Native
   firestore = getFirestore(firebaseApp);

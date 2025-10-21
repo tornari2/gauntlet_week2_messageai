@@ -33,6 +33,12 @@ interface MessageActions {
   // Update a message (for optimistic updates)
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
   
+  // Send message with optimistic update
+  sendMessageOptimistic: (chatId: string, text: string, senderId: string) => Promise<void>;
+  
+  // Retry failed message
+  retryMessage: (chatId: string, tempId: string) => Promise<void>;
+  
   // Subscribe to real-time messages for a chat
   subscribeToMessages: (chatId: string) => void;
   
@@ -205,6 +211,86 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         [chatId]: error,
       },
     }));
+  },
+  
+  sendMessageOptimistic: async (chatId, text, senderId) => {
+    // Generate temporary ID for optimistic message
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create optimistic message
+    const optimisticMessage: Message = {
+      id: tempId,
+      tempId,
+      text,
+      senderId,
+      timestamp: new Date(),
+      readBy: [senderId],
+      pending: true,
+    };
+    
+    // Add optimistic message immediately
+    get().addMessage(chatId, optimisticMessage);
+    
+    try {
+      // Send to server
+      const realMessageId = await chatService.sendMessage(chatId, text, senderId);
+      
+      // Update optimistic message with real ID and remove pending state
+      get().updateMessage(chatId, tempId, {
+        id: realMessageId,
+        pending: false,
+        tempId: undefined,
+      });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Mark message as failed
+      get().updateMessage(chatId, tempId, {
+        pending: false,
+        failed: true,
+      });
+      
+      throw error;
+    }
+  },
+  
+  retryMessage: async (chatId, tempId) => {
+    const state = get();
+    const chatMessages = state.messages[chatId] || [];
+    const failedMessage = chatMessages.find(m => m.tempId === tempId && m.failed);
+    
+    if (!failedMessage) {
+      console.error('Failed message not found');
+      return;
+    }
+    
+    // Mark as pending again
+    get().updateMessage(chatId, tempId, {
+      pending: true,
+      failed: false,
+    });
+    
+    try {
+      // Retry sending
+      const realMessageId = await chatService.sendMessage(chatId, failedMessage.text, failedMessage.senderId);
+      
+      // Update with real ID
+      get().updateMessage(chatId, tempId, {
+        id: realMessageId,
+        pending: false,
+        tempId: undefined,
+      });
+    } catch (error) {
+      console.error('Error retrying message:', error);
+      
+      // Mark as failed again
+      get().updateMessage(chatId, tempId, {
+        pending: false,
+        failed: true,
+      });
+      
+      throw error;
+    }
   },
 }));
 
