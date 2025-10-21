@@ -2,13 +2,13 @@
 
 ## Project Status
 
-**Overall Progress:** 58% (Core Messaging + Enhanced Features Complete)
+**Overall Progress:** 67% (Core Messaging + Enhanced + Persistence Complete)
 **Current Phase:** Advanced Features Development
 **Last Updated:** October 21, 2025
 
 ```
 Planning:        ████████████████████ 100% ✓
-Implementation:  ███████████░░░░░░░░░  58%
+Implementation:  █████████████░░░░░░░  67%
 Testing:         ██░░░░░░░░░░░░░░░░░░  10%
 Deployment:      ░░░░░░░░░░░░░░░░░░░░   0%
 ```
@@ -329,30 +329,83 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 | PR #5 | 3-4h | ~4h | ✅ Complete |
 | PR #6 | 3-4h | ~3.5h | ✅ Complete |
 | PR #7 | 4-5h | ~4h | ✅ Complete |
-| PR #8 | 3-4h | - | 📋 Planned |
+| PR #8 | 3-4h | ~3.5h | ✅ Complete |
 | PR #9 | 5-6h | - | 📋 Planned |
 | PR #10 | 4-5h | - | 📋 Planned |
 | PR #11 | 6-8h | - | 📋 Planned |
 | PR #12 | 2-3h | - | 📋 Planned |
-| **Total** | **49-62h** | **34.5h** | **56%** |
+| **Total** | **49-62h** | **38h** | **61%** |
 
 ### Feature Completion
 - Core Features: 7/10 (70%)
-- Enhanced Features: 0/3 (0%)
+- Enhanced Features: 3/3 (100%)
 - Polish & Testing: 0/1 (0%)
 - Documentation: 3/3 (100%)
 
 ### Code Metrics
-- Total Files: 21 source files + 8 test files
-- Lines of Code: ~2530+ LOC (added ~160 for PR #7)
+- Total Files: 23 source files + 8 test files
+- Lines of Code: ~2700+ LOC (added ~180 for PR #8)
 - Test Coverage: ~10% (basic tests configured)
-- PRs Merged: 7/12 (58%)
+- PRs Merged: 8/12 (67%)
+
+---
+
+### Phase 7: Message Persistence (PR #8) ✅
+**Estimated Time:** 3-4 hours
+**Actual Time:** ~3.5 hours
+**Status:** Complete
+**Commit:** e96171f
+
+#### Completed Features
+- [x] Created storageService.ts for AsyncStorage caching
+- [x] Cache last 100 messages per chat
+- [x] Instant message display from cache
+- [x] Background Firestore sync
+- [x] Offline message queue implementation
+- [x] Auto-retry messages when connection restored
+- [x] Created ConnectionStatus component with NetInfo
+- [x] Animated offline/online banner
+- [x] Integrated caching into messageStore
+- [x] Documented Firestore's automatic offline persistence
+
+#### Acceptance Criteria
+- [x] Messages persist after app restart
+- [x] Offline messages queue and send on reconnect
+- [x] Cached messages load instantly
+- [x] Firestore sync happens in background
+- [x] Connection status indicator works
+- [x] No data loss during crashes
+- [x] Tests pass
+
+#### Files Created
+- `src/services/storageService.ts` - AsyncStorage caching layer
+- `src/components/ConnectionStatus.tsx` - Connection status banner
+- `PR8_SUMMARY.md` - Detailed implementation notes
+
+#### Files Modified
+- `src/stores/messageStore.ts` - Integrated AsyncStorage caching
+- `src/services/firebase.ts` - Added persistence documentation
+- `App.tsx` - Added ConnectionStatus component
+- `package.json` - Added @react-native-community/netinfo
+
+#### Key Learnings
+- Firestore automatically enables offline persistence in React Native
+- AsyncStorage provides additional instant display layer
+- NetInfo perfect for connection state monitoring
+- Cache failures should never crash the app
+- Offline queue essential for reliable message delivery
 
 ---
 
 ## Recent Accomplishments
 
 ### October 21, 2025
+- ✅ Completed PR #8: Message Persistence
+- ✅ Implemented AsyncStorage caching for instant message display
+- ✅ Created offline message queue with auto-retry
+- ✅ Built ConnectionStatus component with animated banner
+- ✅ Integrated NetInfo for connection state monitoring
+- ✅ Messages now persist across app restarts
 - ✅ Completed PR #7: Read Receipts
 - ✅ Implemented WhatsApp-style checkmark indicators (✓, ✓✓, blue checks)
 - ✅ Added auto-read functionality with useFocusEffect
@@ -390,17 +443,17 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 ## Upcoming Work
 
 ### Next 3 Days
-- Day 1: Start PR #7 (Read Receipts)
-- Day 2: Complete PR #7, start PR #8 (Message Persistence)
-- Day 3: Complete PR #8, start PR #9 (Group Chat)
+- Day 1: Start PR #9 (Group Chat)
+- Day 2: Complete PR #9, start PR #10 (Push Notifications)
+- Day 3: Complete PR #10, start PR #11 (User Profile)
 
 ### This Week
 - Foundation: PRs #1-2 ✅
 - Core Messaging: PRs #3-5 ✅
-- Enhanced Features: PRs #6-7 (PR #6 ✅)
+- Enhanced Features: PRs #6-8 ✅
 
 ### Next Week
-- Remaining Features: PRs #8-10
+- Remaining Features: PRs #9-10
 - Polish & Deploy: PRs #11-12
 - Testing & Bug Fixes
 
@@ -409,7 +462,7 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 ## Blockers & Risks
 
 ### Current Blockers
-- None (online status complete, ready for read receipts)
+- None (message persistence complete, ready for group chat)
 
 ### Identified Risks
 1. **Firebase Free Tier Limits** - May hit limits during heavy testing
@@ -481,7 +534,7 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 3. **Document patterns early** - systemPatterns.md will save time during implementation
 4. **Use memory-bank** - Structured context files help with agent collaboration
 
-### From Implementation (PR #1-5)
+### From Implementation (PR #1-8)
 1. **Firestore doesn't accept undefined** - Always use `null` for nullable fields, never `undefined`
 2. **Type consistency matters** - Using `ChatWithDetails` type prevented many bugs with display names
 3. **React Native != Web** - Firebase persistence warnings are expected on mobile (uses memory cache)
@@ -494,6 +547,14 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 10. **Temporary IDs work well** - `temp_${Date.now()}_${Math.random()}` pattern is reliable
 11. **Visual feedback is essential** - Users need to see pending/failed states clearly
 12. **Retry mechanism is critical** - Failed messages must be easily retryable
+13. **AppState API is reliable** - Perfect for tracking when app goes foreground/background
+14. **Allow flexible types** - `Timestamp | Date` unions prevent type conflicts between Firestore and app
+15. **useFocusEffect for screen actions** - Ideal for marking messages read when screen focused
+16. **Read receipt logic** - Compare readBy array with participants array for accurate status
+17. **Firestore persistence is automatic** - React Native Firestore has offline persistence by default
+18. **AsyncStorage complements Firestore** - Provides instant display while Firestore syncs in background
+19. **Cache failures shouldn't crash** - Caching is enhancement, not critical path
+20. **NetInfo works perfectly** - Reliable connection state monitoring for offline handling
 
 ---
 
@@ -521,14 +582,14 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 ## Quick Reference
 
 ### Current Sprint Goals
-Week 1: Complete MVP (PRs 1-12) - 42% Complete
+Week 1: Complete MVP (PRs 1-12) - 67% Complete
 
 ### Current Status
-PRs #1-5: Complete ✅
-Currently working on: PR #6 (Online Status)
+PRs #1-8: Complete ✅
+Currently working on: PR #9 (Group Chat)
 
 ### Next PR
-PR #6: Online Status (presence tracking, last seen)
+PR #9: Group Chat (group creation, multi-user messaging)
 
 ### Documentation
 - Architecture: `ARCHITECTURE.md`
