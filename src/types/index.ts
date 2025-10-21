@@ -11,10 +11,10 @@ export interface User {
   uid: string;
   email: string;
   displayName: string;
-  photoURL?: string;
+  photoURL?: string | null;
   isOnline: boolean;
   lastSeen: Timestamp | Date;
-  pushToken?: string;
+  pushToken?: string | null;
   createdAt: Timestamp | Date;
 }
 
@@ -67,7 +67,7 @@ export interface UserChat {
 export interface ChatWithDetails extends Chat {
   otherUserName?: string; // For direct chats
   otherUserOnline?: boolean; // For direct chats
-  otherUserLastSeen?: Timestamp | Date; // For direct chats
+  otherUserLastSeen?: Date; // For direct chats (converted from Timestamp)
   unreadCount?: number;
 }
 

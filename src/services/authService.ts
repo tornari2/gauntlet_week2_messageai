@@ -310,3 +310,65 @@ export const getAllUsers = async (currentUserId: string): Promise<User[]> => {
   }
 };
 
+/**
+ * Update user's online status
+ * Called when app is foregrounded/backgrounded
+ */
+export const updateOnlineStatus = async (
+  userId: string,
+  isOnline: boolean
+): Promise<void> => {
+  try {
+    const userDocRef = doc(firestore, 'users', userId);
+    await setDoc(
+      userDocRef,
+      {
+        isOnline,
+        lastSeen: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Error updating online status:', error);
+    throw new AppError(
+      'Failed to update online status',
+      ErrorCode.UNKNOWN,
+      error as Error
+    );
+  }
+};
+
+/**
+ * Get a specific user's data by ID
+ * Useful for subscribing to presence updates
+ */
+export const getUserById = async (userId: string): Promise<User | null> => {
+  try {
+    const userDocRef = doc(firestore, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      const data = userDoc.data();
+      return {
+        uid: userId,
+        email: data.email || '',
+        displayName: data.displayName || '',
+        photoURL: data.photoURL || null,
+        isOnline: data.isOnline || false,
+        lastSeen: data.lastSeen?.toDate() || new Date(),
+        pushToken: data.pushToken || null,
+        createdAt: data.createdAt?.toDate() || new Date(),
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting user by ID:', error);
+    throw new AppError(
+      'Failed to get user',
+      ErrorCode.UNKNOWN,
+      error as Error
+    );
+  }
+};
+

@@ -1,10 +1,10 @@
 /**
  * ChatScreen
  * 
- * Individual chat conversation screen with real-time messaging
+ * Individual chat conversation screen with real-time messaging and presence
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,16 @@ import {
   Platform,
 } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useMessageStore } from '../stores/messageStore';
 import { useAuthStore } from '../stores/authStore';
+import { useChatStore } from '../stores/chatStore';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageInput } from '../components/MessageInput';
-import { Message } from '../types';
+import { OnlineIndicator } from '../components/OnlineIndicator';
+import { Message, User } from '../types';
+import { firestore } from '../services/firebase';
 
 type ChatScreenRouteProp = RouteProp<MainStackParamList, 'Chat'>;
 
@@ -31,8 +35,10 @@ export const ChatScreen: React.FC = () => {
   const { chatId, chatName } = route.params;
   
   const flatListRef = useRef<FlatList<Message>>(null);
+  const [otherUser, setOtherUser] = useState<User | null>(null);
   
   const { user } = useAuthStore();
+  const { chats } = useChatStore();
   const {
     messages,
     loading,
@@ -44,6 +50,41 @@ export const ChatScreen: React.FC = () => {
   
   const chatMessages = messages[chatId] || [];
   const isLoading = loading[chatId];
+
+  // Get the current chat to find the other user
+  const currentChat = chats.find(c => c.id === chatId);
+  
+  // Subscribe to other user's presence
+  useEffect(() => {
+    if (!currentChat || currentChat.type !== 'direct' || !user) {
+      return;
+    }
+    
+    // Get the other user ID
+    const otherUserId = currentChat.participants.find(p => p !== user.uid);
+    if (!otherUserId) {
+      return;
+    }
+    
+    // Subscribe to other user's document for real-time presence updates
+    const userDocRef = doc(firestore, 'users', otherUserId);
+    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setOtherUser({
+          uid: doc.id,
+          email: data.email || '',
+          displayName: data.displayName || '',
+          photoURL: data.photoURL || null,
+          isOnline: data.isOnline || false,
+          lastSeen: data.lastSeen?.toDate() || new Date(),
+          createdAt: data.createdAt?.toDate() || new Date(),
+        });
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [currentChat, user]);
 
   // Subscribe to messages on mount
   useEffect(() => {
@@ -123,7 +164,19 @@ export const ChatScreen: React.FC = () => {
         >
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{chatName}</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{chatName}</Text>
+          {otherUser && (
+            <View style={styles.presenceContainer}>
+              <OnlineIndicator 
+                isOnline={otherUser.isOnline}
+                lastSeen={otherUser.lastSeen}
+                showText={true}
+                size="small"
+              />
+            </View>
+          )}
+        </View>
         <View style={styles.headerRight} />
       </View>
 
@@ -162,26 +215,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingTop: 50, // Account for status bar
     backgroundColor: '#25D366',
     borderBottomWidth: 1,
     borderBottomColor: '#1EA952',
   },
   backButton: {
-    paddingRight: 16,
+    paddingRight: 12,
   },
   backText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  headerTitle: {
+  headerCenter: {
     flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-    textAlign: 'center',
+  },
+  presenceContainer: {
+    marginTop: 2,
   },
   headerRight: {
     width: 60, // Balance the back button

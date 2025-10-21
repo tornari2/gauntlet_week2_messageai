@@ -11,6 +11,7 @@ import { ChatWithDetails } from '../types';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
+import { OnlineIndicator } from './OnlineIndicator';
 
 type ChatListItemNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ChatsList'>;
 
@@ -85,9 +86,15 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
             {getChatName().charAt(0).toUpperCase()}
           </Text>
         </View>
-        {/* Online indicator - placeholder for now */}
+        {/* Online indicator for direct chats */}
         {chat.type === 'direct' && (
-          <View style={[styles.onlineIndicator, { opacity: 0.3 }]} />
+          <View style={styles.onlineIndicatorWrapper}>
+            <OnlineIndicator 
+              isOnline={chat.otherUserOnline || false}
+              lastSeen={chat.otherUserLastSeen}
+              size="small"
+            />
+          </View>
         )}
       </View>
 
@@ -144,16 +151,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  onlineIndicator: {
+  onlineIndicatorWrapper: {
     position: 'absolute',
     bottom: 2,
     right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#34B7F1',
-    borderWidth: 2,
-    borderColor: '#fff',
   },
   contentContainer: {
     flex: 1,
