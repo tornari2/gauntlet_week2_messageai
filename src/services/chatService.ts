@@ -23,7 +23,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { firestore } from './firebase';
-import { Chat, User, Message } from '../types';
+import { Chat, ChatWithDetails, User, Message } from '../types';
 
 /**
  * Subscribe to a user's chats in real-time
@@ -34,7 +34,7 @@ import { Chat, User, Message } from '../types';
  */
 export function subscribeToUserChats(
   userId: string,
-  onChatsUpdate: (chats: Chat[]) => void,
+  onChatsUpdate: (chats: ChatWithDetails[]) => void,
   onError?: (error: Error) => void
 ): () => void {
   const chatsRef = collection(firestore, 'chats');
@@ -47,7 +47,7 @@ export function subscribeToUserChats(
   const unsubscribe = onSnapshot(
     q,
     async (snapshot) => {
-      const chats: Chat[] = [];
+      const chats: ChatWithDetails[] = [];
       
       for (const docSnap of snapshot.docs) {
         const chatData = docSnap.data();
@@ -56,7 +56,7 @@ export function subscribeToUserChats(
         if (chatData.type === 'direct') {
           const otherUserId = chatData.participants.find((id: string) => id !== userId);
           if (otherUserId) {
-            const participantName = await getUserDisplayName(otherUserId);
+            const otherUserName = await getUserDisplayName(otherUserId);
             chats.push({
               id: docSnap.id,
               type: chatData.type,
@@ -64,8 +64,8 @@ export function subscribeToUserChats(
               lastMessage: chatData.lastMessage || '',
               lastMessageTime: chatData.lastMessageTime,
               createdAt: chatData.createdAt,
-              participantName,
-            } as Chat);
+              otherUserName,
+            });
           }
         } else {
           // Group chat
@@ -78,7 +78,7 @@ export function subscribeToUserChats(
             createdAt: chatData.createdAt,
             groupName: chatData.groupName,
             groupPhoto: chatData.groupPhoto,
-          } as Chat);
+          });
         }
       }
       

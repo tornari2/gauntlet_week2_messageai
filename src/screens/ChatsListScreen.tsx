@@ -18,12 +18,18 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainStackParamList } from '../navigation/AppNavigator';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { ChatListItem } from '../components/ChatListItem';
 import { Chat } from '../types';
 
+type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
+
 export const ChatsListScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const { chats, loading, subscribeToChats } = useChatStore();
   const { user, logout } = useAuthStore();
 
@@ -101,7 +107,14 @@ export const ChatsListScreen: React.FC = () => {
         }}
       />
 
-      {/* TODO: Add floating action button for creating new chats in PR #5 */}
+      {/* Floating action button for creating new chats */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('NewChat')}
+        testID="new-chat-button"
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -168,6 +181,31 @@ const styles = StyleSheet.create({
     color: '#8e8e93',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#25D366',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  fabIcon: {
+    fontSize: 32,
+    color: '#fff',
+    fontWeight: '300',
+    lineHeight: 32,
   },
 });
 

@@ -16,6 +16,8 @@ import {
   setDoc,
   getDoc,
   serverTimestamp,
+  collection,
+  getDocs,
 } from 'firebase/firestore';
 import { auth, firestore } from './firebase';
 import { User, AppError, ErrorCode } from '../types';
@@ -34,10 +36,10 @@ const getUserData = async (firebaseUser: FirebaseUser): Promise<User> => {
         uid: firebaseUser.uid,
         email: firebaseUser.email || '',
         displayName: firebaseUser.displayName || '',
-        photoURL: firebaseUser.photoURL || undefined,
+        photoURL: firebaseUser.photoURL || null,
         isOnline: data.isOnline || false,
         lastSeen: data.lastSeen || new Date(),
-        pushToken: data.pushToken || undefined,
+        pushToken: data.pushToken || null,
         createdAt: data.createdAt || new Date(),
       };
     } else {
@@ -46,7 +48,7 @@ const getUserData = async (firebaseUser: FirebaseUser): Promise<User> => {
         uid: firebaseUser.uid,
         email: firebaseUser.email || '',
         displayName: firebaseUser.displayName || '',
-        photoURL: firebaseUser.photoURL || undefined,
+        photoURL: firebaseUser.photoURL || null,
         isOnline: true,
         lastSeen: new Date(),
         createdAt: new Date(),
@@ -55,7 +57,7 @@ const getUserData = async (firebaseUser: FirebaseUser): Promise<User> => {
       await setDoc(userDocRef, {
         email: newUser.email,
         displayName: newUser.displayName,
-        photoURL: newUser.photoURL,
+        photoURL: newUser.photoURL || null,
         isOnline: true,
         lastSeen: serverTimestamp(),
         createdAt: serverTimestamp(),
@@ -265,5 +267,46 @@ export const onAuthStateChange = (
  */
 export const getCurrentUser = (): FirebaseUser | null => {
   return auth.currentUser;
+};
+
+/**
+ * Get all users except the current user
+ * Useful for creating new chats
+ */
+export const getAllUsers = async (currentUserId: string): Promise<User[]> => {
+  try {
+    const usersRef = collection(firestore, 'users');
+    // Get all users - we'll filter out current user in memory
+    const querySnapshot = await getDocs(usersRef);
+    
+    const users: User[] = [];
+    querySnapshot.forEach((doc) => {
+      // Skip the current user
+      if (doc.id === currentUserId) {
+        return;
+      }
+      
+      const data = doc.data();
+      users.push({
+        uid: doc.id,
+        email: data.email || '',
+        displayName: data.displayName || '',
+        photoURL: data.photoURL || null,
+        isOnline: data.isOnline || false,
+        lastSeen: data.lastSeen || new Date(),
+        pushToken: data.pushToken || null,
+        createdAt: data.createdAt || new Date(),
+      });
+    });
+    
+    return users;
+  } catch (error) {
+    console.error('Error getting all users:', error);
+    throw new AppError(
+      'Failed to get users',
+      ErrorCode.UNKNOWN,
+      error as Error
+    );
+  }
 };
 
