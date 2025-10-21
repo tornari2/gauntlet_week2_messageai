@@ -52,11 +52,30 @@ export function subscribeToUserChats(
       for (const docSnap of snapshot.docs) {
         const chatData = docSnap.data();
         
-        // Get the other participant's name for direct chats
+        // Calculate unread count for this chat
+        const messagesRef = collection(firestore, 'chats', docSnap.id, 'messages');
+        const messagesSnapshot = await getDocs(messagesRef);
+        let unreadCount = 0;
+        
+        messagesSnapshot.forEach((msgDoc) => {
+          const msgData = msgDoc.data();
+          // Count messages not sent by current user and not read by them
+          if (msgData.senderId !== userId && !msgData.readBy?.includes(userId)) {
+            unreadCount++;
+          }
+        });
+        
+        // Get the other participant's details for direct chats
         if (chatData.type === 'direct') {
           const otherUserId = chatData.participants.find((id: string) => id !== userId);
           if (otherUserId) {
             const otherUserName = await getUserDisplayName(otherUserId);
+            
+            // Get the other user's online status and last seen
+            const otherUserRef = doc(firestore, 'users', otherUserId);
+            const otherUserSnap = await getDoc(otherUserRef);
+            const otherUserData = otherUserSnap.exists() ? otherUserSnap.data() : null;
+            
             chats.push({
               id: docSnap.id,
               type: chatData.type,
@@ -65,6 +84,9 @@ export function subscribeToUserChats(
               lastMessageTime: chatData.lastMessageTime,
               createdAt: chatData.createdAt,
               otherUserName,
+              otherUserOnline: otherUserData?.isOnline || false,
+              otherUserLastSeen: otherUserData?.lastSeen?.toDate() || new Date(),
+              unreadCount,
             });
           }
         } else {
@@ -78,6 +100,7 @@ export function subscribeToUserChats(
             createdAt: chatData.createdAt,
             groupName: chatData.groupName,
             groupPhoto: chatData.groupPhoto,
+            unreadCount,
           });
         }
       }

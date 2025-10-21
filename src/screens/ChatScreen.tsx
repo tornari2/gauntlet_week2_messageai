@@ -1,7 +1,7 @@
 /**
  * ChatScreen
  * 
- * Individual chat conversation screen with real-time messaging and presence
+ * Individual chat conversation screen with real-time messaging, presence, and read receipts
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -15,7 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useMessageStore } from '../stores/messageStore';
@@ -26,6 +26,7 @@ import { MessageInput } from '../components/MessageInput';
 import { OnlineIndicator } from '../components/OnlineIndicator';
 import { Message, User } from '../types';
 import { firestore } from '../services/firebase';
+import { chatService } from '../services/chatService';
 
 type ChatScreenRouteProp = RouteProp<MainStackParamList, 'Chat'>;
 
@@ -36,6 +37,7 @@ export const ChatScreen: React.FC = () => {
   
   const flatListRef = useRef<FlatList<Message>>(null);
   const [otherUser, setOtherUser] = useState<User | null>(null);
+  const [participants, setParticipants] = useState<string[]>([]);
   
   const { user } = useAuthStore();
   const { chats } = useChatStore();
@@ -53,6 +55,44 @@ export const ChatScreen: React.FC = () => {
 
   // Get the current chat to find the other user
   const currentChat = chats.find(c => c.id === chatId);
+  
+  // Get chat participants
+  useEffect(() => {
+    if (currentChat) {
+      setParticipants(currentChat.participants);
+    }
+  }, [currentChat]);
+  
+  // Auto-read messages when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!user) return;
+      
+      // Mark all unread messages as read
+      const markAllAsRead = async () => {
+        try {
+          const unreadMessageIds = chatMessages
+            .filter(msg => msg.senderId !== user.uid && !msg.readBy?.includes(user.uid))
+            .map(msg => msg.id)
+            .filter((id): id is string => id !== undefined && id !== '' && !id.startsWith('temp_'));
+          
+          if (unreadMessageIds.length > 0) {
+            await chatService.markMessagesAsRead(chatId, unreadMessageIds, user.uid);
+          }
+        } catch (error) {
+          console.error('Error marking messages as read:', error);
+        }
+      };
+      
+      // Mark messages as read when screen is focused
+      markAllAsRead();
+      
+      // Also mark new messages as read
+      if (chatMessages.length > 0) {
+        markAllAsRead();
+      }
+    }, [chatId, user, chatMessages])
+  );
   
   // Subscribe to other user's presence
   useEffect(() => {
@@ -130,6 +170,7 @@ export const ChatScreen: React.FC = () => {
       <MessageBubble 
         message={item} 
         isSent={isSent}
+        participants={participants}
         onRetry={item.failed && item.tempId ? () => handleRetry(item.tempId!) : undefined}
       />
     );

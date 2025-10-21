@@ -2,7 +2,7 @@
  * MessageBubble Component
  * 
  * Displays a single message with appropriate styling
- * for sent vs received messages
+ * for sent vs received messages and read receipts
  */
 
 import React from 'react';
@@ -14,9 +14,62 @@ interface MessageBubbleProps {
   message: Message;
   isSent: boolean;
   onRetry?: () => void;
+  participants?: string[]; // Chat participants for read receipt logic
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent, onRetry }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = ({ 
+  message, 
+  isSent, 
+  onRetry,
+  participants = []
+}) => {
+  // Determine read receipt status
+  const getReadReceiptIcon = () => {
+    if (message.pending) {
+      return '◷'; // Clock - pending
+    }
+    
+    if (message.failed) {
+      return '!'; // Exclamation - failed
+    }
+    
+    // For sent messages, check read status
+    const readByCount = message.readBy?.length || 0;
+    
+    // Remove sender from participants to get other participants
+    const otherParticipants = participants.filter(p => p !== message.senderId);
+    const allOthersRead = otherParticipants.every(p => message.readBy?.includes(p));
+    
+    if (readByCount === 1) {
+      // Only sender has read (just sent)
+      return '✓'; // Single check - sent
+    } else if (allOthersRead && otherParticipants.length > 0) {
+      // All other participants have read
+      return '✓✓'; // Double check - read (will be blue)
+    } else if (readByCount > 1) {
+      // Some have read but not all
+      return '✓✓'; // Double check - delivered
+    }
+    
+    return '✓'; // Default to single check
+  };
+  
+  const getReadReceiptColor = () => {
+    if (message.pending || message.failed) {
+      return '#F0F0F0';
+    }
+    
+    // Blue checks if all participants have read
+    const otherParticipants = participants.filter(p => p !== message.senderId);
+    const allOthersRead = otherParticipants.every(p => message.readBy?.includes(p));
+    
+    if (allOthersRead && otherParticipants.length > 0) {
+      return '#4FC3F7'; // Blue for read
+    }
+    
+    return '#F0F0F0'; // White for sent/delivered
+  };
+
   return (
     <View
       style={[
@@ -53,8 +106,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent, o
           </Text>
           
           {isSent && (
-            <Text style={styles.statusIcon}>
-              {message.pending ? '◷' : message.failed ? '!' : '✓'}
+            <Text 
+              style={[
+                styles.statusIcon, 
+                { color: getReadReceiptColor() }
+              ]}
+              testID="read-receipt"
+            >
+              {getReadReceiptIcon()}
             </Text>
           )}
         </View>
