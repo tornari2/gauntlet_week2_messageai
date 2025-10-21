@@ -1,11 +1,18 @@
 # Active Context: WhatsApp Clone MVP
 
 ## Current Status
-**Phase:** Advanced Features - Read Receipts Complete
+**Phase:** Advanced Features - Message Persistence Complete
 **Date Updated:** October 21, 2025
-**Next Action:** Begin PR #8 - Message Persistence
+**Next Action:** Begin PR #9 - Group Chat
 
 ## What We're Working On
+
+### Recently Completed: PR #8 ✅
+**Message Persistence - COMPLETE**
+- Objective: Messages persist across app restarts with instant display
+- Actual Time: ~3.5 hours
+- Status: Complete and pushed to GitHub
+- Commit: e96171f
 
 ### Recently Completed: PR #7 ✅
 **Read Receipts - COMPLETE**
@@ -35,7 +42,7 @@
 - Status: Complete with bug fixes
 - Commits: 31945c1, f36fdf1, 6acb029
 
-### Key Accomplishments from PR #1-7:
+### Key Accomplishments from PR #1-8:
 1. ✅ **Project Foundation** - Expo + Firebase + TypeScript setup
 2. ✅ **Authentication** - Signup/Login with Firestore user profiles
 3. ✅ **Chat List** - Real-time chat list with navigation
@@ -44,7 +51,8 @@
 6. ✅ **Optimistic Updates** - Instant message sending with retry mechanism
 7. ✅ **Online Status** - Real-time presence tracking with last seen
 8. ✅ **Read Receipts** - WhatsApp-style checkmarks and unread badges
-9. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
+9. ✅ **Message Persistence** - AsyncStorage caching and offline queue
+10. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
 
 ### Current Working Features:
 - ✅ User signup and login
@@ -61,31 +69,40 @@
 - ✅ Read receipt checkmarks (✓, ✓✓, blue checks)
 - ✅ Auto-read messages on chat open
 - ✅ Unread count badges in chat list
+- ✅ Messages persist across app restarts
+- ✅ Instant message display from cache
+- ✅ Offline message queue with auto-retry
+- ✅ Connection status banner
 - ✅ Proper display names in chat list
 - ✅ Message timestamps
 - ✅ Firestore security rules
 
 ### Immediate Next Steps
 
-**PR #8: Message Persistence (Recommended Next)**
-1. **Enable Firestore Offline Persistence**
-   - Add enableIndexedDbPersistence() (or React Native equivalent)
-   - Handle errors/warnings
-   - Test offline behavior
+**PR #9: Group Chat (Recommended Next)**
+1. **Extend Chat Service for Groups**
+   - Add createGroupChat() function
+   - Update message sending for multiple participants
+   - Add participant management functions
    
-2. **AsyncStorage Caching**
-   - Create storageService.ts
-   - Cache last 100 messages per chat
-   - Merge with Firestore data
+2. **Create UserSelector Component**
+   - Multi-select user list
+   - Search functionality
+   - Selected user chips
    
-3. **Offline Message Queue**
-   - Queue messages sent while offline
-   - Retry on reconnection
-   - Update status when sent
+3. **Create CreateGroupScreen**
+   - Select participants
+   - Enter group name
+   - Create button
    
-4. **Connection Status**
-   - Create ConnectionStatus component
-   - Show "Connecting..." banner when offline
+4. **Update ChatScreen for Groups**
+   - Show sender names in bubbles
+   - Show group name in header
+   - Different read receipt display
+   
+5. **Update ChatListItem for Groups**
+   - Show group indicator
+   - Show participant count
 
 ## Recent Decisions
 
@@ -111,6 +128,11 @@
 - ✅ **useFocusEffect:** Perfect for auto-reading messages when chat screen focused
 - ✅ **Unread counting:** Calculate in subscribeToUserChats for real-time badge updates
 - ✅ **Blue checks:** Color changes from white to blue when all participants read
+- ✅ **Firestore persistence APIs:** Web-only APIs don't exist in React Native (persistentLocalCache, persistentMultipleTabManager)
+- ✅ **AsyncStorage for instant display:** Complements Firestore's automatic persistence
+- ✅ **Cache error handling:** Cache failures should never crash app, just log and continue
+- ✅ **NetInfo reliability:** Perfect for connection state monitoring and offline queue processing
+- ✅ **Offline queue pattern:** Store failed messages, retry on reconnection automatically
 
 ## Active Constraints
 
@@ -131,7 +153,7 @@
 ## Blockers & Dependencies
 
 ### Current Blockers
-- None (read receipts complete, ready for message persistence)
+- None (message persistence complete, ready for group chat)
 
 ### Items Needing Cleanup
 - Duplicate files in repo (`MessageBubble 2.tsx`, `MessageInput 2.tsx`, `messageStore 2.ts`, `dateHelpers 2.ts`, `firestore 2.rules`)
@@ -139,16 +161,16 @@
 - Uncommitted changes in working directory
 
 ### Upcoming Dependencies
-- **PR #8 (Message Persistence)** - Depends on PR #5 ✅ (complete)
 - **PR #9 (Group Chat)** - Depends on PR #4 ✅, PR #7 ✅ (both complete)
 - **PR #10 (Push Notifications)** - Depends on PR #4 ✅ (complete)
+- **PR #11 (User Profile)** - Depends on PR #2 ✅ (complete)
 
 ## Questions to Resolve
 
 ### Current Questions
-- [ ] Should we add automated tests for read receipts?
-- [ ] Any bugs discovered during PR #7 testing?
-- [ ] Should we implement message persistence or group chat next?
+- [ ] Should we add automated tests for message persistence?
+- [ ] Any bugs discovered during PR #8 testing?
+- [ ] Should we implement group chat or push notifications next?
 
 ### Resolved Questions
 - [x] Firebase project name? → Used Firebase Console defaults
@@ -160,22 +182,25 @@
 - [x] Last seen format? → "Active X ago" using formatLastSeen helper
 - [x] Read receipt colors? → White for delivered, blue for read
 - [x] Auto-read approach? → useFocusEffect when screen focused
+- [x] Firestore persistence in RN? → Automatic, no web APIs needed
+- [x] How to cache messages? → AsyncStorage with 100 message limit
+- [x] Offline queue approach? → Store in AsyncStorage, retry on reconnection
 
 ## Context for AI Agents
 
 ### When Starting New Work Session
 **Quick Context:**
 - Project: WhatsApp clone MVP with React Native + Expo + Firebase
-- Current Status: **PRs #1-7 complete** ✅
-- Core messaging with optimistic updates, online status, and read receipts working
-- Ready for: Message persistence (PR #8)
+- Current Status: **PRs #1-8 complete** ✅
+- Core messaging with optimistic updates, presence, read receipts, and persistence working
+- Ready for: Group Chat (PR #9)
 - Reference: `IMPLEMENTATION_PLAN.md` for detailed tasks
 - Reference: `ARCHITECTURE.md` for system design
 
 **Files to Review:**
-- `memory-bank/progress.md` - See what's been completed (58% done)
-- `IMPLEMENTATION_PLAN.md` - PR #8 tasks (next)
-- PR summaries: `PR4_SUMMARY.md`, `PR5_SUMMARY.md`, `PR6_SUMMARY.md`, `PR7_SUMMARY.md`
+- `memory-bank/progress.md` - See what's been completed (67% done)
+- `IMPLEMENTATION_PLAN.md` - PR #9 tasks (next)
+- PR summaries: `PR4_SUMMARY.md`, `PR5_SUMMARY.md`, `PR6_SUMMARY.md`, `PR7_SUMMARY.md`, `PR8_SUMMARY.md`
 - Bug fix docs: `BUG_FIXES.md`, `FIX_UNKNOWN_USER.md`, `UI_CHANGES.md`
 
 ### When Implementing Features
@@ -191,6 +216,10 @@
 - useFocusEffect perfect for screen-focused actions (like marking messages read)
 - Read receipt logic: compare readBy array with participants array
 - Unread count: calculate in subscribeToUserChats for real-time updates
+- Firestore persistence: automatic in RN, no web APIs needed
+- AsyncStorage strategy: cache last 100 messages, serialize timestamps
+- Offline queue: store failures, retry on reconnection
+- Cache error handling: failures shouldn't crash app
 
 **Reference Files:**
 - `ARCHITECTURE.md` - Data flow diagrams
@@ -250,21 +279,23 @@ Less effective: "Make the messaging work"
 - [x] Complete PR #5 (Optimistic updates)
 - [x] Complete PR #6 (Online status)
 - [x] Complete PR #7 (Read receipts)
+- [x] Complete PR #8 (Message persistence)
 - [x] Fix critical bugs (undefined values, display names)
 - [x] Test on physical devices
-- [x] Commit PR #6 and PR #7 to git
+- [x] Commit PRs #6, #7, and #8 to git
 - [x] Push to GitHub
 - [x] Update memory bank
-- [ ] Decide: PR #8 (Message persistence) or PR #9 (Group chat) next
+- [ ] Decide: PR #9 (Group chat) or PR #10 (Push notifications) next
 
 ### This Week's Goals (Updated)
-- [x] PRs 1-7 complete (setup, auth, chat list, messaging, optimistic updates, online status, read receipts) ✅
+- [x] PRs 1-8 complete (setup, auth, chat list, messaging, optimistic updates, online status, read receipts, persistence) ✅
 - [x] Basic one-on-one chat working ✅
 - [x] Real-time message delivery functional ✅
 - [x] Instant message sending (optimistic UI) ✅
 - [x] Real-time presence tracking ✅
 - [x] Read receipts with checkmarks ✅
-- [ ] Start PR #8 (Message persistence) or PR #9 (Group chat)
+- [x] Message persistence with offline support ✅
+- [ ] Start PR #9 (Group chat) or PR #10 (Push notifications)
 
 ### Original Sprint Goal
 - [ ] MVP feature-complete (PRs 1-12)
@@ -272,7 +303,7 @@ Less effective: "Make the messaging work"
 - [ ] Deployed to Expo Go
 - [ ] Manual testing checklist complete
 
-**Progress: 58% (7/12 PRs complete)**
+**Progress: 67% (8/12 PRs complete)**
 
 ## Notes & Reminders
 
@@ -308,11 +339,11 @@ npx tsc --noEmit
 ## Next Session Prep
 
 ### Before Starting Next Session
-1. Review this file for current status (PRs #1-7 complete ✅)
-2. Check `progress.md` for completed items (58% done)
-3. Review PR #8 in `IMPLEMENTATION_PLAN.md` (Message Persistence)
-4. Review `PR7_SUMMARY.md` for read receipts implementation
-5. Consider testing read receipts on multiple devices
+1. Review this file for current status (PRs #1-8 complete ✅)
+2. Check `progress.md` for completed items (67% done)
+3. Review PR #9 in `IMPLEMENTATION_PLAN.md` (Group Chat)
+4. Review `PR8_SUMMARY.md` for message persistence implementation
+5. Consider testing persistence on multiple devices
 
 ### To Update After Session
 - Update "Current Focus" section with new work
