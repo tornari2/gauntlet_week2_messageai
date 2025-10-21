@@ -1,11 +1,18 @@
 # Active Context: WhatsApp Clone MVP
 
 ## Current Status
-**Phase:** Enhanced Features - Online Status Complete
+**Phase:** Advanced Features - Read Receipts Complete
 **Date Updated:** October 21, 2025
-**Next Action:** Begin PR #7 - Read Receipts
+**Next Action:** Begin PR #8 - Message Persistence
 
 ## What We're Working On
+
+### Recently Completed: PR #7 ✅
+**Read Receipts - COMPLETE**
+- Objective: Implement WhatsApp-style read receipts with checkmarks
+- Actual Time: ~4 hours
+- Status: Complete and pushed to GitHub
+- Commit: 7206969
 
 ### Recently Completed: PR #6 ✅
 **Online/Offline Status - COMPLETE**
@@ -28,7 +35,7 @@
 - Status: Complete with bug fixes
 - Commits: 31945c1, f36fdf1, 6acb029
 
-### Key Accomplishments from PR #1-6:
+### Key Accomplishments from PR #1-7:
 1. ✅ **Project Foundation** - Expo + Firebase + TypeScript setup
 2. ✅ **Authentication** - Signup/Login with Firestore user profiles
 3. ✅ **Chat List** - Real-time chat list with navigation
@@ -36,7 +43,8 @@
 5. ✅ **NewChatScreen** - User discovery and chat creation
 6. ✅ **Optimistic Updates** - Instant message sending with retry mechanism
 7. ✅ **Online Status** - Real-time presence tracking with last seen
-8. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
+8. ✅ **Read Receipts** - WhatsApp-style checkmarks and unread badges
+9. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
 
 ### Current Working Features:
 - ✅ User signup and login
@@ -50,27 +58,34 @@
 - ✅ Last seen timestamps ("Active X ago")
 - ✅ Real-time presence updates
 - ✅ AppState monitoring
+- ✅ Read receipt checkmarks (✓, ✓✓, blue checks)
+- ✅ Auto-read messages on chat open
+- ✅ Unread count badges in chat list
 - ✅ Proper display names in chat list
 - ✅ Message timestamps
 - ✅ Firestore security rules
 
 ### Immediate Next Steps
 
-**PR #7: Read Receipts (Recommended Next)**
-1. **Add Read Receipt Tracking**
-   - markMessagesAsRead() function
-   - Track readBy array in messages
-   - Update on chat screen focus
+**PR #8: Message Persistence (Recommended Next)**
+1. **Enable Firestore Offline Persistence**
+   - Add enableIndexedDbPersistence() (or React Native equivalent)
+   - Handle errors/warnings
+   - Test offline behavior
    
-2. **Visual Indicators**
-   - Single check (✓) for sent
-   - Double check (✓✓) for delivered
-   - Blue checks for read
+2. **AsyncStorage Caching**
+   - Create storageService.ts
+   - Cache last 100 messages per chat
+   - Merge with Firestore data
    
-3. **Unread Count**
-   - Badge in chat list
-   - Clear on chat open
-   - Bold unread chats
+3. **Offline Message Queue**
+   - Queue messages sent while offline
+   - Retry on reconnection
+   - Update status when sent
+   
+4. **Connection Status**
+   - Create ConnectionStatus component
+   - Show "Connecting..." banner when offline
 
 ## Recent Decisions
 
@@ -92,6 +107,10 @@
 - ✅ **Timestamp handling:** OnlineIndicator accepts `Timestamp | Date` for flexibility
 - ✅ **AppState tracking:** Reliable presence tracking via React Native AppState API
 - ✅ **Real-time presence:** Efficient Firestore listeners for online status updates
+- ✅ **Read receipt logic:** getReadReceiptIcon() checks readBy array against participants
+- ✅ **useFocusEffect:** Perfect for auto-reading messages when chat screen focused
+- ✅ **Unread counting:** Calculate in subscribeToUserChats for real-time badge updates
+- ✅ **Blue checks:** Color changes from white to blue when all participants read
 
 ## Active Constraints
 
@@ -120,16 +139,16 @@
 - Uncommitted changes in working directory
 
 ### Upcoming Dependencies
-- **PR #7 (Read Receipts)** - Depends on PR #4 ✅ (complete)
 - **PR #8 (Message Persistence)** - Depends on PR #5 ✅ (complete)
-- **PR #9 (Group Chat)** - Depends on PR #4, PR #7
+- **PR #9 (Group Chat)** - Depends on PR #4 ✅, PR #7 ✅ (both complete)
+- **PR #10 (Push Notifications)** - Depends on PR #4 ✅ (complete)
 
 ## Questions to Resolve
 
 ### Current Questions
-- [ ] Should we add automated tests for online status?
-- [ ] Any bugs discovered during PR #6 testing?
-- [ ] Should we implement read receipts next or focus on persistence?
+- [ ] Should we add automated tests for read receipts?
+- [ ] Any bugs discovered during PR #7 testing?
+- [ ] Should we implement message persistence or group chat next?
 
 ### Resolved Questions
 - [x] Firebase project name? → Used Firebase Console defaults
@@ -139,22 +158,24 @@
 - [x] Why Firestore errors? → Fixed: undefined vs null issue
 - [x] How to track presence? → AppState listener with Firestore updates
 - [x] Last seen format? → "Active X ago" using formatLastSeen helper
+- [x] Read receipt colors? → White for delivered, blue for read
+- [x] Auto-read approach? → useFocusEffect when screen focused
 
 ## Context for AI Agents
 
 ### When Starting New Work Session
 **Quick Context:**
 - Project: WhatsApp clone MVP with React Native + Expo + Firebase
-- Current Status: **PRs #1-6 complete** ✅
-- Core messaging with optimistic updates and online status working
-- Ready for: Read receipts (PR #7)
+- Current Status: **PRs #1-7 complete** ✅
+- Core messaging with optimistic updates, online status, and read receipts working
+- Ready for: Message persistence (PR #8)
 - Reference: `IMPLEMENTATION_PLAN.md` for detailed tasks
 - Reference: `ARCHITECTURE.md` for system design
 
 **Files to Review:**
-- `memory-bank/progress.md` - See what's been completed (50% done)
-- `IMPLEMENTATION_PLAN.md` - PR #7 tasks (next)
-- PR summaries: `PR4_SUMMARY.md`, `PR5_SUMMARY.md`, `PR6_SUMMARY.md`
+- `memory-bank/progress.md` - See what's been completed (58% done)
+- `IMPLEMENTATION_PLAN.md` - PR #8 tasks (next)
+- PR summaries: `PR4_SUMMARY.md`, `PR5_SUMMARY.md`, `PR6_SUMMARY.md`, `PR7_SUMMARY.md`
 - Bug fix docs: `BUG_FIXES.md`, `FIX_UNKNOWN_USER.md`, `UI_CHANGES.md`
 
 ### When Implementing Features
@@ -167,6 +188,9 @@
 - AppState API for presence tracking is reliable and efficient
 - Allow `Timestamp | Date` unions for Firebase/app data flexibility
 - OnlineIndicator component pattern: dot + optional text, multiple sizes
+- useFocusEffect perfect for screen-focused actions (like marking messages read)
+- Read receipt logic: compare readBy array with participants array
+- Unread count: calculate in subscribeToUserChats for real-time updates
 
 **Reference Files:**
 - `ARCHITECTURE.md` - Data flow diagrams
@@ -225,20 +249,22 @@ Less effective: "Make the messaging work"
 - [x] Complete PR #4 (Real-time messaging)
 - [x] Complete PR #5 (Optimistic updates)
 - [x] Complete PR #6 (Online status)
+- [x] Complete PR #7 (Read receipts)
 - [x] Fix critical bugs (undefined values, display names)
 - [x] Test on physical devices
-- [x] Commit PR #6 to git
+- [x] Commit PR #6 and PR #7 to git
+- [x] Push to GitHub
 - [x] Update memory bank
-- [ ] Decide: PR #7 (Read receipts) next
+- [ ] Decide: PR #8 (Message persistence) or PR #9 (Group chat) next
 
 ### This Week's Goals (Updated)
-- [x] PRs 1-6 complete (setup, auth, chat list, messaging, optimistic updates, online status) ✅
+- [x] PRs 1-7 complete (setup, auth, chat list, messaging, optimistic updates, online status, read receipts) ✅
 - [x] Basic one-on-one chat working ✅
 - [x] Real-time message delivery functional ✅
 - [x] Instant message sending (optimistic UI) ✅
 - [x] Real-time presence tracking ✅
-- [ ] Start PR #7 (Read receipts)
-- [ ] Start PR #8 (Message persistence)
+- [x] Read receipts with checkmarks ✅
+- [ ] Start PR #8 (Message persistence) or PR #9 (Group chat)
 
 ### Original Sprint Goal
 - [ ] MVP feature-complete (PRs 1-12)
@@ -246,7 +272,7 @@ Less effective: "Make the messaging work"
 - [ ] Deployed to Expo Go
 - [ ] Manual testing checklist complete
 
-**Progress: 50% (6/12 PRs complete)**
+**Progress: 58% (7/12 PRs complete)**
 
 ## Notes & Reminders
 
@@ -282,11 +308,11 @@ npx tsc --noEmit
 ## Next Session Prep
 
 ### Before Starting Next Session
-1. Review this file for current status (PRs #1-6 complete ✅)
-2. Check `progress.md` for completed items (50% done)
-3. Review PR #7 in `IMPLEMENTATION_PLAN.md` (Read Receipts)
-4. Review `PR6_SUMMARY.md` for online status implementation
-5. Consider testing online status on multiple devices
+1. Review this file for current status (PRs #1-7 complete ✅)
+2. Check `progress.md` for completed items (58% done)
+3. Review PR #8 in `IMPLEMENTATION_PLAN.md` (Message Persistence)
+4. Review `PR7_SUMMARY.md` for read receipts implementation
+5. Consider testing read receipts on multiple devices
 
 ### To Update After Session
 - Update "Current Focus" section with new work
