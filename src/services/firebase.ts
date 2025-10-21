@@ -6,9 +6,8 @@
  */
 
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, Auth } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Firebase configuration from environment variables
 // Use EXPO_PUBLIC_ prefix for Expo to expose them to the client
@@ -56,14 +55,10 @@ try {
   // Initialize Firebase app
   firebaseApp = initializeApp(firebaseConfig);
 
-  // Initialize Auth with AsyncStorage persistence for React Native
-  // This ensures auth state persists between app sessions
-  auth = initializeAuth(firebaseApp, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
+  // Initialize Auth - Firebase Auth automatically handles persistence in React Native
+  auth = getAuth(firebaseApp);
 
   // Initialize Firestore - use default for React Native
-  // React Native doesn't support IndexedDB, so we use memory cache
   firestore = getFirestore(firebaseApp);
 
   console.log('Firebase initialized successfully');
