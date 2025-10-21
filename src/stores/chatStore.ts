@@ -9,19 +9,19 @@
  */
 
 import { create } from 'zustand';
-import { Chat } from '../types';
+import { ChatWithDetails } from '../types';
 import { chatService } from '../services/chatService';
 
 interface ChatState {
-  chats: Chat[];
-  currentChat: Chat | null;
+  chats: ChatWithDetails[];
+  currentChat: ChatWithDetails | null;
   loading: boolean;
   error: string | null;
 }
 
 interface ChatActions {
-  setChats: (chats: Chat[]) => void;
-  setCurrentChat: (chat: Chat | null) => void;
+  setChats: (chats: ChatWithDetails[]) => void;
+  setCurrentChat: (chat: ChatWithDetails | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -31,7 +31,7 @@ interface ChatActions {
 
 type ChatStore = ChatState & ChatActions;
 
-export const useChatStore = create<ChatStore>((set, get) => ({
+export const useChatStore = create<ChatStore>((set) => ({
   // Initial state
   chats: [],
   currentChat: null,

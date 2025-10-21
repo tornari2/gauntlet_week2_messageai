@@ -7,15 +7,15 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Chat } from '../types';
+import { ChatWithDetails } from '../types';
 import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
 
-type ChatListItemNavigationProp = StackNavigationProp<MainStackParamList, 'ChatsList'>;
+type ChatListItemNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ChatsList'>;
 
 interface ChatListItemProps {
-  chat: Chat;
+  chat: ChatWithDetails;
 }
 
 export const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
@@ -27,7 +27,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
 
   const getChatName = () => {
     if (chat.type === 'direct') {
-      return chat.participantName || 'Unknown User';
+      return chat.otherUserName || 'Unknown User';
     }
     return chat.groupName || 'Group Chat';
   };
