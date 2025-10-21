@@ -10,6 +10,7 @@ import { create } from 'zustand';
 import { Message } from '../types';
 import { chatService } from '../services/chatService';
 import * as storageService from '../services/storageService';
+import { useNetworkStore } from './networkStore';
 
 interface MessageState {
   // Messages organized by chatId: { chatId: Message[] }
@@ -240,6 +241,9 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     // Generate temporary ID for optimistic message
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
+    // Check network status
+    const isConnected = useNetworkStore.getState().isConnected;
+    
     // Create optimistic message
     const optimisticMessage: Message = {
       id: tempId,
@@ -254,18 +258,38 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     // Add optimistic message immediately
     get().addMessage(chatId, optimisticMessage);
     
+    // If offline, add to queue immediately and keep as pending
+    if (!isConnected) {
+      console.log('📴 Device is offline, queuing message');
+      try {
+        await storageService.addToOfflineQueue(chatId, optimisticMessage);
+        console.log('✅ Message added to offline queue, will remain pending');
+        // Keep message as pending (don't mark as failed yet)
+      } catch (queueError) {
+        console.error('❌ Error adding to offline queue:', queueError);
+        // Mark as failed if we can't even queue it
+        get().updateMessage(chatId, tempId, {
+          pending: false,
+          failed: true,
+        });
+      }
+      return;
+    }
+    
     try {
-      // Send to server
+      // Send to server (we're online)
+      console.log('📡 Sending message to server...');
       const realMessageId = await chatService.sendMessage(chatId, text, senderId);
       
       // Update optimistic message with real ID and remove pending state
+      console.log('✅ Message sent successfully:', realMessageId);
       get().updateMessage(chatId, tempId, {
         id: realMessageId,
         pending: false,
         tempId: undefined,
       });
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
       
       // Add to offline queue for retry when connection restored
       try {
@@ -374,15 +398,16 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         return;
       }
       
-      console.log(`Processing ${queue.length} messages from offline queue`);
+      console.log(`🔄 Processing ${queue.length} messages from offline queue`);
       
       // Process each message in the queue
-      for (let i = 0; i < queue.length; i++) {
+      for (let i = queue.length - 1; i >= 0; i--) {
         const item = queue[i];
         const { chatId, message } = item;
         
         try {
           // Try to send the message
+          console.log(`📤 Attempting to send queued message for chat ${chatId}`);
           const realMessageId = await chatService.sendMessage(
             chatId,
             message.text,
@@ -401,14 +426,20 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
           
           // Remove from queue
           await storageService.removeFromOfflineQueue(i);
-          console.log(`Successfully sent queued message for chat ${chatId}`);
+          console.log(`✅ Successfully sent queued message for chat ${chatId}`);
         } catch (error) {
-          console.error(`Failed to send queued message for chat ${chatId}:`, error);
-          // Keep in queue for next retry
+          console.error(`❌ Failed to send queued message for chat ${chatId}:`, error);
+          // Keep in queue for next retry, but mark as failed in UI
+          if (message.tempId) {
+            get().updateMessage(chatId, message.tempId, {
+              pending: false,
+              failed: true,
+            });
+          }
         }
       }
     } catch (error) {
-      console.error('Error processing offline queue:', error);
+      console.error('❌ Error processing offline queue:', error);
     }
   },
 }));

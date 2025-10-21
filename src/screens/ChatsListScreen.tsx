@@ -23,7 +23,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
-import { ChatListItem } from '../components/ChatListItem';
+import { SwipeableChatListItem } from '../components/SwipeableChatListItem';
 import { Chat } from '../types';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -54,7 +54,7 @@ export const ChatsListScreen: React.FC = () => {
   };
 
   const renderChatItem = ({ item }: { item: Chat }) => (
-    <ChatListItem chat={item} />
+    <SwipeableChatListItem chat={item} />
   );
 
   const renderEmptyState = () => {

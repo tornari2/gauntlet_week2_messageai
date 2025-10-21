@@ -1,12 +1,13 @@
 /**
  * App Navigator
- * Main navigation setup with conditional auth/main routing
+ * Main navigation setup with conditional auth/main routing and deep linking
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../stores/authStore';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
@@ -95,15 +96,39 @@ const LoadingScreen = () => {
 };
 
 /**
- * Root navigator with conditional rendering
+ * Root navigator with conditional rendering and notification deep linking
  */
 export const AppNavigator = () => {
   const { user, loading, initialized, initialize } = useAuthStore();
+  const navigationRef = useRef<NavigationContainerRef<any>>(null);
+  const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     // Initialize auth state on mount
     initialize();
   }, [initialize]);
+
+  // Handle notification taps for deep linking
+  useEffect(() => {
+    // Listen for notification responses (when user taps notification)
+    notificationResponseListener.current = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const chatId = response.notification.request.content.data?.chatId;
+        const chatName = response.notification.request.content.data?.chatName || 'Chat';
+
+        if (chatId && navigationRef.current?.isReady()) {
+          // Navigate to the specific chat
+          navigationRef.current?.navigate('Chat', { chatId, chatName });
+        }
+      }
+    );
+
+    return () => {
+      if (notificationResponseListener.current) {
+        notificationResponseListener.current.remove();
+      }
+    };
+  }, []);
 
   // Show loading screen while initializing
   if (loading || !initialized) {
@@ -111,7 +136,7 @@ export const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {user ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
   );

@@ -21,6 +21,7 @@ import {
   Timestamp,
   addDoc,
   updateDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { firestore } from './firebase';
 import { Chat, ChatWithDetails, User, Message } from '../types';
@@ -44,10 +45,15 @@ export function subscribeToUserChats(
     orderBy('lastMessageTime', 'desc')
   );
 
+  // Store user status subscriptions
+  const userStatusUnsubscribers = new Map<string, () => void>();
+  let latestChats: ChatWithDetails[] = [];
+
   const unsubscribe = onSnapshot(
     q,
     async (snapshot) => {
       const chats: ChatWithDetails[] = [];
+      const newUserIds = new Set<string>();
       
       for (const docSnap of snapshot.docs) {
         const chatData = docSnap.data();
@@ -69,14 +75,15 @@ export function subscribeToUserChats(
         if (chatData.type === 'direct') {
           const otherUserId = chatData.participants.find((id: string) => id !== userId);
           if (otherUserId) {
+            newUserIds.add(otherUserId);
             const otherUserName = await getUserDisplayName(otherUserId);
             
-            // Get the other user's online status and last seen
+            // Get the other user's online status and last seen (initial load)
             const otherUserRef = doc(firestore, 'users', otherUserId);
             const otherUserSnap = await getDoc(otherUserRef);
             const otherUserData = otherUserSnap.exists() ? otherUserSnap.data() : null;
             
-            chats.push({
+            const chatWithDetails: ChatWithDetails = {
               id: docSnap.id,
               type: chatData.type,
               participants: chatData.participants,
@@ -87,7 +94,37 @@ export function subscribeToUserChats(
               otherUserOnline: otherUserData?.isOnline || false,
               otherUserLastSeen: otherUserData?.lastSeen?.toDate() || new Date(),
               unreadCount,
-            });
+            };
+            
+            chats.push(chatWithDetails);
+            
+            // Subscribe to this user's status changes if not already subscribed
+            if (!userStatusUnsubscribers.has(otherUserId)) {
+              const userStatusUnsubscribe = onSnapshot(
+                doc(firestore, 'users', otherUserId),
+                (userDoc) => {
+                  if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    // Update this user's status in all chats
+                    latestChats = latestChats.map(chat => {
+                      if (chat.type === 'direct' && chat.participants.includes(otherUserId)) {
+                        return {
+                          ...chat,
+                          otherUserOnline: userData.isOnline || false,
+                          otherUserLastSeen: userData.lastSeen?.toDate() || new Date(),
+                        };
+                      }
+                      return chat;
+                    });
+                    onChatsUpdate([...latestChats]);
+                  }
+                },
+                (error) => {
+                  console.error(`Error subscribing to user ${otherUserId} status:`, error);
+                }
+              );
+              userStatusUnsubscribers.set(otherUserId, userStatusUnsubscribe);
+            }
           }
         } else {
           // Group chat
@@ -105,6 +142,15 @@ export function subscribeToUserChats(
         }
       }
       
+      // Clean up subscriptions for users no longer in the chat list
+      for (const [subscribedUserId, unsubFunc] of userStatusUnsubscribers.entries()) {
+        if (!newUserIds.has(subscribedUserId)) {
+          unsubFunc();
+          userStatusUnsubscribers.delete(subscribedUserId);
+        }
+      }
+      
+      latestChats = chats;
       onChatsUpdate(chats);
     },
     (error) => {
@@ -113,7 +159,15 @@ export function subscribeToUserChats(
     }
   );
 
-  return unsubscribe;
+  // Return a function that unsubscribes from both chats and user statuses
+  return () => {
+    unsubscribe();
+    // Clean up all user status subscriptions
+    for (const unsubFunc of userStatusUnsubscribers.values()) {
+      unsubFunc();
+    }
+    userStatusUnsubscribers.clear();
+  };
 }
 
 /**
@@ -494,6 +548,50 @@ export async function getUserDisplayNames(
   }
 }
 
+/**
+ * Delete a chat and all its messages
+ * @param chatId - The chat ID to delete
+ * @param userId - The user ID requesting the deletion
+ */
+export async function deleteChat(
+  chatId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const chatRef = doc(firestore, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+    
+    if (!chatSnap.exists()) {
+      throw new Error('Chat not found');
+    }
+    
+    const chatData = chatSnap.data() as Chat;
+    
+    // Verify the user is a participant
+    if (!chatData.participants.includes(userId)) {
+      throw new Error('User is not a participant in this chat');
+    }
+    
+    // Delete all messages in the chat
+    const messagesRef = collection(firestore, 'chats', chatId, 'messages');
+    const messagesSnapshot = await getDocs(messagesRef);
+    
+    const deleteBatch: Promise<void>[] = [];
+    messagesSnapshot.forEach((messageDoc) => {
+      const messageRef = doc(firestore, 'chats', chatId, 'messages', messageDoc.id);
+      deleteBatch.push(deleteDoc(messageRef));
+    });
+    
+    await Promise.all(deleteBatch);
+    
+    // Delete the chat document
+    await deleteDoc(chatRef);
+  } catch (error) {
+    console.error('Error deleting chat:', error);
+    throw new Error('Failed to delete chat');
+  }
+}
+
 export const chatService = {
   subscribeToUserChats,
   getChatParticipants,
@@ -506,5 +604,6 @@ export const chatService = {
   removeParticipant,
   getChatById,
   getUserDisplayNames,
+  deleteChat,
 };
 

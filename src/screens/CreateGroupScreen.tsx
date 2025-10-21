@@ -20,16 +20,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { UserSelector } from '../components/UserSelector';
 import { chatService } from '../services/chatService';
 import { useAuthStore } from '../stores/authStore';
-
-type RootStackParamList = {
-  ChatsListScreen: undefined;
-  ChatScreen: { chatId: string };
-  CreateGroupScreen: undefined;
-};
+import { MainStackParamList } from '../navigation/AppNavigator';
 
 type CreateGroupScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'CreateGroupScreen'
+  MainStackParamList,
+  'CreateGroup'
 >;
 
 interface Props {
@@ -70,7 +65,10 @@ export function CreateGroupScreen({ navigation }: Props) {
       );
 
       // Navigate to the new group chat
-      navigation.replace('ChatScreen', { chatId });
+      navigation.replace('Chat', { 
+        chatId, 
+        chatName: groupName.trim() 
+      });
     } catch (error) {
       console.error('Error creating group:', error);
       Alert.alert('Error', 'Failed to create group. Please try again.');
@@ -96,10 +94,19 @@ export function CreateGroupScreen({ navigation }: Props) {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <View style={styles.header}>
-        <Text style={styles.headerText}>New Group</Text>
-        <Text style={styles.headerSubtext}>
-          {selectedUserIds.length} participant{selectedUserIds.length !== 1 ? 's' : ''} selected
-        </Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          testID="back-button"
+        >
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerText}>New Group</Text>
+          <Text style={styles.headerSubtext}>
+            {selectedUserIds.length} participant{selectedUserIds.length !== 1 ? 's' : ''} selected
+          </Text>
+        </View>
       </View>
 
       {/* Group name input */}
@@ -161,10 +168,24 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 4,
+  },
+  backButtonText: {
+    fontSize: 32,
+    color: '#25D366',
+    fontWeight: 'bold',
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerText: {
     fontSize: 20,

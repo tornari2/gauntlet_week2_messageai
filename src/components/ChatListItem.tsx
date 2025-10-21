@@ -19,7 +19,7 @@ interface ChatListItemProps {
   chat: ChatWithDetails;
 }
 
-export const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
+export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) => {
   const navigation = useNavigation<ChatListItemNavigationProp>();
 
   const handlePress = () => {
@@ -134,7 +134,20 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
       </View>
     </TouchableOpacity>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function - only re-render if these specific props change
+  return (
+    prevProps.chat.id === nextProps.chat.id &&
+    prevProps.chat.lastMessage === nextProps.chat.lastMessage &&
+    prevProps.chat.lastMessageTime === nextProps.chat.lastMessageTime &&
+    prevProps.chat.otherUserOnline === nextProps.chat.otherUserOnline &&
+    prevProps.chat.otherUserLastSeen === nextProps.chat.otherUserLastSeen &&
+    prevProps.chat.unreadCount === nextProps.chat.unreadCount &&
+    prevProps.chat.otherUserName === nextProps.chat.otherUserName &&
+    prevProps.chat.groupName === nextProps.chat.groupName &&
+    prevProps.chat.participants.length === nextProps.chat.participants.length
+  );
+});
 
 const styles = StyleSheet.create({
   container: {

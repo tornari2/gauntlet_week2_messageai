@@ -9,32 +9,48 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useMessageStore } from '../stores/messageStore';
+import { useNetworkStore } from '../stores/networkStore';
 
 export const ConnectionStatus: React.FC = () => {
-  const [isConnected, setIsConnected] = useState(true);
   const [slideAnim] = useState(new Animated.Value(-50));
+  const { isConnected, setConnected } = useNetworkStore();
   const processOfflineQueue = useMessageStore((state) => state.processOfflineQueue);
 
   useEffect(() => {
+    console.log('🔌 ConnectionStatus: Setting up NetInfo listener');
+    
+    // Fetch initial state
+    NetInfo.fetch().then((state) => {
+      const connected = state.isConnected ?? false;
+      console.log('📶 Initial network status:', connected ? 'CONNECTED' : 'DISCONNECTED', 'Details:', state);
+      setConnected(connected);
+    });
+
     // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener((state) => {
       const connected = state.isConnected ?? false;
+      console.log('📶 Network status changed:', connected ? 'CONNECTED ✅' : 'DISCONNECTED ❌');
+      console.log('📶 NetInfo details:', JSON.stringify(state, null, 2));
       
-      if (connected !== isConnected) {
-        setIsConnected(connected);
-        
-        // If reconnected, process offline queue
-        if (connected && !isConnected) {
-          console.log('Connection restored, processing offline queue');
-          processOfflineQueue();
-        }
+      // Check previous state from store
+      const prevConnected = useNetworkStore.getState().isConnected;
+      console.log('📶 Previous:', prevConnected, '→ New:', connected);
+      
+      // Update global network store
+      setConnected(connected);
+      
+      // If reconnected, process offline queue
+      if (connected && !prevConnected) {
+        console.log('✅ Connection restored, processing offline queue');
+        processOfflineQueue();
       }
     });
 
     return () => {
+      console.log('🔌 ConnectionStatus: Cleaning up NetInfo listener');
       unsubscribe();
     };
-  }, [isConnected, processOfflineQueue]);
+  }, [processOfflineQueue, setConnected]);
 
   useEffect(() => {
     // Animate banner in/out based on connection status

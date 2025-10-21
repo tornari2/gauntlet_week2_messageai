@@ -217,15 +217,9 @@ export const signOut = async (): Promise<void> => {
     
     if (currentUser) {
       // Update online status before signing out
-      const userDocRef = doc(firestore, 'users', currentUser.uid);
-      await setDoc(
-        userDocRef,
-        {
-          isOnline: false,
-          lastSeen: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      // Import dynamically to avoid circular dependencies
+      const { setUserOffline } = await import('./presenceService');
+      await setUserOffline(currentUser.uid);
     }
 
     await firebaseSignOut(auth);
@@ -366,6 +360,35 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     console.error('Error getting user by ID:', error);
     throw new AppError(
       'Failed to get user',
+      ErrorCode.UNKNOWN,
+      error as Error
+    );
+  }
+};
+
+/**
+ * Update user's push notification token
+ * @param userId - User ID
+ * @param pushToken - Expo push token
+ */
+export const updatePushToken = async (
+  userId: string,
+  pushToken: string | null
+): Promise<void> => {
+  try {
+    const userDocRef = doc(firestore, 'users', userId);
+    await setDoc(
+      userDocRef,
+      {
+        pushToken,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Error updating push token:', error);
+    throw new AppError(
+      'Failed to update push token',
       ErrorCode.UNKNOWN,
       error as Error
     );

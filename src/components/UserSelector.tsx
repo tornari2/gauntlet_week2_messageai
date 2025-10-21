@@ -122,24 +122,6 @@ export function UserSelector({
     );
   };
 
-  const renderSelectedUserChip = (userId: string) => {
-    const user = allUsers.find((u) => u.uid === userId);
-    if (!user) return null;
-
-    return (
-      <View key={userId} style={styles.chip}>
-        <Text style={styles.chipText}>{user.displayName}</Text>
-        <TouchableOpacity
-          onPress={() => toggleUserSelection(userId)}
-          style={styles.chipRemove}
-          testID={`remove-chip-${userId}`}
-        >
-          <Text style={styles.chipRemoveText}>×</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -153,7 +135,23 @@ export function UserSelector({
       {/* Selected user chips */}
       {selectedUserIds.length > 0 && (
         <View style={styles.chipsContainer}>
-          {selectedUserIds.map(renderSelectedUserChip)}
+          {selectedUserIds.map((userId) => {
+            const user = allUsers.find((u) => u.uid === userId);
+            if (!user) return null;
+
+            return (
+              <View key={userId} style={styles.chip}>
+                <Text style={styles.chipText}>{user.displayName}</Text>
+                <TouchableOpacity
+                  onPress={() => toggleUserSelection(userId)}
+                  style={styles.chipRemove}
+                  testID={`remove-chip-${userId}`}
+                >
+                  <Text style={styles.chipRemoveText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
         </View>
       )}
 

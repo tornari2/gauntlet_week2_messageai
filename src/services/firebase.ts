@@ -8,6 +8,7 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getDatabase, Database } from 'firebase/database';
 
 // Firebase configuration from environment variables
 // Use EXPO_PUBLIC_ prefix for Expo to expose them to the client
@@ -18,6 +19,7 @@ const firebaseConfig = {
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  databaseURL: `https://${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`,
 };
 
 // Validate configuration
@@ -50,6 +52,7 @@ validateConfig();
 let firebaseApp: FirebaseApp;
 let auth: Auth;
 let firestore: Firestore;
+let database: Database;
 
 try {
   // Initialize Firebase app
@@ -64,6 +67,9 @@ try {
   // Our AsyncStorage layer in storageService.ts provides additional caching
   firestore = getFirestore(firebaseApp);
 
+  // Initialize Realtime Database (used for presence system)
+  database = getDatabase(firebaseApp);
+
   console.log('Firebase initialized successfully with automatic offline persistence');
 } catch (error) {
   console.error('Firebase initialization error:', error);
@@ -71,10 +77,11 @@ try {
 }
 
 // Export Firebase instances
-export { firebaseApp, auth, firestore };
+export { firebaseApp, auth, firestore, database };
 
 // Export Firebase for testing purposes
 export const getFirebaseApp = (): FirebaseApp => firebaseApp;
 export const getFirebaseAuth = (): Auth => auth;
 export const getFirebaseFirestore = (): Firestore => firestore;
+export const getFirebaseDatabase = (): Database => database;
 

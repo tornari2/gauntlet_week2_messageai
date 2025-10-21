@@ -15,7 +15,7 @@ interface OnlineIndicatorProps {
   size?: 'small' | 'medium' | 'large';
 }
 
-export const OnlineIndicator: React.FC<OnlineIndicatorProps> = ({
+export const OnlineIndicator: React.FC<OnlineIndicatorProps> = React.memo(({
   isOnline,
   lastSeen,
   showText = false,
@@ -58,7 +58,15 @@ export const OnlineIndicator: React.FC<OnlineIndicatorProps> = ({
       testID={isOnline ? 'online-dot' : 'offline-dot'}
     />
   );
-};
+}, (prevProps, nextProps) => {
+  // Only re-render if isOnline or lastSeen actually changed
+  return (
+    prevProps.isOnline === nextProps.isOnline &&
+    prevProps.lastSeen === nextProps.lastSeen &&
+    prevProps.showText === nextProps.showText &&
+    prevProps.size === nextProps.size
+  );
+});
 
 const styles = StyleSheet.create({
   container: {
