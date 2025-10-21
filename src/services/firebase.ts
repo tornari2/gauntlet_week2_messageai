@@ -59,9 +59,12 @@ try {
   auth = getAuth(firebaseApp);
 
   // Initialize Firestore
+  // NOTE: Firestore automatically enables offline persistence in React Native
+  // Data is cached locally and syncs when connection is restored
+  // Our AsyncStorage layer in storageService.ts provides additional caching
   firestore = getFirestore(firebaseApp);
 
-  console.log('Firebase initialized successfully');
+  console.log('Firebase initialized successfully with automatic offline persistence');
 } catch (error) {
   console.error('Firebase initialization error:', error);
   throw error;

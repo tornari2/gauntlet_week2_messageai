@@ -3,11 +3,13 @@
  * 
  * Manages message state for all chats using Zustand.
  * Messages are stored in a Record keyed by chatId.
+ * Integrates with AsyncStorage for offline persistence.
  */
 
 import { create } from 'zustand';
 import { Message } from '../types';
 import { chatService } from '../services/chatService';
+import * as storageService from '../services/storageService';
 
 interface MessageState {
   // Messages organized by chatId: { chatId: Message[] }
@@ -53,6 +55,15 @@ interface MessageActions {
   
   // Set error state
   setError: (chatId: string, error: Error | null) => void;
+  
+  // Load cached messages from AsyncStorage
+  loadCachedMessages: (chatId: string) => Promise<void>;
+  
+  // Save messages to AsyncStorage
+  saveMessagesToCache: (chatId: string) => Promise<void>;
+  
+  // Process offline queue when connection is restored
+  processOfflineQueue: () => Promise<void>;
 }
 
 export const useMessageStore = create<MessageState & MessageActions>((set, get) => ({
@@ -74,6 +85,9 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         }),
       },
     }));
+    
+    // Save to cache asynchronously
+    get().saveMessagesToCache(chatId);
   },
   
   addMessage: (chatId, message) => {
@@ -113,6 +127,9 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         },
       };
     });
+    
+    // Save to cache asynchronously
+    get().saveMessagesToCache(chatId);
   },
   
   updateMessage: (chatId, messageId, updates) => {
@@ -130,6 +147,9 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         },
       };
     });
+    
+    // Save to cache asynchronously
+    get().saveMessagesToCache(chatId);
   },
   
   subscribeToMessages: (chatId) => {
@@ -139,6 +159,9 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     if (state.unsubscribers[chatId]) {
       return;
     }
+    
+    // Load cached messages first for instant display
+    get().loadCachedMessages(chatId);
     
     // Set loading state
     get().setLoading(chatId, true);
@@ -244,6 +267,14 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     } catch (error) {
       console.error('Error sending message:', error);
       
+      // Add to offline queue for retry when connection restored
+      try {
+        await storageService.addToOfflineQueue(chatId, optimisticMessage);
+        console.log('Message added to offline queue');
+      } catch (queueError) {
+        console.error('Error adding to offline queue:', queueError);
+      }
+      
       // Mark message as failed
       get().updateMessage(chatId, tempId, {
         pending: false,
@@ -290,6 +321,94 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       });
       
       throw error;
+    }
+  },
+  
+  // Load cached messages from AsyncStorage
+  loadCachedMessages: async (chatId) => {
+    try {
+      const cachedMessages = await storageService.getCachedMessages(chatId);
+      
+      if (cachedMessages.length > 0) {
+        console.log(`Loaded ${cachedMessages.length} cached messages for chat ${chatId}`);
+        
+        // Set messages without triggering another cache save
+        set((state) => ({
+          messages: {
+            ...state.messages,
+            [chatId]: cachedMessages.sort((a, b) => {
+              const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toMillis();
+              const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toMillis();
+              return aTime - bTime;
+            }),
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading cached messages:', error);
+      // Don't throw - cached messages are not critical
+    }
+  },
+  
+  // Save messages to AsyncStorage
+  saveMessagesToCache: async (chatId) => {
+    try {
+      const state = get();
+      const messages = state.messages[chatId];
+      
+      if (messages && messages.length > 0) {
+        await storageService.cacheMessages(chatId, messages);
+      }
+    } catch (error) {
+      console.error('Error saving messages to cache:', error);
+      // Don't throw - caching is not critical
+    }
+  },
+  
+  // Process offline queue when connection is restored
+  processOfflineQueue: async () => {
+    try {
+      const queue = await storageService.getOfflineQueue();
+      
+      if (queue.length === 0) {
+        return;
+      }
+      
+      console.log(`Processing ${queue.length} messages from offline queue`);
+      
+      // Process each message in the queue
+      for (let i = 0; i < queue.length; i++) {
+        const item = queue[i];
+        const { chatId, message } = item;
+        
+        try {
+          // Try to send the message
+          const realMessageId = await chatService.sendMessage(
+            chatId,
+            message.text,
+            message.senderId
+          );
+          
+          // Update message in store with real ID
+          if (message.tempId) {
+            get().updateMessage(chatId, message.tempId, {
+              id: realMessageId,
+              pending: false,
+              failed: false,
+              tempId: undefined,
+            });
+          }
+          
+          // Remove from queue
+          await storageService.removeFromOfflineQueue(i);
+          console.log(`Successfully sent queued message for chat ${chatId}`);
+        } catch (error) {
+          console.error(`Failed to send queued message for chat ${chatId}:`, error);
+          // Keep in queue for next retry
+        }
+      }
+    } catch (error) {
+      console.error('Error processing offline queue:', error);
     }
   },
 }));

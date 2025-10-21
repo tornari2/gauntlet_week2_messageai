@@ -9,6 +9,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/stores/authStore';
 import { updateOnlineStatus } from './src/services/authService';
+import { ConnectionStatus } from './src/components/ConnectionStatus';
 
 export default function App(): React.ReactElement {
   const appState = useRef(AppState.currentState);
@@ -56,6 +57,7 @@ export default function App(): React.ReactElement {
 
   return (
     <>
+      <ConnectionStatus />
       <AppNavigator />
       <StatusBar style="auto" />
     </>
