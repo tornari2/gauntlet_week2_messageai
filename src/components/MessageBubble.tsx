@@ -6,16 +6,17 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Message } from '../types';
 import { formatBubbleTime } from '../utils/dateHelpers';
 
 interface MessageBubbleProps {
   message: Message;
   isSent: boolean;
+  onRetry?: () => void;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent, onRetry }) => {
   return (
     <View
       style={[
@@ -57,6 +58,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
             </Text>
           )}
         </View>
+        
+        {message.failed && onRetry && (
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={onRetry}
+            testID="retry-button"
+          >
+            <Text style={styles.retryText}>Tap to retry</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -126,6 +137,19 @@ const styles = StyleSheet.create({
   statusIcon: {
     fontSize: 12,
     color: '#F0F0F0',
+  },
+  retryButton: {
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  retryText: {
+    fontSize: 12,
+    color: '#FF0000',
+    fontWeight: '600',
   },
 });
 

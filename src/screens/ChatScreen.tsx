@@ -19,7 +19,6 @@ import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useMessageStore } from '../stores/messageStore';
 import { useAuthStore } from '../stores/authStore';
-import { chatService } from '../services/chatService';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageInput } from '../components/MessageInput';
 import { Message } from '../types';
@@ -37,6 +36,8 @@ export const ChatScreen: React.FC = () => {
   const {
     messages,
     loading,
+    sendMessageOptimistic,
+    retryMessage,
     subscribeToMessages,
     unsubscribeFromMessages,
   } = useMessageStore();
@@ -66,16 +67,31 @@ export const ChatScreen: React.FC = () => {
     if (!user) return;
     
     try {
-      await chatService.sendMessage(chatId, text, user.uid);
+      // Use optimistic sending - message appears instantly
+      await sendMessageOptimistic(chatId, text, user.uid);
     } catch (error) {
       console.error('Error sending message:', error);
-      // TODO: Show error toast in PR #5
+      // Message will show as failed, user can retry
+    }
+  };
+
+  const handleRetry = async (tempId: string) => {
+    try {
+      await retryMessage(chatId, tempId);
+    } catch (error) {
+      console.error('Error retrying message:', error);
     }
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isSent = item.senderId === user?.uid;
-    return <MessageBubble message={item} isSent={isSent} />;
+    return (
+      <MessageBubble 
+        message={item} 
+        isSent={isSent}
+        onRetry={item.failed && item.tempId ? () => handleRetry(item.tempId!) : undefined}
+      />
+    );
   };
 
   const renderEmpty = () => {
