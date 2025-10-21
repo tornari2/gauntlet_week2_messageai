@@ -131,7 +131,7 @@
 ## Blockers & Dependencies
 
 ### Current Blockers
-- None - online status working, ready for read receipts
+- None (read receipts complete, ready for message persistence)
 
 ### Items Needing Cleanup
 - Duplicate files in repo (`MessageBubble 2.tsx`, `MessageInput 2.tsx`, `messageStore 2.ts`, `dateHelpers 2.ts`, `firestore 2.rules`)
