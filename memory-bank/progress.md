@@ -2,13 +2,13 @@
 
 ## Project Status
 
-**Overall Progress:** 67% (Core Messaging + Enhanced + Persistence Complete)
+**Overall Progress:** 75% (Core Messaging + Enhanced + Persistence + Groups Complete)
 **Current Phase:** Advanced Features Development
 **Last Updated:** October 21, 2025
 
 ```
 Planning:        ████████████████████ 100% ✓
-Implementation:  █████████████░░░░░░░  67%
+Implementation:  ███████████████░░░░░  75%
 Testing:         ██░░░░░░░░░░░░░░░░░░  10%
 Deployment:      ░░░░░░░░░░░░░░░░░░░░   0%
 ```
@@ -228,44 +228,55 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 
 ---
 
-### Phase 8: Message Persistence (PR #8) 📋
-**Estimated Time:** 3-4 hours
-**Status:** Planned
-**Dependencies:** PR #5
-
-#### Planned Features
-- Firestore offline persistence
-- AsyncStorage caching
-- Offline message queue
-- Connection status indicator
-- Batch read operations
-
----
-
-### Phase 8: Message Persistence (PR #8) 📋
-**Estimated Time:** 3-4 hours
-**Status:** Planned
-**Dependencies:** PR #4
-
-#### Planned Features
-- Firestore offline persistence
-- AsyncStorage caching
-- Offline message queue
-- Connection status indicator
-
----
-
-### Phase 9: Group Chat (PR #9) 📋
+### Phase 9: Group Chat (PR #9) ✅
 **Estimated Time:** 5-6 hours
-**Status:** Planned
-**Dependencies:** PR #4, PR #7
+**Actual Time:** ~2 hours
+**Status:** Complete
+**Commit:** 0d80b65
 
-#### Planned Features
-- Create group chats
-- Multi-user selection
-- Group messaging
-- Sender names in messages
-- Group read receipts
+#### Completed Features
+- [x] Extended chatService with group functions (createGroupChat, addParticipant, removeParticipant)
+- [x] Created UserSelector component with multi-select and search
+- [x] Created CreateGroupScreen with participant selection workflow
+- [x] Updated ChatScreen to show group names, participant counts, sender names
+- [x] Updated MessageBubble to display sender names in group chats
+- [x] Updated ChatListItem with group indicators (👥 icon, participant count, darker color)
+- [x] Added "New Group" floating action button to ChatsListScreen
+- [x] Added CreateGroup route to navigation
+- [x] Real-time group messaging with all participants
+- [x] getUserDisplayNames batch function for efficient name loading
+
+#### Acceptance Criteria
+- [x] Users can create group chats with 2+ participants
+- [x] Group chats appear in chat list with group indicators
+- [x] Messages sent in groups reach all participants
+- [x] Sender names shown in group message bubbles
+- [x] Group avatar shows 👥 emoji
+- [x] Participant count displays in chat list and header
+- [x] Search functionality works in user selection
+- [x] Selected user chips display and are removable
+- [x] Validation prevents empty groups or missing names
+
+#### Files Created
+- `src/components/UserSelector.tsx` - Multi-select user list with search
+- `src/screens/CreateGroupScreen.tsx` - Group creation workflow
+- `PR9_SUMMARY.md` - Detailed implementation documentation
+
+#### Files Modified
+- `src/services/chatService.ts` - Added 5 new group-related functions
+- `src/screens/ChatScreen.tsx` - Group chat support (names, counts, sender display)
+- `src/components/MessageBubble.tsx` - Sender name display for groups
+- `src/components/ChatListItem.tsx` - Group indicators and styling
+- `src/screens/ChatsListScreen.tsx` - New Group FAB button
+- `src/navigation/AppNavigator.tsx` - CreateGroup route
+
+#### Key Learnings
+- Existing types already fully supported group chats
+- Batch operations (getUserDisplayNames) prevent N+1 queries
+- Optional props allow gradual feature additions
+- Conditional rendering based on chat.type keeps code clean
+- Chips UI pattern excellent for multi-select interfaces
+- Group avatar emoji (👥) better than placeholder images for MVP
 
 ---
 
@@ -330,23 +341,23 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 | PR #6 | 3-4h | ~3.5h | ✅ Complete |
 | PR #7 | 4-5h | ~4h | ✅ Complete |
 | PR #8 | 3-4h | ~3.5h | ✅ Complete |
-| PR #9 | 5-6h | - | 📋 Planned |
+| PR #9 | 5-6h | ~2h | ✅ Complete |
 | PR #10 | 4-5h | - | 📋 Planned |
 | PR #11 | 6-8h | - | 📋 Planned |
 | PR #12 | 2-3h | - | 📋 Planned |
-| **Total** | **49-62h** | **38h** | **61%** |
+| **Total** | **49-62h** | **40h** | **65%** |
 
 ### Feature Completion
-- Core Features: 7/10 (70%)
+- Core Features: 8/10 (80%)
 - Enhanced Features: 3/3 (100%)
 - Polish & Testing: 0/1 (0%)
 - Documentation: 3/3 (100%)
 
 ### Code Metrics
-- Total Files: 23 source files + 8 test files
-- Lines of Code: ~2700+ LOC (added ~180 for PR #8)
+- Total Files: 25 source files + 8 test files
+- Lines of Code: ~3,100+ LOC (added ~400 for PR #9)
 - Test Coverage: ~10% (basic tests configured)
-- PRs Merged: 8/12 (67%)
+- PRs Merged: 9/12 (75%)
 
 ---
 
@@ -400,6 +411,13 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 ## Recent Accomplishments
 
 ### October 21, 2025
+- ✅ Completed PR #9: Group Chat
+- ✅ Created UserSelector component with multi-select and search
+- ✅ Built CreateGroupScreen with participant selection workflow
+- ✅ Extended chatService with 5 group-related functions
+- ✅ Updated UI components for group indicators and sender names
+- ✅ Added "New Group" floating action button
+- ✅ Full real-time group messaging working
 - ✅ Completed PR #8: Message Persistence
 - ✅ Implemented AsyncStorage caching for instant message display
 - ✅ Created offline message queue with auto-retry
@@ -443,17 +461,17 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 ## Upcoming Work
 
 ### Next 3 Days
-- Day 1: Start PR #9 (Group Chat)
-- Day 2: Complete PR #9, start PR #10 (Push Notifications)
-- Day 3: Complete PR #10, start PR #11 (User Profile)
+- Day 1: Start PR #10 (Push Notifications)
+- Day 2: Complete PR #10, start PR #11 (UI Polish & Testing)
+- Day 3: Complete PR #11, start PR #12 (Deployment)
 
 ### This Week
 - Foundation: PRs #1-2 ✅
 - Core Messaging: PRs #3-5 ✅
-- Enhanced Features: PRs #6-8 ✅
+- Enhanced Features: PRs #6-9 ✅
 
 ### Next Week
-- Remaining Features: PRs #9-10
+- Remaining Features: PR #10
 - Polish & Deploy: PRs #11-12
 - Testing & Bug Fixes
 
@@ -462,7 +480,7 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 ## Blockers & Risks
 
 ### Current Blockers
-- None (message persistence complete, ready for group chat)
+- None (group chat complete, ready for push notifications)
 
 ### Identified Risks
 1. **Firebase Free Tier Limits** - May hit limits during heavy testing
@@ -555,6 +573,11 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 18. **AsyncStorage complements Firestore** - Provides instant display while Firestore syncs in background
 19. **Cache failures shouldn't crash** - Caching is enhancement, not critical path
 20. **NetInfo works perfectly** - Reliable connection state monitoring for offline handling
+21. **Existing types can support future features** - Chat type already had group support built in
+22. **Batch operations prevent N+1 queries** - getUserDisplayNames loads all names at once
+23. **Optional props enable gradual features** - senderName prop added without breaking existing code
+24. **Conditional rendering by chat.type** - Clean way to handle direct vs group differences
+25. **Chips UI pattern for multi-select** - Intuitive way to show selected items with removal
 
 ---
 
@@ -582,14 +605,14 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 ## Quick Reference
 
 ### Current Sprint Goals
-Week 1: Complete MVP (PRs 1-12) - 67% Complete
+Week 1: Complete MVP (PRs 1-12) - 75% Complete
 
 ### Current Status
-PRs #1-8: Complete ✅
-Currently working on: PR #9 (Group Chat)
+PRs #1-9: Complete ✅
+Currently working on: PR #10 (Push Notifications)
 
 ### Next PR
-PR #9: Group Chat (group creation, multi-user messaging)
+PR #10: Push Notifications (expo-notifications, permission handling, deep linking)
 
 ### Documentation
 - Architecture: `ARCHITECTURE.md`
@@ -611,5 +634,5 @@ npx tsc --noEmit
 ---
 
 **Last Updated:** October 21, 2025
-**Next Update:** After completing PR #6
+**Next Update:** After completing PR #10
 
