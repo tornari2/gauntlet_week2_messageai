@@ -330,6 +330,170 @@ export async function markMessagesAsRead(
   }
 }
 
+/**
+ * Create a new group chat
+ * @param creatorId - The creator's user ID
+ * @param participantIds - Array of participant user IDs (excluding creator)
+ * @param groupName - The name of the group
+ * @returns Chat ID
+ */
+export async function createGroupChat(
+  creatorId: string,
+  participantIds: string[],
+  groupName: string
+): Promise<string> {
+  try {
+    // Add creator to participants list
+    const allParticipants = [creatorId, ...participantIds];
+    
+    // Create new group chat
+    const newChatRef = doc(collection(firestore, 'chats'));
+    const newChat: Omit<Chat, 'id'> = {
+      type: 'group',
+      participants: allParticipants,
+      lastMessage: '',
+      lastMessageTime: serverTimestamp() as Timestamp,
+      createdAt: serverTimestamp() as Timestamp,
+      groupName,
+      // groupPhoto can be added later
+    };
+    
+    await setDoc(newChatRef, newChat);
+    
+    return newChatRef.id;
+  } catch (error) {
+    console.error('Error creating group chat:', error);
+    throw new Error('Failed to create group chat');
+  }
+}
+
+/**
+ * Add a participant to an existing group chat
+ * @param chatId - The chat ID
+ * @param userId - The user ID to add
+ */
+export async function addParticipant(
+  chatId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const chatRef = doc(firestore, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+    
+    if (!chatSnap.exists()) {
+      throw new Error('Chat not found');
+    }
+    
+    const chatData = chatSnap.data() as Chat;
+    
+    if (chatData.type !== 'group') {
+      throw new Error('Can only add participants to group chats');
+    }
+    
+    // Check if user is already a participant
+    if (chatData.participants.includes(userId)) {
+      return; // Already a participant
+    }
+    
+    // Add user to participants array
+    await updateDoc(chatRef, {
+      participants: [...chatData.participants, userId],
+    });
+  } catch (error) {
+    console.error('Error adding participant:', error);
+    throw new Error('Failed to add participant');
+  }
+}
+
+/**
+ * Remove a participant from a group chat
+ * @param chatId - The chat ID
+ * @param userId - The user ID to remove
+ */
+export async function removeParticipant(
+  chatId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const chatRef = doc(firestore, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+    
+    if (!chatSnap.exists()) {
+      throw new Error('Chat not found');
+    }
+    
+    const chatData = chatSnap.data() as Chat;
+    
+    if (chatData.type !== 'group') {
+      throw new Error('Can only remove participants from group chats');
+    }
+    
+    // Remove user from participants array
+    const updatedParticipants = chatData.participants.filter(id => id !== userId);
+    
+    // Don't allow removing the last participant
+    if (updatedParticipants.length === 0) {
+      throw new Error('Cannot remove the last participant from a group');
+    }
+    
+    await updateDoc(chatRef, {
+      participants: updatedParticipants,
+    });
+  } catch (error) {
+    console.error('Error removing participant:', error);
+    throw new Error('Failed to remove participant');
+  }
+}
+
+/**
+ * Get chat details by ID
+ * @param chatId - The chat ID
+ * @returns Chat object
+ */
+export async function getChatById(chatId: string): Promise<Chat | null> {
+  try {
+    const chatRef = doc(firestore, 'chats', chatId);
+    const chatSnap = await getDoc(chatRef);
+    
+    if (chatSnap.exists()) {
+      return {
+        id: chatSnap.id,
+        ...chatSnap.data(),
+      } as Chat;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching chat:', error);
+    throw new Error('Failed to fetch chat');
+  }
+}
+
+/**
+ * Get multiple users' display names
+ * @param userIds - Array of user IDs
+ * @returns Record of userId -> displayName
+ */
+export async function getUserDisplayNames(
+  userIds: string[]
+): Promise<Record<string, string>> {
+  try {
+    const names: Record<string, string> = {};
+    
+    await Promise.all(
+      userIds.map(async (userId) => {
+        const name = await getUserDisplayName(userId);
+        names[userId] = name;
+      })
+    );
+    
+    return names;
+  } catch (error) {
+    console.error('Error fetching user display names:', error);
+    return {};
+  }
+}
+
 export const chatService = {
   subscribeToUserChats,
   getChatParticipants,
@@ -337,5 +501,10 @@ export const chatService = {
   sendMessage,
   subscribeToMessages,
   markMessagesAsRead,
+  createGroupChat,
+  addParticipant,
+  removeParticipant,
+  getChatById,
+  getUserDisplayNames,
 };
 

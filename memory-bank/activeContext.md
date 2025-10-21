@@ -1,11 +1,18 @@
 # Active Context: WhatsApp Clone MVP
 
 ## Current Status
-**Phase:** Advanced Features - Message Persistence Complete
+**Phase:** Advanced Features - Group Chat Complete
 **Date Updated:** October 21, 2025
-**Next Action:** Begin PR #9 - Group Chat
+**Next Action:** Begin PR #10 - Push Notifications
 
 ## What We're Working On
+
+### Recently Completed: PR #9 ✅
+**Group Chat - COMPLETE**
+- Objective: Implement group chat functionality with participant management
+- Actual Time: ~2 hours
+- Status: Complete and ready for testing
+- Features: Create groups, send messages, sender names, group indicators
 
 ### Recently Completed: PR #8 ✅
 **Message Persistence - COMPLETE**
@@ -42,7 +49,7 @@
 - Status: Complete with bug fixes
 - Commits: 31945c1, f36fdf1, 6acb029
 
-### Key Accomplishments from PR #1-8:
+### Key Accomplishments from PR #1-9:
 1. ✅ **Project Foundation** - Expo + Firebase + TypeScript setup
 2. ✅ **Authentication** - Signup/Login with Firestore user profiles
 3. ✅ **Chat List** - Real-time chat list with navigation
@@ -52,12 +59,14 @@
 7. ✅ **Online Status** - Real-time presence tracking with last seen
 8. ✅ **Read Receipts** - WhatsApp-style checkmarks and unread badges
 9. ✅ **Message Persistence** - AsyncStorage caching and offline queue
-10. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
+10. ✅ **Group Chat** - Create groups, multi-participant messaging, sender names
+11. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
 
 ### Current Working Features:
 - ✅ User signup and login
 - ✅ Viewing list of chats
 - ✅ Creating new chats with any user
+- ✅ Creating group chats with multiple users
 - ✅ Sending and receiving messages in real-time
 - ✅ Optimistic message updates (instant send)
 - ✅ Message status indicators (pending, sent, failed)
@@ -74,35 +83,36 @@
 - ✅ Offline message queue with auto-retry
 - ✅ Connection status banner
 - ✅ Proper display names in chat list
+- ✅ Group chat indicators (icon, participant count)
+- ✅ Sender names in group messages
+- ✅ Multi-select user interface with search
 - ✅ Message timestamps
 - ✅ Firestore security rules
 
 ### Immediate Next Steps
 
-**PR #9: Group Chat (Recommended Next)**
-1. **Extend Chat Service for Groups**
-   - Add createGroupChat() function
-   - Update message sending for multiple participants
-   - Add participant management functions
+**PR #10: Push Notifications (Recommended Next)**
+1. **Install Notification Dependencies**
+   - expo-notifications
+   - expo-device
    
-2. **Create UserSelector Component**
-   - Multi-select user list
-   - Search functionality
-   - Selected user chips
+2. **Create Notification Service**
+   - Request permissions
+   - Get Expo push token
+   - Store token in Firestore
    
-3. **Create CreateGroupScreen**
-   - Select participants
-   - Enter group name
-   - Create button
+3. **Set Up Notification Handlers**
+   - Foreground notifications
+   - Notification tap handling
+   - Deep linking to chats
    
-4. **Update ChatScreen for Groups**
-   - Show sender names in bubbles
-   - Show group name in header
-   - Different read receipt display
+4. **Integrate in App.tsx**
+   - Register on mount
+   - Set up listeners
    
-5. **Update ChatListItem for Groups**
-   - Show group indicator
-   - Show participant count
+5. **Optional: Cloud Function**
+   - Trigger on new message
+   - Send push via Expo API
 
 ## Recent Decisions
 
@@ -153,7 +163,7 @@
 ## Blockers & Dependencies
 
 ### Current Blockers
-- None (message persistence complete, ready for group chat)
+- None (group chat complete, ready for push notifications)
 
 ### Items Needing Cleanup
 - Duplicate files in repo (`MessageBubble 2.tsx`, `MessageInput 2.tsx`, `messageStore 2.ts`, `dateHelpers 2.ts`, `firestore 2.rules`)
@@ -161,9 +171,9 @@
 - Uncommitted changes in working directory
 
 ### Upcoming Dependencies
-- **PR #9 (Group Chat)** - Depends on PR #4 ✅, PR #7 ✅ (both complete)
 - **PR #10 (Push Notifications)** - Depends on PR #4 ✅ (complete)
 - **PR #11 (User Profile)** - Depends on PR #2 ✅ (complete)
+- **PR #12 (UI Polish)** - Depends on all previous PRs
 
 ## Questions to Resolve
 
@@ -191,16 +201,16 @@
 ### When Starting New Work Session
 **Quick Context:**
 - Project: WhatsApp clone MVP with React Native + Expo + Firebase
-- Current Status: **PRs #1-8 complete** ✅
-- Core messaging with optimistic updates, presence, read receipts, and persistence working
-- Ready for: Group Chat (PR #9)
+- Current Status: **PRs #1-9 complete** ✅
+- Core messaging with optimistic updates, presence, read receipts, persistence, and groups working
+- Ready for: Push Notifications (PR #10)
 - Reference: `IMPLEMENTATION_PLAN.md` for detailed tasks
 - Reference: `ARCHITECTURE.md` for system design
 
 **Files to Review:**
-- `memory-bank/progress.md` - See what's been completed (67% done)
-- `IMPLEMENTATION_PLAN.md` - PR #9 tasks (next)
-- PR summaries: `PR4_SUMMARY.md`, `PR5_SUMMARY.md`, `PR6_SUMMARY.md`, `PR7_SUMMARY.md`, `PR8_SUMMARY.md`
+- `memory-bank/progress.md` - See what's been completed (75% done)
+- `IMPLEMENTATION_PLAN.md` - PR #10 tasks (next)
+- PR summaries: `PR4_SUMMARY.md`, `PR5_SUMMARY.md`, `PR6_SUMMARY.md`, `PR7_SUMMARY.md`, `PR8_SUMMARY.md`, `PR9_SUMMARY.md`
 - Bug fix docs: `BUG_FIXES.md`, `FIX_UNKNOWN_USER.md`, `UI_CHANGES.md`
 
 ### When Implementing Features
@@ -280,22 +290,24 @@ Less effective: "Make the messaging work"
 - [x] Complete PR #6 (Online status)
 - [x] Complete PR #7 (Read receipts)
 - [x] Complete PR #8 (Message persistence)
+- [x] Complete PR #9 (Group chat)
 - [x] Fix critical bugs (undefined values, display names)
 - [x] Test on physical devices
 - [x] Commit PRs #6, #7, and #8 to git
 - [x] Push to GitHub
 - [x] Update memory bank
-- [ ] Decide: PR #9 (Group chat) or PR #10 (Push notifications) next
+- [ ] Decide: PR #10 (Push notifications) or PR #11 (User profile) next
 
 ### This Week's Goals (Updated)
-- [x] PRs 1-8 complete (setup, auth, chat list, messaging, optimistic updates, online status, read receipts, persistence) ✅
+- [x] PRs 1-9 complete (setup, auth, chat list, messaging, optimistic updates, online status, read receipts, persistence, groups) ✅
 - [x] Basic one-on-one chat working ✅
 - [x] Real-time message delivery functional ✅
 - [x] Instant message sending (optimistic UI) ✅
 - [x] Real-time presence tracking ✅
 - [x] Read receipts with checkmarks ✅
 - [x] Message persistence with offline support ✅
-- [ ] Start PR #9 (Group chat) or PR #10 (Push notifications)
+- [x] Group chat functionality complete ✅
+- [ ] Start PR #10 (Push notifications) or PR #11 (User profile)
 
 ### Original Sprint Goal
 - [ ] MVP feature-complete (PRs 1-12)
@@ -303,7 +315,7 @@ Less effective: "Make the messaging work"
 - [ ] Deployed to Expo Go
 - [ ] Manual testing checklist complete
 
-**Progress: 67% (8/12 PRs complete)**
+**Progress: 75% (9/12 PRs complete)**
 
 ## Notes & Reminders
 
@@ -339,11 +351,11 @@ npx tsc --noEmit
 ## Next Session Prep
 
 ### Before Starting Next Session
-1. Review this file for current status (PRs #1-8 complete ✅)
-2. Check `progress.md` for completed items (67% done)
-3. Review PR #9 in `IMPLEMENTATION_PLAN.md` (Group Chat)
-4. Review `PR8_SUMMARY.md` for message persistence implementation
-5. Consider testing persistence on multiple devices
+1. Review this file for current status (PRs #1-9 complete ✅)
+2. Check `progress.md` for completed items (75% done)
+3. Review PR #10 in `IMPLEMENTATION_PLAN.md` (Push Notifications)
+4. Review `PR9_SUMMARY.md` for group chat implementation
+5. Consider testing group chat on multiple devices
 
 ### To Update After Session
 - Update "Current Focus" section with new work

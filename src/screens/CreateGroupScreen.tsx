@@ -1,0 +1,216 @@
+/**
+ * CreateGroupScreen
+ * 
+ * Allows users to create a group chat by selecting participants and entering a group name
+ */
+
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { UserSelector } from '../components/UserSelector';
+import { chatService } from '../services/chatService';
+import { useAuthStore } from '../stores/authStore';
+
+type RootStackParamList = {
+  ChatsListScreen: undefined;
+  ChatScreen: { chatId: string };
+  CreateGroupScreen: undefined;
+};
+
+type CreateGroupScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'CreateGroupScreen'
+>;
+
+interface Props {
+  navigation: CreateGroupScreenNavigationProp;
+}
+
+export function CreateGroupScreen({ navigation }: Props) {
+  const currentUser = useAuthStore((state) => state.user);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleCreateGroup = async () => {
+    // Validation
+    if (selectedUserIds.length === 0) {
+      Alert.alert('Error', 'Please select at least one participant');
+      return;
+    }
+
+    if (groupName.trim().length === 0) {
+      Alert.alert('Error', 'Please enter a group name');
+      return;
+    }
+
+    if (!currentUser) {
+      Alert.alert('Error', 'You must be logged in to create a group');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Create the group chat
+      const chatId = await chatService.createGroupChat(
+        currentUser.uid,
+        selectedUserIds,
+        groupName.trim()
+      );
+
+      // Navigate to the new group chat
+      navigation.replace('ChatScreen', { chatId });
+    } catch (error) {
+      console.error('Error creating group:', error);
+      Alert.alert('Error', 'Failed to create group. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const canCreate = selectedUserIds.length > 0 && groupName.trim().length > 0;
+
+  if (!currentUser) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Please log in to create a group</Text>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <View style={styles.header}>
+        <Text style={styles.headerText}>New Group</Text>
+        <Text style={styles.headerSubtext}>
+          {selectedUserIds.length} participant{selectedUserIds.length !== 1 ? 's' : ''} selected
+        </Text>
+      </View>
+
+      {/* Group name input */}
+      <View style={styles.groupNameContainer}>
+        <TextInput
+          style={styles.groupNameInput}
+          placeholder="Group Name"
+          value={groupName}
+          onChangeText={setGroupName}
+          maxLength={50}
+          testID="group-name-input"
+        />
+      </View>
+
+      {/* User selector */}
+      <View style={styles.selectorContainer}>
+        <UserSelector
+          currentUserId={currentUser.uid}
+          selectedUserIds={selectedUserIds}
+          onSelectionChange={setSelectedUserIds}
+        />
+      </View>
+
+      {/* Create button */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[
+            styles.createButton,
+            (!canCreate || loading) && styles.createButtonDisabled,
+          ]}
+          onPress={handleCreateGroup}
+          disabled={!canCreate || loading}
+          testID="create-group-button"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.createButtonText}>Create Group</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#999',
+  },
+  header: {
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 4,
+  },
+  headerSubtext: {
+    fontSize: 14,
+    color: '#666',
+  },
+  groupNameContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  groupNameInput: {
+    height: 44,
+    fontSize: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+  },
+  selectorContainer: {
+    flex: 1,
+  },
+  buttonContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  createButton: {
+    backgroundColor: '#25D366',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  createButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+

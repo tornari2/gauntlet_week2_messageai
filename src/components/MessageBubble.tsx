@@ -15,13 +15,15 @@ interface MessageBubbleProps {
   isSent: boolean;
   onRetry?: () => void;
   participants?: string[]; // Chat participants for read receipt logic
+  senderName?: string; // Display name for group chats
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ 
   message, 
   isSent, 
   onRetry,
-  participants = []
+  participants = [],
+  senderName
 }) => {
   // Determine read receipt status
   const getReadReceiptIcon = () => {
@@ -86,6 +88,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           message.failed && styles.failedBubble,
         ]}
       >
+        {/* Show sender name for group chats on received messages */}
+        {!isSent && senderName && (
+          <Text style={styles.senderName}>{senderName}</Text>
+        )}
+        
         <Text
           style={[
             styles.text,
@@ -176,6 +183,12 @@ const styles = StyleSheet.create({
   },
   receivedText: {
     color: '#000000',
+  },
+  senderName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#25D366',
+    marginBottom: 4,
   },
   metaContainer: {
     flexDirection: 'row',

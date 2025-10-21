@@ -81,9 +81,12 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
     >
       {/* Avatar placeholder */}
       <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
+        <View style={[
+          styles.avatar,
+          chat.type === 'group' && styles.groupAvatar
+        ]}>
           <Text style={styles.avatarText}>
-            {getChatName().charAt(0).toUpperCase()}
+            {chat.type === 'group' ? '👥' : getChatName().charAt(0).toUpperCase()}
           </Text>
         </View>
         {/* Online indicator for direct chats */}
@@ -101,9 +104,16 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
       {/* Chat info */}
       <View style={styles.contentContainer}>
         <View style={styles.headerRow}>
-          <Text style={styles.chatName} numberOfLines={1}>
-            {getChatName()}
-          </Text>
+          <View style={styles.nameContainer}>
+            <Text style={styles.chatName} numberOfLines={1}>
+              {getChatName()}
+            </Text>
+            {chat.type === 'group' && (
+              <Text style={styles.participantCount}>
+                ({chat.participants.length})
+              </Text>
+            )}
+          </View>
           <Text style={styles.timestamp}>
             {formatTimestamp(chat.lastMessageTime)}
           </Text>
@@ -146,6 +156,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  groupAvatar: {
+    backgroundColor: '#128C7E', // Darker green for groups
+  },
   avatarText: {
     color: '#fff',
     fontSize: 24,
@@ -166,11 +179,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   chatName: {
     fontSize: 17,
     fontWeight: '600',
     color: '#000',
-    flex: 1,
+  },
+  participantCount: {
+    fontSize: 13,
+    color: '#8e8e93',
+    marginLeft: 4,
   },
   timestamp: {
     fontSize: 13,

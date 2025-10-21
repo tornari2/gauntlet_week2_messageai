@@ -1,0 +1,318 @@
+/**
+ * UserSelector Component
+ * 
+ * Multi-select user list with search functionality and selected user chips
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
+import { collection, getDocs } from 'firebase/firestore';
+import { firestore } from '../services/firebase';
+import { User } from '../types';
+
+interface UserSelectorProps {
+  currentUserId: string;
+  selectedUserIds: string[];
+  onSelectionChange: (userIds: string[]) => void;
+  excludeUserIds?: string[];
+}
+
+export function UserSelector({
+  currentUserId,
+  selectedUserIds,
+  onSelectionChange,
+  excludeUserIds = [],
+}: UserSelectorProps) {
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  useEffect(() => {
+    // Filter users based on search query
+    if (searchQuery.trim() === '') {
+      setFilteredUsers(allUsers);
+    } else {
+      const query = searchQuery.toLowerCase();
+      setFilteredUsers(
+        allUsers.filter((user) =>
+          user.displayName.toLowerCase().includes(query) ||
+          user.email.toLowerCase().includes(query)
+        )
+      );
+    }
+  }, [searchQuery, allUsers]);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const usersRef = collection(firestore, 'users');
+      const usersSnapshot = await getDocs(usersRef);
+      
+      const users: User[] = [];
+      usersSnapshot.forEach((doc) => {
+        const userData = doc.data() as User;
+        // Exclude current user and any other excluded users
+        if (
+          userData.uid !== currentUserId &&
+          !excludeUserIds.includes(userData.uid)
+        ) {
+          users.push(userData);
+        }
+      });
+      
+      // Sort by display name
+      users.sort((a, b) => a.displayName.localeCompare(b.displayName));
+      
+      setAllUsers(users);
+      setFilteredUsers(users);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    if (selectedUserIds.includes(userId)) {
+      onSelectionChange(selectedUserIds.filter((id) => id !== userId));
+    } else {
+      onSelectionChange([...selectedUserIds, userId]);
+    }
+  };
+
+  const renderUserItem = ({ item }: { item: User }) => {
+    const isSelected = selectedUserIds.includes(item.uid);
+
+    return (
+      <TouchableOpacity
+        style={[styles.userItem, isSelected && styles.userItemSelected]}
+        onPress={() => toggleUserSelection(item.uid)}
+        testID={`user-item-${item.uid}`}
+      >
+        <View style={styles.userInfo}>
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarText}>
+              {item.displayName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={styles.userName}>{item.displayName}</Text>
+            <Text style={styles.userEmail}>{item.email}</Text>
+          </View>
+        </View>
+        {isSelected && (
+          <View style={styles.checkmark}>
+            <Text style={styles.checkmarkText}>✓</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSelectedUserChip = (userId: string) => {
+    const user = allUsers.find((u) => u.uid === userId);
+    if (!user) return null;
+
+    return (
+      <View key={userId} style={styles.chip}>
+        <Text style={styles.chipText}>{user.displayName}</Text>
+        <TouchableOpacity
+          onPress={() => toggleUserSelection(userId)}
+          style={styles.chipRemove}
+          testID={`remove-chip-${userId}`}
+        >
+          <Text style={styles.chipRemoveText}>×</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#25D366" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Selected user chips */}
+      {selectedUserIds.length > 0 && (
+        <View style={styles.chipsContainer}>
+          {selectedUserIds.map(renderSelectedUserChip)}
+        </View>
+      )}
+
+      {/* Search input */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search users..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          testID="user-search-input"
+        />
+      </View>
+
+      {/* User list */}
+      <FlatList
+        data={filteredUsers}
+        renderItem={renderUserItem}
+        keyExtractor={(item) => item.uid}
+        contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {searchQuery ? 'No users found' : 'No users available'}
+            </Text>
+          </View>
+        }
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#25D366',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  chipText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  chipRemove: {
+    marginLeft: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chipRemoveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  searchContainer: {
+    padding: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchInput: {
+    height: 40,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    fontSize: 16,
+  },
+  listContainer: {
+    paddingVertical: 8,
+  },
+  userItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  userItemSelected: {
+    backgroundColor: '#f0f9f4',
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#25D366',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 2,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#666',
+  },
+  checkmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#25D366',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmarkText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+  },
+});
+

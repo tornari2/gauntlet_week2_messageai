@@ -107,6 +107,15 @@ export const ChatsListScreen: React.FC = () => {
         }}
       />
 
+      {/* Floating action button for creating new group */}
+      <TouchableOpacity
+        style={[styles.fab, styles.fabSecondary]}
+        onPress={() => navigation.navigate('CreateGroup')}
+        testID="new-group-button"
+      >
+        <Text style={styles.fabText}>👥</Text>
+      </TouchableOpacity>
+
       {/* Floating action button for creating new chats */}
       <TouchableOpacity
         style={styles.fab}
@@ -201,11 +210,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
   },
+  fabSecondary: {
+    bottom: 90, // Position above the main FAB
+    backgroundColor: '#128C7E', // Darker green
+  },
   fabIcon: {
     fontSize: 32,
     color: '#fff',
     fontWeight: '300',
     lineHeight: 32,
+  },
+  fabText: {
+    fontSize: 24,
+    color: '#fff',
   },
 });
 

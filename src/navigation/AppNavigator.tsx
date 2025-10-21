@@ -13,6 +13,7 @@ import { SignupScreen } from '../screens/SignupScreen';
 import { ChatsListScreen } from '../screens/ChatsListScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { NewChatScreen } from '../screens/NewChatScreen';
+import { CreateGroupScreen } from '../screens/CreateGroupScreen';
 
 // Type definitions for navigation
 export type AuthStackParamList = {
@@ -23,6 +24,7 @@ export type AuthStackParamList = {
 export type MainStackParamList = {
   ChatsList: undefined;
   NewChat: undefined;
+  CreateGroup: undefined;
   Chat: {
     chatId: string;
     chatName: string;
@@ -66,6 +68,11 @@ const MainStack = () => {
         name="NewChat"
         component={NewChatScreen}
         options={{ title: 'New Chat' }}
+      />
+      <Stack.Screen
+        name="CreateGroup"
+        component={CreateGroupScreen}
+        options={{ title: 'Create Group' }}
       />
       <Stack.Screen
         name="Chat"

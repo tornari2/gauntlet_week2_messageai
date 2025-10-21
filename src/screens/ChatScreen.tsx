@@ -38,6 +38,7 @@ export const ChatScreen: React.FC = () => {
   const flatListRef = useRef<FlatList<Message>>(null);
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [participants, setParticipants] = useState<string[]>([]);
+  const [senderNames, setSenderNames] = useState<Record<string, string>>({});
   
   const { user } = useAuthStore();
   const { chats } = useChatStore();
@@ -55,11 +56,19 @@ export const ChatScreen: React.FC = () => {
 
   // Get the current chat to find the other user
   const currentChat = chats.find(c => c.id === chatId);
+  const isGroupChat = currentChat?.type === 'group';
   
-  // Get chat participants
+  // Get chat participants and their names
   useEffect(() => {
     if (currentChat) {
       setParticipants(currentChat.participants);
+      
+      // Load sender names for group chats
+      if (currentChat.type === 'group') {
+        chatService.getUserDisplayNames(currentChat.participants)
+          .then(names => setSenderNames(names))
+          .catch(err => console.error('Error loading sender names:', err));
+      }
     }
   }, [currentChat]);
   
@@ -166,11 +175,14 @@ export const ChatScreen: React.FC = () => {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isSent = item.senderId === user?.uid;
+    const senderName = isGroupChat && !isSent ? senderNames[item.senderId] : undefined;
+    
     return (
       <MessageBubble 
         message={item} 
         isSent={isSent}
         participants={participants}
+        senderName={senderName}
         onRetry={item.failed && item.tempId ? () => handleRetry(item.tempId!) : undefined}
       />
     );
@@ -206,8 +218,14 @@ export const ChatScreen: React.FC = () => {
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{chatName}</Text>
-          {otherUser && (
+          <Text style={styles.headerTitle}>
+            {isGroupChat ? currentChat?.groupName : chatName}
+          </Text>
+          {isGroupChat ? (
+            <Text style={styles.participantCount}>
+              {participants.length} participant{participants.length !== 1 ? 's' : ''}
+            </Text>
+          ) : otherUser ? (
             <View style={styles.presenceContainer}>
               <OnlineIndicator 
                 isOnline={otherUser.isOnline}
@@ -216,7 +234,7 @@ export const ChatScreen: React.FC = () => {
                 size="small"
               />
             </View>
-          )}
+          ) : null}
         </View>
         <View style={styles.headerRight} />
       </View>
@@ -280,6 +298,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   presenceContainer: {
+    marginTop: 2,
+  },
+  participantCount: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
   },
   headerRight: {
