@@ -16,7 +16,7 @@ import { NotificationData } from '../components/NotificationBanner';
  */
 export async function registerForLocalNotifications(): Promise<boolean> {
   try {
-    // Check existing permissions
+    // Check existing permissions (this might fail on emulator)
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -28,7 +28,7 @@ export async function registerForLocalNotifications(): Promise<boolean> {
 
     // Check if permission was granted
     if (finalStatus !== 'granted') {
-      console.log('Failed to get notification permissions!');
+      // Silently fail - user can still use in-app banners
       return false;
     }
 
@@ -46,7 +46,8 @@ export async function registerForLocalNotifications(): Promise<boolean> {
     console.log('✅ Local notifications registered successfully');
     return true;
   } catch (error) {
-    console.error('Error registering for local notifications:', error);
+    // Silently fail on emulators or when notifications aren't available
+    // In-app banners will still work
     return false;
   }
 }

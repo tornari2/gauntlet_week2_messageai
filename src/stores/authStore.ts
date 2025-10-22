@@ -74,16 +74,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
    */
   login: async (email: string, password: string) => {
     try {
-      set({ loading: true, error: null });
+      // DON'T set global loading state - it causes AppNavigator to unmount the LoginScreen
+      // The LoginScreen uses its own localLoading state
+      set({ error: null });
       
       const user = await authService.signIn(email, password);
       
-      set({ user, loading: false });
+      set({ user });
     } catch (error) {
       // Don't log error here - it's handled in the UI
       set({ 
-        error: error as Error, 
-        loading: false 
+        error: error as Error
       });
       throw error; // Re-throw so UI can handle it
     }
@@ -94,16 +95,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
    */
   signup: async (email: string, password: string, displayName: string) => {
     try {
-      set({ loading: true, error: null });
+      // DON'T set global loading state - it causes AppNavigator to unmount the SignupScreen
+      // The SignupScreen uses its own localLoading state
+      set({ error: null });
       
       const user = await authService.signUp(email, password, displayName);
       
-      set({ user, loading: false });
+      set({ user });
     } catch (error) {
       // Don't log error here - it's handled in the UI
       set({ 
-        error: error as Error, 
-        loading: false 
+        error: error as Error
       });
       throw error; // Re-throw so UI can handle it
     }

@@ -130,6 +130,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             keyboardType="email-address"
             editable={!localLoading}
             testID="email-input"
+            autoComplete="off"
+            textContentType="none"
           />
 
           <TextInput
@@ -142,6 +144,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             autoCapitalize="none"
             editable={!localLoading}
             testID="password-input"
+            autoComplete="off"
+            textContentType="none"
           />
 
           <TouchableOpacity

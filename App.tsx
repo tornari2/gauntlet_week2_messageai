@@ -73,11 +73,10 @@ export default function App(): React.ReactElement {
       const granted = await registerForLocalNotifications();
       if (granted) {
         console.log('✅ Local notifications registered');
-      } else {
-        console.log('❌ Local notification permissions denied');
       }
+      // Silently fail if not granted - in-app banners will still work
     } catch (error) {
-      console.error('Error registering for local notifications:', error);
+      // Silently fail - notifications are optional, in-app banners will work
     }
   };
 
