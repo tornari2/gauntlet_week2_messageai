@@ -101,11 +101,16 @@ export function subscribeToUserChats(
             
             // Subscribe to this user's status changes if not already subscribed
             if (!userStatusUnsubscribers.has(otherUserId)) {
+              console.log(`👂 Setting up status subscription for user:`, otherUserId);
               const userStatusUnsubscribe = onSnapshot(
                 doc(firestore, 'users', otherUserId),
                 (userDoc) => {
                   if (userDoc.exists()) {
                     const userData = userDoc.data();
+                    console.log(`📡 Status update received for user ${otherUserId}:`, {
+                      isOnline: userData.isOnline,
+                      lastSeen: userData.lastSeen
+                    });
                     // Update this user's status in all chats
                     latestChats = latestChats.map(chat => {
                       if (chat.type === 'direct' && chat.participants.includes(otherUserId)) {
@@ -117,6 +122,7 @@ export function subscribeToUserChats(
                       }
                       return chat;
                     });
+                    console.log(`🔄 Updating chat list with new status for ${otherUserId}`);
                     onChatsUpdate([...latestChats]);
                   }
                 },

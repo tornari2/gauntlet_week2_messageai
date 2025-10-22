@@ -212,13 +212,17 @@ export const signOut = async (): Promise<void> => {
     const currentUser = auth.currentUser;
     
     if (currentUser) {
+      console.log('🚪 Signing out user:', currentUser.uid);
       // Update online status before signing out
       // Import dynamically to avoid circular dependencies
       const { setUserOffline } = await import('./presenceService');
+      console.log('📴 Setting user offline before sign out...');
       await setUserOffline(currentUser.uid);
+      console.log('✅ User set to offline, proceeding with sign out');
     }
 
     await firebaseSignOut(auth);
+    console.log('✅ Firebase sign out complete');
   } catch (error) {
     console.error('Sign out error:', error);
     throw new AppError(

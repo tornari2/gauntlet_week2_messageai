@@ -154,10 +154,15 @@ export const setUserOffline = async (userId: string): Promise<void> => {
   };
 
   try {
+    console.log('📴 setUserOffline called for user:', userId);
+    
     // Set offline in Realtime Database
+    console.log('⏳ Updating Realtime Database...');
     await set(userStatusDatabaseRef, isOfflineData);
+    console.log('✅ Realtime Database updated');
     
     // Mirror to Firestore
+    console.log('⏳ Updating Firestore...');
     await setDoc(
       userStatusFirestoreRef,
       {
@@ -166,10 +171,9 @@ export const setUserOffline = async (userId: string): Promise<void> => {
       },
       { merge: true }
     );
-    
-    console.log('User presence set to offline:', userId);
+    console.log('✅ Firestore updated - User presence set to offline:', userId);
   } catch (error) {
-    console.error('Error setting user offline:', error);
+    console.error('❌ Error setting user offline:', error);
     throw error;
   }
 };
