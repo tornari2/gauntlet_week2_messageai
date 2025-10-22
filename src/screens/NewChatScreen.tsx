@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   TextInput,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,6 +26,7 @@ import { getAllUsers } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { User } from '../types';
+import { Colors } from '../constants/Colors';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -114,7 +116,7 @@ export const NewChatScreen: React.FC = () => {
     if (loading) {
       return (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#25D366" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading users...</Text>
         </View>
       );
@@ -132,17 +134,19 @@ export const NewChatScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Chat</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          >
+            <Text style={styles.backButtonText}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>New Chat</Text>
+        </View>
 
       {/* Search bar */}
       <View style={styles.searchContainer}>
@@ -173,15 +177,20 @@ export const NewChatScreen: React.FC = () => {
       {/* Loading overlay */}
       {creatingChat && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#25D366" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingOverlayText}>Creating chat...</Text>
         </View>
       )}
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -191,10 +200,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 50,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#1EA952',
+    borderBottomColor: Colors.primaryDark,
   },
   backButton: {
     marginRight: 16,
@@ -234,7 +242,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -261,7 +269,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.online,
     marginLeft: 8,
   },
   emptyList: {

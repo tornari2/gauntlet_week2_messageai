@@ -16,6 +16,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
+import { Colors } from '../constants/Colors';
 
 interface LoginScreenProps {
   navigation: any;
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 56,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    color: '#25D366',
+    color: Colors.primary,
     fontWeight: '600',
   },
 });

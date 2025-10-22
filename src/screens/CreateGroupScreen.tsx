@@ -15,12 +15,14 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { UserSelector } from '../components/UserSelector';
 import { chatService } from '../services/chatService';
 import { useAuthStore } from '../stores/authStore';
 import { MainStackParamList } from '../navigation/AppNavigator';
+import { Colors } from '../constants/Colors';
 
 type CreateGroupScreenNavigationProp = NativeStackNavigationProp<
   MainStackParamList,
@@ -88,26 +90,28 @@ export function CreateGroupScreen({ navigation }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          testID="back-button"
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerText}>New Group</Text>
-          <Text style={styles.headerSubtext}>
-            {selectedUserIds.length} participant{selectedUserIds.length !== 1 ? 's' : ''} selected
-          </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            testID="back-button"
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          >
+            <Text style={styles.backButtonText}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerText}>New Group</Text>
+            <Text style={styles.headerSubtext}>
+              {selectedUserIds.length} participant{selectedUserIds.length !== 1 ? 's' : ''} selected
+            </Text>
+          </View>
         </View>
-      </View>
 
       {/* Group name input */}
       <View style={styles.groupNameContainer}>
@@ -148,11 +152,16 @@ export function CreateGroupScreen({ navigation }: Props) {
           )}
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -177,11 +186,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginRight: 12,
-    padding: 4,
+    padding: 8,
   },
   backButtonText: {
     fontSize: 32,
-    color: '#25D366',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   headerTextContainer: {
@@ -219,7 +228,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   createButton: {
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',

@@ -17,6 +17,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,6 +26,7 @@ import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { SwipeableChatListItem } from '../components/SwipeableChatListItem';
 import { Chat } from '../types';
+import { Colors } from '../constants/Colors';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -61,7 +63,7 @@ export const ChatsListScreen: React.FC = () => {
     if (loading) {
       return (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#25D366" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading chats...</Text>
         </View>
       );
@@ -79,18 +81,19 @@ export const ChatsListScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header with logout button */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Chats</Text>
-        <TouchableOpacity
-          onPress={handleLogout}
-          style={styles.logoutButton}
-          testID="logout-button"
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Header with logout button */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Chats</Text>
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={styles.logoutButton}
+            testID="logout-button"
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
 
       {/* Chats list */}
       <FlatList
@@ -124,11 +127,16 @@ export const ChatsListScreen: React.FC = () => {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -139,10 +147,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 50, // Account for status bar
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#1EA952',
+    borderBottomColor: Colors.primaryDark,
   },
   headerTitle: {
     fontSize: 24,
@@ -198,7 +205,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
@@ -212,7 +219,7 @@ const styles = StyleSheet.create({
   },
   fabSecondary: {
     bottom: 90, // Position above the main FAB
-    backgroundColor: '#128C7E', // Darker green
+    backgroundColor: Colors.primaryDark,
   },
   fabIcon: {
     fontSize: 32,
