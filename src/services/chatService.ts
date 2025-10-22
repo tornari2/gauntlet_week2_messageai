@@ -84,6 +84,20 @@ export function subscribeToUserChats(
             const otherUserSnap = await getDoc(otherUserRef);
             const otherUserData = otherUserSnap.exists() ? otherUserSnap.data() : null;
             
+            // Check if user is truly online based on lastActive timestamp
+            // User is offline if lastActive is older than 15 seconds
+            const isReallyOnline = () => {
+              if (!otherUserData?.isOnline) return false;
+              if (!otherUserData?.lastActive) return otherUserData.isOnline;
+              
+              const lastActive = otherUserData.lastActive.toDate?.() || new Date(otherUserData.lastActive);
+              const now = new Date();
+              const secondsSinceActive = (now.getTime() - lastActive.getTime()) / 1000;
+              
+              // Consider offline if no heartbeat in last 15 seconds
+              return secondsSinceActive < 15;
+            };
+            
             const chatWithDetails: ChatWithDetails = {
               id: docSnap.id,
               type: chatData.type,
@@ -92,7 +106,7 @@ export function subscribeToUserChats(
               lastMessageTime: chatData.lastMessageTime,
               createdAt: chatData.createdAt,
               otherUserName,
-              otherUserOnline: otherUserData?.isOnline || false,
+              otherUserOnline: isReallyOnline(),
               otherUserLastSeen: otherUserData?.lastSeen?.toDate() || new Date(),
               unreadCount,
             };
@@ -107,16 +121,35 @@ export function subscribeToUserChats(
                 (userDoc) => {
                   if (userDoc.exists()) {
                     const userData = userDoc.data();
+                    
+                    // Check if user is truly online based on lastActive timestamp
+                    const isReallyOnline = () => {
+                      if (!userData.isOnline) return false;
+                      if (!userData.lastActive) return userData.isOnline;
+                      
+                      const lastActive = userData.lastActive.toDate?.() || new Date(userData.lastActive);
+                      const now = new Date();
+                      const secondsSinceActive = (now.getTime() - lastActive.getTime()) / 1000;
+                      
+                      // Consider offline if no heartbeat in last 15 seconds
+                      return secondsSinceActive < 15;
+                    };
+                    
+                    const actualOnlineStatus = isReallyOnline();
+                    
                     console.log(`📡 Status update received for user ${otherUserId}:`, {
                       isOnline: userData.isOnline,
+                      lastActive: userData.lastActive,
+                      actualOnlineStatus,
                       lastSeen: userData.lastSeen
                     });
+                    
                     // Update this user's status in all chats
                     latestChats = latestChats.map(chat => {
                       if (chat.type === 'direct' && chat.participants.includes(otherUserId)) {
                         return {
                           ...chat,
-                          otherUserOnline: userData.isOnline || false,
+                          otherUserOnline: actualOnlineStatus,
                           otherUserLastSeen: userData.lastSeen?.toDate() || new Date(),
                         };
                       }

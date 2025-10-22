@@ -28,6 +28,11 @@ import { database, firestore } from './firebase';
  * Set up presence system for a user
  * This should be called when a user logs in
  * 
+ * Uses a heartbeat system for faster offline detection:
+ * - Updates lastActive timestamp every 5 seconds
+ * - Users are considered offline if lastActive > 15 seconds old
+ * - More reliable than onDisconnect for force-killed apps
+ * 
  * @param userId - The user's ID
  * @returns Cleanup function to call on logout
  */
@@ -51,6 +56,25 @@ export const setupPresence = (userId: string): (() => void) => {
     last_changed: rtdbServerTimestamp(),
   };
 
+  // Heartbeat interval - update lastActive every 5 seconds
+  let heartbeatInterval: NodeJS.Timeout | null = null;
+
+  const updateHeartbeat = async () => {
+    try {
+      await setDoc(
+        userStatusFirestoreRef,
+        {
+          isOnline: true,
+          lastActive: serverTimestamp(),
+          lastSeen: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('❌ Error updating heartbeat:', error);
+    }
+  };
+
   // Monitor connection state using the special .info/connected path
   const connectedRef = ref(database, '.info/connected');
   console.log('🔌 Monitoring Firebase Realtime Database connection...');
@@ -60,8 +84,11 @@ export const setupPresence = (userId: string): (() => void) => {
     console.log('🔌 Firebase RTDB connection status:', isConnected ? 'CONNECTED ✅' : 'DISCONNECTED ❌');
     
     if (isConnected === false) {
-      // Not connected to Firebase, do nothing
-      // The onDisconnect handler will automatically run when we lose connection
+      // Not connected to Firebase, stop heartbeat
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
       console.log('⚠️ Not connected to Firebase RTDB - waiting for connection...');
       return;
     }
@@ -93,17 +120,26 @@ export const setupPresence = (userId: string): (() => void) => {
       await set(userStatusDatabaseRef, isOnlineData);
       console.log('✅ User set to ONLINE in RTDB');
       
-      // Mirror to Firestore
+      // Mirror to Firestore with lastActive timestamp
       console.log('⏳ Mirroring presence to Firestore...');
       await setDoc(
         userStatusFirestoreRef,
         {
           isOnline: true,
+          lastActive: serverTimestamp(),
           lastSeen: serverTimestamp(),
         },
         { merge: true }
       );
       console.log('✅ User presence set to ONLINE in Firestore');
+      
+      // Start heartbeat - update lastActive every 5 seconds
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+      heartbeatInterval = setInterval(updateHeartbeat, 5000);
+      console.log('💓 Heartbeat started (5 second interval)');
+      
       console.log('🎉 Presence system fully active for user:', userId);
     } catch (error) {
       console.error('❌ ERROR setting user online:', error);
@@ -133,8 +169,14 @@ export const setupPresence = (userId: string): (() => void) => {
 
   // Return cleanup function
   return () => {
+    console.log('🧹 Cleaning up presence system for user:', userId);
     unsubscribe();
     statusUnsubscribe();
+    // Stop heartbeat
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      console.log('💓 Heartbeat stopped');
+    }
   };
 };
 
