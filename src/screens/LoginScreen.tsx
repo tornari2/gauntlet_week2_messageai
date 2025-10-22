@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 import { Colors } from '../constants/Colors';
@@ -26,13 +25,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const { login } = useAuthStore();
 
   const handleLogin = async () => {
+    // Clear any previous errors
+    setError('');
+
     // Validation
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both email and password');
+      setError('Please enter both email and password');
       return;
     }
 
@@ -41,10 +44,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       await login(email.trim(), password);
       // Navigation will happen automatically when auth state changes
     } catch (error: any) {
-      Alert.alert(
-        'Login Failed',
-        error.message || 'An error occurred during login'
-      );
+      setError(error.message || 'An error occurred during login');
     } finally {
       setLocalLoading(false);
     }
@@ -65,6 +65,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
+
+        {/* Error Message */}
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
         {/* Form */}
         <View style={styles.form}>
@@ -133,7 +140,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
-    marginBottom: 48,
+    marginBottom: 32,
   },
   title: {
     fontSize: 32,
@@ -144,6 +151,20 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
+  },
+  errorContainer: {
+    backgroundColor: '#FFE5E5',
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.error,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+    borderRadius: 8,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: 14,
+    fontWeight: '500',
   },
   form: {
     marginBottom: 24,

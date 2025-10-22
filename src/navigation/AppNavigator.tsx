@@ -90,7 +90,7 @@ const MainStack = () => {
 const LoadingScreen = () => {
   return (
     <View style={styles.loading}>
-      <ActivityIndicator size="large" color="#25D366" />
+      <ActivityIndicator size="large" color="#D4A574" />
     </View>
   );
 };

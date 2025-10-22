@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
@@ -29,6 +28,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const { signup } = useAuthStore();
 
@@ -58,10 +58,13 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
   };
 
   const handleSignup = async () => {
+    // Clear any previous errors
+    setError('');
+
     // Validation
     const validationError = validateInputs();
     if (validationError) {
-      Alert.alert('Validation Error', validationError);
+      setError(validationError);
       return;
     }
 
@@ -70,10 +73,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
       await signup(email.trim(), password, displayName.trim());
       // Navigation will happen automatically when auth state changes
     } catch (error: any) {
-      Alert.alert(
-        'Signup Failed',
-        error.message || 'An error occurred during signup'
-      );
+      setError(error.message || 'An error occurred during signup');
     } finally {
       setLocalLoading(false);
     }
@@ -98,6 +98,13 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>Sign up to get started</Text>
           </View>
+
+          {/* Error Message */}
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
           {/* Form */}
           <View style={styles.form}>
@@ -193,7 +200,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
-    marginBottom: 48,
+    marginBottom: 32,
   },
   title: {
     fontSize: 32,
@@ -204,6 +211,20 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
+  },
+  errorContainer: {
+    backgroundColor: '#FFE5E5',
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.error,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+    borderRadius: 8,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: 14,
+    fontWeight: '500',
   },
   form: {
     marginBottom: 24,
