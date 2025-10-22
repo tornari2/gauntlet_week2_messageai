@@ -76,16 +76,38 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
   
   // Actions
   setMessages: (chatId, messages) => {
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [chatId]: messages.sort((a, b) => {
-          const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toMillis();
-          const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toMillis();
-          return aTime - bTime;
-        }),
-      },
-    }));
+    set((state) => {
+      const existingMessages = state.messages[chatId] || [];
+      
+      // Preserve pending/failed messages that aren't in the new messages from Firestore
+      const pendingMessages = existingMessages.filter(
+        msg => (msg.pending || msg.failed) && msg.tempId
+      );
+      
+      // Combine Firestore messages with pending local messages
+      const allMessages = [...messages];
+      
+      // Add pending messages that aren't already represented in Firestore
+      pendingMessages.forEach(pendingMsg => {
+        const existsInFirestore = messages.some(m => 
+          m.id === pendingMsg.id || m.tempId === pendingMsg.tempId
+        );
+        if (!existsInFirestore) {
+          allMessages.push(pendingMsg);
+        }
+      });
+      
+      return {
+        messages: {
+          ...state.messages,
+          [chatId]: allMessages.sort((a, b) => {
+            const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toMillis();
+            const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toMillis();
+            return aTime - bTime;
+          }),
+        },
+      };
+    });
     
     // Save to cache asynchronously
     get().saveMessagesToCache(chatId);
