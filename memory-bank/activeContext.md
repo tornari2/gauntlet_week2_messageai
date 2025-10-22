@@ -5,6 +5,32 @@
 **Date Updated:** October 22, 2025
 **Next Action:** Continue with PR #11 - UI Polish
 
+## Recent Completion: Error Toast Popup & Google Auth Guide ✅
+**Status:** COMPLETE
+**Date:** October 22, 2025
+**Commits:** c709e2a, 0abe057
+
+### What Was Added
+- **Error Toast Popup Component**
+  - Created reusable ErrorToast component with slide-up animation
+  - Replaced inline error messages with animated toast notifications
+  - Auto-dismisses after 4 seconds with manual dismiss option
+  - Better visibility with warning icon, shadow, and red accent
+  - Applied to both LoginScreen and SignupScreen
+  
+- **Google Authentication Guide**
+  - Comprehensive 525-line implementation guide
+  - Step-by-step instructions with code examples
+  - Time estimate: 3-4 hours (Medium difficulty)
+  - Explains Expo Go limitations and EAS Build requirement
+  - Testing checklist and common issues
+  - Recommendation: nice-to-have but not essential for MVP
+
+### Impact
+- Better error UX with prominent toast notifications
+- Clear roadmap for implementing Google Sign-In if needed
+- Users understand technical requirements and time commitment
+
 ## Recent Completion: Console Errors & Spinner Flicker Fixed ✅
 **Status:** COMPLETE
 **Date:** October 22, 2025
