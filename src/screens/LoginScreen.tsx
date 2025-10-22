@@ -3,7 +3,7 @@
  * Allows users to sign in with email and password
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import {
   View,
   Text,
@@ -22,11 +22,31 @@ interface LoginScreenProps {
   navigation: any;
 }
 
+type ErrorAction = 
+  | { type: 'SET_ERROR'; message: string }
+  | { type: 'CLEAR_ERROR' };
+
+const errorReducer = (state: { message: string; timestamp: number } | null, action: ErrorAction) => {
+  console.log('🔄 Reducer called with action:', action.type, action);
+  
+  switch (action.type) {
+    case 'SET_ERROR':
+      const newState = { message: action.message, timestamp: Date.now() };
+      console.log('🔄 Reducer returning new error state:', newState);
+      return newState;
+    case 'CLEAR_ERROR':
+      console.log('🔄 Reducer clearing error');
+      return null;
+    default:
+      return state;
+  }
+};
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
-  const [error, setError] = useState<{ message: string; timestamp: number } | null>(null);
+  const [error, dispatchError] = useReducer(errorReducer, null);
 
   const { login } = useAuthStore();
 
@@ -41,13 +61,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     // Validation
     if (!email.trim() || !password.trim()) {
       const msg = 'Please enter both email and password';
-      console.log('❌ Validation failed, setting error:', msg);
-      setError({ message: msg, timestamp: Date.now() });
+      console.log('❌ Validation failed, dispatching error:', msg);
+      dispatchError({ type: 'SET_ERROR', message: msg });
       return;
     }
 
     // Clear error before attempting login
-    setError(null);
+    dispatchError({ type: 'CLEAR_ERROR' });
 
     try {
       setLocalLoading(true);
@@ -57,13 +77,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     } catch (err: any) {
       setLocalLoading(false);
       const errorMsg = err.message || 'An error occurred during login';
-      console.log('❌ Login failed, setting error:', errorMsg);
-      
-      // Set error with timestamp to force new object reference
-      const errorObj = { message: errorMsg, timestamp: Date.now() };
-      console.log('🎬 Setting error directly (no timing tricks):', errorObj);
-      setError(errorObj);
-      console.log('✅ setError called with:', errorObj);
+      console.log('❌ Login failed, dispatching error:', errorMsg);
+      console.log('🎬 About to dispatch SET_ERROR action');
+      dispatchError({ type: 'SET_ERROR', message: errorMsg });
+      console.log('✅ Dispatched SET_ERROR action');
     }
   };
 
@@ -139,7 +156,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       {/* Error Toast Popup */}
       <ErrorToast 
         message={error?.message || null} 
-        onDismiss={() => setError(null)} 
+        onDismiss={() => dispatchError({ type: 'CLEAR_ERROR' })} 
       />
     </KeyboardAvoidingView>
   );
