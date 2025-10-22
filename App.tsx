@@ -115,7 +115,7 @@ export default function App(): React.ReactElement {
 
     // App is going from background to foreground
     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('📱 App has come to the foreground - setting online');
+      console.log('📱 App has come to the foreground - ensuring user is online');
       try {
         await updatePresence(user.uid, true);
         console.log('✅ Successfully set user online via AppState change');
@@ -124,16 +124,12 @@ export default function App(): React.ReactElement {
       }
     }
 
-    // App is going to background
-    if (appState.current === 'active' && nextAppState.match(/inactive|background/)) {
-      console.log('📱 App has gone to the background - setting offline');
-      try {
-        await updatePresence(user.uid, false);
-        console.log('✅ Successfully set user offline via AppState change');
-      } catch (error) {
-        console.error('❌ Error updating offline status:', error);
-      }
-    }
+    // NOTE: We do NOT set user offline when app goes to background
+    // Users should stay online when the app is backgrounded
+    // They will be automatically set offline when:
+    // 1. Network connection is lost (Firebase onDisconnect handles this)
+    // 2. App is completely killed/closed (Firebase onDisconnect handles this)
+    // 3. User explicitly logs out (handled by authStore)
 
     appState.current = nextAppState;
   }, [user]);
