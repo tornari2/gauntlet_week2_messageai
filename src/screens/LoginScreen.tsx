@@ -3,7 +3,7 @@
  * Allows users to sign in with email and password
  */
 
-import React, { useState, useEffect, useReducer } from 'react';
+import React, { useState, useEffect, useReducer, useRef } from 'react';
 import {
   View,
   Text,
@@ -46,14 +46,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
-  const [error, dispatchError] = useReducer(errorReducer, null);
+  const [renderTrigger, setRenderTrigger] = useState(0);
+  const errorRef = useRef<{ message: string; timestamp: number } | null>(null);
 
   const { login } = useAuthStore();
 
-  // Track error state changes
+  // Track when component mounts/unmounts
   useEffect(() => {
-    console.log('📊 Error state changed to:', error ? `"${error.message}" at ${error.timestamp}` : 'empty');
-  }, [error]);
+    console.log('🏗️  LoginScreen mounted');
+    return () => {
+      console.log('💥 LoginScreen unmounting');
+    };
+  }, []);
+
+  // Track render trigger changes (which indicate error changes)
+  useEffect(() => {
+    console.log('📊 Render trigger changed, current error:', errorRef.current);
+  }, [renderTrigger]);
 
   const handleLogin = async () => {
     console.log('🔐 Login pressed - email:', email, 'password:', password ? '***' : 'empty');
@@ -61,13 +70,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     // Validation
     if (!email.trim() || !password.trim()) {
       const msg = 'Please enter both email and password';
-      console.log('❌ Validation failed, dispatching error:', msg);
-      dispatchError({ type: 'SET_ERROR', message: msg });
+      console.log('❌ Validation failed, setting error via ref:', msg);
+      errorRef.current = { message: msg, timestamp: Date.now() };
+      setRenderTrigger(prev => prev + 1);
+      console.log('✅ Error set in ref, triggered re-render');
       return;
     }
 
     // Clear error before attempting login
-    dispatchError({ type: 'CLEAR_ERROR' });
+    errorRef.current = null;
+    setRenderTrigger(prev => prev + 1);
 
     try {
       setLocalLoading(true);
@@ -77,10 +89,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     } catch (err: any) {
       setLocalLoading(false);
       const errorMsg = err.message || 'An error occurred during login';
-      console.log('❌ Login failed, dispatching error:', errorMsg);
-      console.log('🎬 About to dispatch SET_ERROR action');
-      dispatchError({ type: 'SET_ERROR', message: errorMsg });
-      console.log('✅ Dispatched SET_ERROR action');
+      console.log('❌ Login failed, setting error via ref:', errorMsg);
+      console.log('🎬 About to set error in ref and trigger render');
+      errorRef.current = { message: errorMsg, timestamp: Date.now() };
+      console.log('📝 Error stored in ref:', errorRef.current);
+      setRenderTrigger(prev => {
+        const newValue = prev + 1;
+        console.log('🔔 Triggering render:', prev, '=>', newValue);
+        return newValue;
+      });
+      console.log('✅ Render trigger updated');
     }
   };
 
@@ -155,8 +173,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       {/* Error Toast Popup */}
       <ErrorToast 
-        message={error?.message || null} 
-        onDismiss={() => dispatchError({ type: 'CLEAR_ERROR' })} 
+        message={errorRef.current?.message || null} 
+        onDismiss={() => {
+          errorRef.current = null;
+          setRenderTrigger(prev => prev + 1);
+        }} 
       />
     </KeyboardAvoidingView>
   );
