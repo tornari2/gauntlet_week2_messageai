@@ -1,9 +1,34 @@
 # Active Context: WhatsApp Clone MVP
 
 ## Current Status
-**Phase:** Advanced Features Complete + Documentation Updated ✅
+**Phase:** Advanced Features Complete + Documentation Updated + UX Polish ✅
 **Date Updated:** October 22, 2025
 **Next Action:** Continue with PR #11 - UI Polish
+
+## Recent Completion: Auth Screen UX Improvements ✅
+**Status:** COMPLETE
+**Date:** October 22, 2025
+**Commit:** d2f455b
+
+### What Was Fixed
+- **Inline Error Messages**
+  - Replaced native Alert.alert popups with inline error banners
+  - Red error bar with left border accent (#FFE5E5 background, #FF6B6B border)
+  - Better positioned below headers for immediate visibility
+  - Error state management in both LoginScreen and SignupScreen
+  - Removed unused Alert imports
+
+- **Loading Spinner Consistency**
+  - Fixed color inconsistency in AppNavigator LoadingScreen
+  - Changed from green (#25D366 - old WhatsApp color) to tan/brown (#D4A574)
+  - Eliminated color flashing during app load
+  - Now matches primary brand color throughout app
+
+### Impact
+- Better UX - errors displayed inline instead of blocking popups
+- Smooth loading experience without color changes
+- More professional error handling
+- Consistent visual branding
 
 ## Recent Completion: Comprehensive README Update ✅
 **Status:** COMPLETE

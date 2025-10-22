@@ -1,5 +1,41 @@
 # Bug Fixes Log
 
+## October 22, 2025
+
+### Auth Screen UX Improvements
+**Status:** ✅ Fixed
+**Commit:** d2f455b
+
+**Issues Fixed:**
+
+1. **Inline Error Messages**
+   - **Problem:** Login and signup errors shown as native Alert.alert popups that block the UI
+   - **Impact:** Poor UX - users had to dismiss popups, messages weren't well positioned
+   - **Fix:** 
+     - Added error state management to LoginScreen and SignupScreen
+     - Replaced Alert.alert with inline error banners
+     - Styled with red background (#FFE5E5), left border accent (#FF6B6B)
+     - Positioned below headers for immediate visibility
+     - Auto-clears on next submit attempt
+   - **Files Changed:** 
+     - `src/screens/LoginScreen.tsx`
+     - `src/screens/SignupScreen.tsx`
+
+2. **Loading Spinner Color Inconsistency**
+   - **Problem:** App initialization showed green spinner (#25D366), then flashed to tan/brown (#D4A574)
+   - **Impact:** Jarring visual transition during app load
+   - **Root Cause:** AppNavigator LoadingScreen using old WhatsApp green color
+   - **Fix:** Changed ActivityIndicator color to match primary brand color (#D4A574)
+   - **Files Changed:** `src/navigation/AppNavigator.tsx`
+
+**Result:**
+- Better UX with inline error messages
+- Smooth loading experience without color changes
+- Consistent visual branding throughout app
+- Removed unused Alert imports
+
+---
+
 ## October 21, 2025
 
 ### Critical Firestore Bug - Undefined Values
