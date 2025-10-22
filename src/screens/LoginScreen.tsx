@@ -84,6 +84,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     navigation.navigate('Signup');
   };
 
+  const testToast = () => {
+    console.log('🧪 TEST: Setting test error message');
+    setError('This is a test error message!');
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -133,6 +138,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             ) : (
               <Text style={styles.buttonText}>Login</Text>
             )}
+          </TouchableOpacity>
+
+          {/* Test Toast Button */}
+          <TouchableOpacity
+            style={[styles.button, styles.testButton]}
+            onPress={testToast}
+          >
+            <Text style={styles.buttonText}>🧪 Test Toast</Text>
           </TouchableOpacity>
         </View>
 
@@ -207,6 +220,10 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  testButton: {
+    backgroundColor: '#FF6B6B',
+    marginTop: 12,
   },
   buttonText: {
     color: '#fff',
