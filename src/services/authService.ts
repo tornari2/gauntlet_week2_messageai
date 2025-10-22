@@ -116,8 +116,6 @@ export const signUp = async (
       createdAt: new Date(),
     };
   } catch (error: any) {
-    console.error('Signup error:', error);
-
     // Handle specific Firebase errors
     if (error.code === 'auth/email-already-in-use') {
       throw new AppError(
@@ -177,8 +175,6 @@ export const signIn = async (
 
     return { ...user, isOnline: true };
   } catch (error: any) {
-    console.error('Sign in error:', error);
-
     // Handle specific Firebase errors
     if (error.code === 'auth/user-not-found') {
       throw new AppError(

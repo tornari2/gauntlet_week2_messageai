@@ -102,12 +102,6 @@ export const ChatsListScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={chats.length === 0 ? styles.emptyList : undefined}
         ListEmptyComponent={renderEmptyState}
-        refreshing={loading}
-        onRefresh={() => {
-          if (user) {
-            subscribeToChats(user.uid);
-          }
-        }}
       />
 
       {/* Floating action button for creating new group */}

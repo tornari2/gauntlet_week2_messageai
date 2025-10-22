@@ -80,7 +80,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       
       set({ user, loading: false });
     } catch (error) {
-      console.error('Login error:', error);
+      // Don't log error here - it's handled in the UI
       set({ 
         error: error as Error, 
         loading: false 
@@ -100,7 +100,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       
       set({ user, loading: false });
     } catch (error) {
-      console.error('Signup error:', error);
+      // Don't log error here - it's handled in the UI
       set({ 
         error: error as Error, 
         loading: false 

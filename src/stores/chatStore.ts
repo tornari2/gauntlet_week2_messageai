@@ -55,7 +55,9 @@ export const useChatStore = create<ChatStore>((set) => ({
    * Returns an unsubscribe function
    */
   subscribeToChats: (userId: string) => {
-    set({ loading: true, error: null });
+    // Only show loading on initial load (when chats array is empty)
+    const isInitialLoad = useChatStore.getState().chats.length === 0;
+    set({ loading: isInitialLoad, error: null });
     
     const unsubscribe = chatService.subscribeToUserChats(userId, (chats) => {
       set({ chats, loading: false });
