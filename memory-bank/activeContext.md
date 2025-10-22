@@ -3,37 +3,47 @@
 ## Current Status
 **Phase:** Advanced Features Complete + Documentation Updated + UX Polish ✅
 **Date Updated:** October 22, 2025
-**Next Action:** Clean up debug logging and continue UI polish
+**Next Action:** Test presence system thoroughly, then clean up debug logging
 
-## Recent Completion: Heartbeat System for Fast Offline Detection ✅
+## Recent Completion: CRITICAL - Presence System Fixed! ✅
 **Status:** COMPLETE
 **Date:** October 22, 2025
-**Commit:** 90170c4
+**Commit:** 76bd4f4
+**Severity:** Critical bug fix
 
-### The Issue
-When users force-closed the app, they still appeared online for 30-60+ seconds on other users' screens, creating confusion.
+### The Problem
+Users never appeared offline when they closed the app or logged out. This completely broke the presence system - users would appear online indefinitely.
 
-### Root Cause
-Firebase's `onDisconnect()` is designed for graceful disconnects. Force-killing an app creates an abrupt disconnection that Firebase's server takes a long time to detect (30-60+ seconds).
+### Root Cause - Architectural Flaw
+The mirroring approach didn't work:
+- `onDisconnect()` updated Realtime Database when app closed
+- A listener was supposed to mirror RTDB → Firestore
+- **But** that listener closed with the app!
+- Firestore never got updated
+- Other users watching Firestore never saw offline status
 
-### The Solution
-Implemented a heartbeat-based presence system:
-- Updates `lastActive` timestamp every 5 seconds
-- Users considered offline if `lastActive` > 15 seconds old
-- Much faster than relying solely on Firebase's onDisconnect()
-
-### How It Works
-1. Login starts heartbeat interval (5 second updates)
-2. Each heartbeat updates Firestore with current timestamp
-3. Other users check age of `lastActive` timestamp
-4. If older than 15 seconds → show as offline
-5. Cleanup stops heartbeat on logout
+### The Fix
+Changed to watch Realtime Database directly for presence:
+- All clients now subscribe to RTDB `/status/{userId}` path
+- RTDB's `onDisconnect()` is server-side, works when app closes
+- Status updates propagate immediately to all connected clients
+- No mirroring needed
 
 ### Result
-- ✅ Force-killed apps show offline within ~15 seconds
-- ✅ More responsive presence system
-- ✅ Better user experience
-- ✅ Firebase onDisconnect() remains as backup
+- ✅ User offline after 30-60 seconds when app closes
+- ✅ Immediate offline on network disconnect
+- ✅ Immediate offline on logout
+- ✅ Real-time status updates for all users
+- ✅ Presence system fully functional
+
+### Technical Change
+```typescript
+// Before: Firestore (broken)
+onSnapshot(doc(firestore, 'users', userId), ...)
+
+// After: Realtime Database (works!)
+onValue(ref(database, `/status/${userId}`), ...)
+```
 
 ---
 

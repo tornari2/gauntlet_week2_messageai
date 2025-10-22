@@ -2,56 +2,6 @@
 
 ## October 22, 2025
 
-### Slow Offline Detection When App Force-Killed
-**Status:** ✅ Fixed
-**Commit:** 90170c4
-
-**The Problem:**
-When users force-closed the app (swipe away from app switcher), they would still appear online on other users' screens for 30-60+ seconds. This created confusion and a poor user experience.
-
-**Root Cause:**
-Firebase Realtime Database's `onDisconnect()` handler is designed for graceful disconnects. When an app is force-killed:
-1. The WebSocket connection is abruptly terminated
-2. No graceful disconnect message is sent
-3. Firebase server must wait for connection timeout detection
-4. This timeout can take 30-60+ seconds to trigger
-
-**The Solution: Heartbeat System**
-
-Implemented a heartbeat-based presence system that updates a `lastActive` timestamp every 5 seconds:
-
-```typescript
-// In presenceService.ts
-heartbeatInterval = setInterval(updateHeartbeat, 5000);
-
-// In chatService.ts
-const secondsSinceActive = (now.getTime() - lastActive.getTime()) / 1000;
-return secondsSinceActive < 15; // Offline if > 15 seconds
-```
-
-**How It Works:**
-1. When user logs in, start heartbeat that updates `lastActive` every 5 seconds
-2. Other users subscribe to this `lastActive` timestamp
-3. If `lastActive` is older than 15 seconds, consider user offline
-4. Stop heartbeat on logout or cleanup
-5. Firebase's `onDisconnect()` remains as a backup mechanism
-
-**Benefits:**
-- ✅ Force-killed apps show offline within ~15 seconds (vs 60+ seconds before)
-- ✅ More responsive presence system overall
-- ✅ Works for all types of abrupt disconnections
-- ✅ Still uses Firebase's onDisconnect() as backup
-- ✅ Gracefully handles network issues
-
-**Files Changed:**
-- `src/services/presenceService.ts` - Added heartbeat interval and lastActive updates
-- `src/services/chatService.ts` - Check lastActive age to determine real online status
-
-**Result:**
-Users now accurately appear offline within 15 seconds of force-closing the app, providing a much more responsive and realistic presence system.
-
----
-
 ### Chat List Flicker on App Foreground
 **Status:** ✅ Fixed
 **Commit:** 970f0b2
