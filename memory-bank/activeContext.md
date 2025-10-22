@@ -3,9 +3,62 @@
 ## Current Status
 **Phase:** Advanced Features Complete + Documentation Updated + UX Polish ✅
 **Date Updated:** October 22, 2025
-**Next Action:** Continue with PR #11 - UI Polish
+**Next Action:** Clean up debug logging and continue UI polish
 
-## Recent Completion: Error Toast Popup & Google Auth Guide ✅
+## Recent Completion: CRITICAL BUG FIX - Error Toast Now Working! 🎉
+**Status:** COMPLETE ✅
+**Date:** October 22, 2025
+**Commit:** d83ba78
+**Severity:** Critical issue resolved
+
+### The Bug Hunt Journey
+After multiple attempts using different state management approaches (useState, useReducer, refs, timing strategies), discovered the root cause through systematic logging:
+
+**The Problem:**
+- Error toast notifications were completely broken
+- LoginScreen was **unmounting and remounting** during every login attempt
+- All state/refs were being destroyed and recreated
+- This explained why NO state management approach worked
+
+**Root Cause:**
+```
+User clicks Login 
+→ authStore.login() sets loading: true
+→ AppNavigator sees loading=true, shows LoadingScreen
+→ AuthStack UNMOUNTS (LoginScreen destroyed)
+→ Login fails, loading: false
+→ AuthStack REMOUNTS (Fresh LoginScreen, empty state)
+→ Error set in new component instance (old refs/state gone)
+```
+
+**The Fix:**
+1. **Removed Global Loading State**
+   - Removed `loading: true/false` from authStore.login() and signup()
+   - Each screen uses only its own localLoading state
+   - AppNavigator no longer unmounts screens during auth
+   - Component stays mounted, error state persists
+
+2. **Disabled Password Autofill**
+   - Added `autoComplete="off"` and `textContentType="none"` to TextInputs
+   - Eliminates "Save Password" popup on failed logins
+
+### Result
+- ✅ Error toast **finally works!** Slides up from bottom with animation
+- ✅ Component lifecycle stable during authentication
+- ✅ No more password save prompts
+- ✅ Smooth UX for error display
+
+### Next Steps
+- Clean up extensive debug logging from troubleshooting
+- Apply autofill prevention to SignupScreen
+- Continue UI polish tasks
+
+### Key Lesson
+Component lifecycle issues can make state management appear broken. Always check mount/unmount behavior before trying multiple state approaches.
+
+---
+
+## Previous Completion: Error Toast Popup & Google Auth Guide ✅
 **Status:** COMPLETE
 **Date:** October 22, 2025
 **Commits:** c709e2a, 0abe057
@@ -17,6 +70,7 @@
   - Auto-dismisses after 4 seconds with manual dismiss option
   - Better visibility with warning icon, shadow, and red accent
   - Applied to both LoginScreen and SignupScreen
+  - **NOTE:** Was broken until commit d83ba78 fixed the unmounting issue
   
 - **Google Authentication Guide**
   - Comprehensive 525-line implementation guide
@@ -25,11 +79,6 @@
   - Explains Expo Go limitations and EAS Build requirement
   - Testing checklist and common issues
   - Recommendation: nice-to-have but not essential for MVP
-
-### Impact
-- Better error UX with prominent toast notifications
-- Clear roadmap for implementing Google Sign-In if needed
-- Users understand technical requirements and time commitment
 
 ## Recent Completion: Console Errors & Spinner Flicker Fixed ✅
 **Status:** COMPLETE

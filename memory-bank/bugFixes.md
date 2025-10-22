@@ -2,6 +2,63 @@
 
 ## October 22, 2025
 
+### Critical: LoginScreen Unmounting During Auth + Error Toast Not Appearing
+**Status:** ✅ Fixed
+**Commit:** d83ba78
+**Severity:** Critical (Error messages completely broken)
+
+**The Problem:**
+Error toast notifications were not appearing on login/signup failures despite extensive debugging attempts with useState, useReducer, refs, and various timing strategies.
+
+**Root Cause Discovery:**
+Through systematic logging, discovered the LoginScreen was **unmounting and remounting** during every login attempt:
+```
+LOG  🔐 Login pressed
+LOG  💥 LoginScreen unmounting        ← Component DESTROYED!
+LOG  🏗️  LoginScreen mounted          ← Fresh component created
+LOG  ❌ Login failed, setting error
+```
+
+**Why It Happened:**
+1. User presses "Login" button
+2. `authStore.login()` sets `loading: true` **globally**
+3. `AppNavigator` checks: `if (loading) return <LoadingScreen />`
+4. **Entire AuthStack unmounts** → LoginScreen destroyed, all state lost
+5. Login fails, `loading: false` 
+6. **AuthStack remounts** → Fresh LoginScreen with empty state
+7. Error gets set in new component instance, but previous refs/state are gone
+8. This explained why NO state management approach worked (useState, useReducer, refs)
+
+**The Fix:**
+1. **Removed Global Loading State from Auth Operations**
+   - Removed `loading: true/false` from `authStore.login()` method
+   - Removed `loading: true/false` from `authStore.signup()` method  
+   - Each screen now uses only its own `localLoading` state
+   - AppNavigator no longer unmounts screens during authentication
+   - Component stays mounted throughout auth process
+   
+2. **Disabled Password Autofill**
+   - Added `autoComplete="off"` to email and password TextInputs
+   - Added `textContentType="none"` to disable iOS autofill
+   - Eliminates "Save Password" popup on failed login attempts
+
+**Files Changed:**
+- `src/stores/authStore.ts` - Removed global loading state from login/signup
+- `src/screens/LoginScreen.tsx` - Added autofill prevention props
+- `src/screens/SignupScreen.tsx` - Will need same autofill prevention
+
+**Result:**
+- ✅ Error toast now appears on login/signup failures
+- ✅ Component stays mounted during authentication
+- ✅ No more "Save Password" popup
+- ✅ All debugging logs can now be cleaned up
+- ✅ Error toast slides up smoothly from bottom with animation
+
+**Key Lesson:**
+Component lifecycle issues can make state management appear broken. Always check if components are unmounting unexpectedly before trying different state approaches.
+
+---
+
 ### Console Error Banners & Spinner Flicker
 **Status:** ✅ Fixed
 **Commit:** 6016893
