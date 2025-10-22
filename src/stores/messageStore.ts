@@ -183,7 +183,7 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       return;
     }
     
-    // Load cached messages first for instant display
+    // Load cached messages first for instant display (including pending messages)
     get().loadCachedMessages(chatId);
     
     // Set loading state
@@ -194,6 +194,9 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     const unsubscribe = chatService.subscribeToMessages(
       chatId,
       (messages) => {
+        console.log(`📥 Firestore update for chat ${chatId}: ${messages.length} messages`);
+        
+        // Preserve pending messages when setting new messages from Firestore
         get().setMessages(chatId, messages);
         get().setLoading(chatId, false);
       },

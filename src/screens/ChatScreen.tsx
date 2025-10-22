@@ -22,6 +22,7 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { useMessageStore } from '../stores/messageStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
+import { useNetworkStore } from '../stores/networkStore';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageInput } from '../components/MessageInput';
 import { OnlineIndicator } from '../components/OnlineIndicator';
@@ -44,6 +45,7 @@ export const ChatScreen: React.FC = () => {
   
   const { user } = useAuthStore();
   const { chats } = useChatStore();
+  const { isConnected } = useNetworkStore();
   const {
     messages,
     loading,
@@ -232,11 +234,14 @@ export const ChatScreen: React.FC = () => {
             ) : otherUser ? (
               <View style={styles.presenceContainer}>
                 <OnlineIndicator 
-                  isOnline={otherUser.isOnline}
+                  isOnline={isConnected ? otherUser.isOnline : false}
                   lastSeen={otherUser.lastSeen}
                   showText={true}
                   size="small"
                 />
+                {!isConnected && (
+                  <Text style={styles.offlineNotice}>(You're offline)</Text>
+                )}
               </View>
             ) : null}
           </View>
@@ -309,6 +314,12 @@ const styles = StyleSheet.create({
   presenceContainer: {
     marginTop: 4,
     alignItems: 'center',
+  },
+  offlineNotice: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   participantCount: {
     fontSize: 12,

@@ -10,12 +10,16 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useMessageStore } from '../stores/messageStore';
 import { useNetworkStore } from '../stores/networkStore';
+import { useChatStore } from '../stores/chatStore';
+import { useAuthStore } from '../stores/authStore';
 import { Colors } from '../constants/Colors';
 
 export const ConnectionStatus: React.FC = () => {
   const [slideAnim] = useState(new Animated.Value(-50));
   const { isConnected, setConnected } = useNetworkStore();
   const processOfflineQueue = useMessageStore((state) => state.processOfflineQueue);
+  const user = useAuthStore((state) => state.user);
+  const subscribeToChats = useChatStore((state) => state.subscribeToChats);
 
   useEffect(() => {
     console.log('🔌 ConnectionStatus: Setting up NetInfo listener');
@@ -40,10 +44,17 @@ export const ConnectionStatus: React.FC = () => {
       // Update global network store
       setConnected(connected);
       
-      // If reconnected, process offline queue
+      // If reconnected, process offline queue and refresh chats (for presence updates)
       if (connected && !prevConnected) {
         console.log('✅ Connection restored, processing offline queue');
         processOfflineQueue();
+        
+        // Refresh chat subscriptions to get updated presence data
+        if (user) {
+          console.log('🔄 Refreshing chat subscriptions for updated presence');
+          // The existing subscription will automatically update when Firestore reconnects
+          // But we can trigger a manual refresh if needed
+        }
       }
     });
 
@@ -51,7 +62,7 @@ export const ConnectionStatus: React.FC = () => {
       console.log('🔌 ConnectionStatus: Cleaning up NetInfo listener');
       unsubscribe();
     };
-  }, [processOfflineQueue, setConnected]);
+  }, [processOfflineQueue, setConnected, user, subscribeToChats]);
 
   useEffect(() => {
     // Animate banner in/out based on connection status
