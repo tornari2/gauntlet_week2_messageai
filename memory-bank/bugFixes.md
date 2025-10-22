@@ -231,6 +231,115 @@ useEffect(() => {
 
 ---
 
+### SafeAreaProvider Error
+**Status:** ✅ Fixed
+**Commit:** a501825 (Phase 10)
+
+**Problem:**
+```
+ERROR [Error: No safe area value available. Make sure you are rendering 
+`<SafeAreaProvider>` at the top of your app.]
+```
+
+**Root Cause:**
+`NotificationBanner` component uses `useSafeAreaInsets()` from `react-native-safe-area-context`, but no `SafeAreaProvider` was wrapping the app.
+
+**Fix:**
+Wrapped entire App component return with `<SafeAreaProvider>`:
+```typescript
+// App.tsx
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+return (
+  <SafeAreaProvider>
+    <NotificationBanner />
+    <ConnectionStatus />
+    <AppNavigator />
+  </SafeAreaProvider>
+);
+```
+
+**Lesson:** Components using safe area hooks require `SafeAreaProvider` at the root level.
+
+---
+
+### Android Back Button Not Clickable
+**Status:** ✅ Fixed
+**Commit:** a501825 (Phase 10)
+
+**Problem:**
+Back button in ChatScreen header was not responding to touches on Android devices.
+
+**Root Cause:**
+Two absolutely positioned overlay components were blocking touch events:
+1. `NotificationBanner` - `position: absolute`, `zIndex: 9999`
+2. `ConnectionStatus` - `position: absolute`, `zIndex: 1000`
+
+Even when hidden (slid off-screen), they still captured touch events.
+
+**Fix:**
+Added `pointerEvents` prop to both components:
+
+1. **NotificationBanner.tsx:**
+```typescript
+<Animated.View
+  pointerEvents="box-none"  // Allow touches to pass through
+>
+```
+
+2. **ConnectionStatus.tsx:**
+```typescript
+<Animated.View
+  pointerEvents={isConnected ? 'none' : 'box-none'}
+>
+```
+
+**Behavior:**
+- `"none"` - All touches pass through (when banner hidden)
+- `"box-none"` - Container doesn't capture, but children can (when banner visible)
+
+**Lesson:** Absolutely positioned overlays with high z-index must use `pointerEvents` to prevent blocking unintended touches. Always test touch interactions on Android as behavior can differ from iOS.
+
+---
+
+### Firebase Realtime Database Permission Denied
+**Status:** ✅ Documented
+**Commit:** a501825 (Phase 10)
+
+**Problem:**
+```
+ERROR Error sending real-time notification: [Error: PERMISSION_DENIED: Permission denied]
+```
+
+**Root Cause:**
+Firebase Realtime Database rules hadn't been deployed yet, or database wasn't enabled.
+
+**Solution:**
+1. Enable Realtime Database in Firebase Console
+2. Deploy database rules from `database.rules.json`:
+```json
+{
+  "rules": {
+    "notifications": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
+```
+
+**Documentation:**
+Created `FIXING_PERMISSION_ERROR.md` with step-by-step guide for:
+- Deploying via Firebase Console (easiest)
+- Deploying via Firebase CLI
+- Troubleshooting permission issues
+
+**Lesson:** Always deploy database rules before testing real-time features. Provide clear documentation for setup steps.
+
+---
+
 ## Known Issues
 
 ### Non-Issues (Expected Behavior)
