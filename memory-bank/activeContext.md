@@ -1,11 +1,24 @@
 # Active Context: WhatsApp Clone MVP
 
 ## Current Status
-**Phase:** Advanced Features - Major Bug Fixes & Optimizations Complete
-**Date Updated:** October 21, 2025
+**Phase:** Advanced Features - All Critical Bugs Fixed ✅
+**Date Updated:** October 22, 2025
 **Next Action:** Continue with PR #10 - Push Notifications (Setup Started)
 
 ## What We're Working On
+
+### Recently Completed: Critical Bug Fixes ✅
+**Duplicate Keys + Network Flicker - COMPLETE**
+- Objective: Fix React Native duplicate key warnings and network status flicker
+- Actual Time: ~1 hour
+- Status: Complete, tested, and pushed to GitHub
+- Commit: 5e52c09
+- Features:
+  - Fixed race condition in optimistic message updates
+  - Removed temp messages instead of merging to avoid duplicates
+  - Optimized ConnectionStatus with refs to prevent re-renders
+  - Fixed FlatList keyExtractor for stable keys
+  - Eliminated UI flicker on network status changes
 
 ### Recently Completed: Bug Fixes & Optimizations ✅
 **Offline Message Status + Presence System + Performance**
@@ -77,6 +90,8 @@
 12. ✅ **Robust Presence System** - Firebase RTDB with onDisconnect() for reliable status
 13. ✅ **Performance Optimizations** - Eliminated chat list flickering with memoization
 14. ✅ **Bug Fixes** - Firestore undefined values, display names, persistence warnings
+15. ✅ **Duplicate Key Fix** - Fixed race condition in optimistic updates, removed temp messages
+16. ✅ **Network Flicker Fix** - Optimized ConnectionStatus with refs, eliminated UI flicker
 
 ### Current Working Features:
 - ✅ User signup and login
@@ -108,6 +123,8 @@
 - ✅ Firestore security rules
 - ✅ **Firebase RTDB security rules**
 - ✅ **Performance optimized** (memoized components, no flicker)
+- ✅ **No duplicate key warnings** (fixed race condition in optimistic updates)
+- ✅ **No network status flicker** (optimized ConnectionStatus with refs)
 
 ### Immediate Next Steps
 
@@ -179,6 +196,14 @@
 - ✅ **AppState change detection (NEW):** Fixed AppState listener not triggering
   - Wrapped handler in useCallback for proper memoization
   - Reordered code to define function before useEffect
+- ✅ **Duplicate key warnings (NEW):** Fixed React Native FlatList duplicate key errors
+  - Changed strategy from updating temp messages to removing them
+  - Firestore listener provides authoritative message version
+  - Applied to sendMessageOptimistic, retryMessage, and processOfflineQueue
+- ✅ **Network status flicker (NEW):** Fixed UI flicker when going offline/online
+  - Removed unused dependencies from ConnectionStatus component
+  - Used refs to store callbacks and prevent re-renders
+  - NetInfo listener now only sets up once on mount
 
 ## Active Constraints
 
@@ -199,10 +224,12 @@
 ## Blockers & Dependencies
 
 ### Current Blockers
-- **None** - All major bugs fixed, system is stable and performant
+- **None** - All critical bugs fixed, system is stable and performant
   - ✅ Offline message status working correctly
   - ✅ Presence system reliable (survives force-close)
   - ✅ Chat list performance optimized (no flicker)
+  - ✅ Duplicate key warnings eliminated
+  - ✅ Network status transitions smooth (no flicker)
   - Ready for push notification testing on physical device
 
 ### Items Needing Cleanup

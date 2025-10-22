@@ -135,6 +135,102 @@ try {
 }
 ```
 
+---
+
+## October 22, 2025
+
+### Duplicate Key Warnings - React Native FlatList
+**Status:** ✅ Fixed
+**Commit:** 5e52c09
+
+**Problem:**
+```
+ERROR Encountered two children with the same key, `%s`. Keys should be unique...
+```
+
+**Root Cause:**
+Race condition in optimistic message updates:
+1. User sends message → optimistic message with `tempId` added
+2. Firestore receives message and broadcasts update with real ID
+3. Local `sendMessage` completes and updates temp message with real ID
+4. Result: Two messages with the same ID (updated temp + Firestore message)
+
+**Fix:**
+Changed message confirmation strategy in `messageStore.ts`:
+- Instead of updating optimistic message with real ID, we now **remove** it
+- Firestore's real-time listener provides the authoritative version
+- Applied to `sendMessageOptimistic`, `retryMessage`, and `processOfflineQueue`
+
+**Code Changes:**
+```typescript
+// ❌ OLD - Caused duplicates
+get().updateMessage(chatId, tempId, {
+  id: realMessageId,
+  pending: false,
+  tempId: undefined,
+});
+
+// ✅ NEW - Removes temp, Firestore provides real
+set((state) => {
+  const existingMessages = state.messages[chatId] || [];
+  return {
+    messages: {
+      ...state.messages,
+      [chatId]: existingMessages.filter(m => m.tempId !== tempId),
+    },
+  };
+});
+```
+
+**Also Fixed:**
+- Simplified deduplication logic in `setMessages`
+- Changed FlatList keyExtractor from `Math.random()` to `msg-${index}`
+- Added comprehensive logging for debugging
+
+**Lesson:** When using optimistic updates with real-time listeners, remove optimistic data once operation completes rather than trying to merge it.
+
+---
+
+### Network Status Flicker
+**Status:** ✅ Fixed
+**Commit:** 5e52c09
+
+**Problem:**
+When going offline/online, users saw a brief flicker of the NewChatScreen or user lists on the main chat pane.
+
+**Root Cause:**
+`ConnectionStatus` component had unnecessary dependencies in useEffect:
+- `subscribeToChats`, `user`, `processOfflineQueue`, `setConnected` in dependency array
+- Each network change triggered re-render and re-subscribed to NetInfo
+- This caused navigation stack to briefly show cached screens
+
+**Fix:**
+Refactored `ConnectionStatus.tsx`:
+1. Removed unused imports (`useChatStore`, `useAuthStore`)
+2. Used refs to store callbacks (`processOfflineQueueRef`, `setConnectedRef`)
+3. Changed useEffect dependency array to empty `[]` (setup once on mount)
+4. Removed verbose logging
+
+**Code Changes:**
+```typescript
+// ❌ OLD - Re-rendered on every change
+}, [processOfflineQueue, setConnected, user, subscribeToChats]);
+
+// ✅ NEW - Only sets up once
+const processOfflineQueueRef = useRef(processOfflineQueue);
+useEffect(() => {
+  processOfflineQueueRef.current = processOfflineQueue;
+}, [processOfflineQueue]);
+
+useEffect(() => {
+  // NetInfo setup
+}, []); // Empty deps - setup once
+```
+
+**Lesson:** Use refs for callbacks that don't need to trigger re-renders. NetInfo listener should be set up once on mount, not on every state change.
+
+---
+
 ## Known Issues
 
 ### Non-Issues (Expected Behavior)
@@ -143,9 +239,7 @@ try {
 
 ### To Fix Later
 - Improve error messages for users
-- Add retry logic for failed Firestore writes
 - Add loading indicators during operations
-- Handle network connectivity issues
 
 ## Testing Checklist
 

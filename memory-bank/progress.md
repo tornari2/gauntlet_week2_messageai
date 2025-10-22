@@ -411,7 +411,7 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 ### Phase 9.5: Bug Fixes & Optimizations ✅
 **Actual Time:** ~3 hours
 **Status:** Complete
-**Commit:** 0c8bf08
+**Commit:** 0c8bf08, 5e52c09
 
 #### Completed Features
 - [x] Offline message status with clock icon when offline
@@ -423,6 +423,8 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 - [x] Performance optimization with React.memo()
 - [x] Eliminated chat list flickering
 - [x] Push notification infrastructure (partial)
+- [x] **Fixed duplicate key warnings** (race condition in optimistic updates)
+- [x] **Fixed network reconnection flicker** (ConnectionStatus component)
 
 #### Acceptance Criteria
 - [x] Messages show clock icon when sent offline
@@ -432,6 +434,8 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 - [x] Chat list updates smoothly without flicker
 - [x] Only online indicator changes, not entire chat item
 - [x] Connection banner works correctly
+- [x] **No duplicate key warnings in React Native**
+- [x] **No UI flicker when network status changes**
 
 #### Files Created
 - `src/stores/networkStore.ts` - Global network state management
@@ -444,12 +448,13 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 - `NOTIFICATION_TESTING_GUIDE.md` - Guide for testing notifications
 
 #### Files Modified
-- `src/stores/messageStore.ts` - Network-aware sending, offline queue processing
-- `src/components/ConnectionStatus.tsx` - Network store integration
+- `src/stores/messageStore.ts` - Network-aware sending, offline queue processing, **fixed duplicate key race condition**
+- `src/components/ConnectionStatus.tsx` - Network store integration, **removed unnecessary dependencies, used refs**
 - `src/components/ChatListItem.tsx` - Memoization with custom comparison
 - `src/components/OnlineIndicator.tsx` - Memoization for smooth transitions
 - `src/services/firebase.ts` - RTDB initialization
 - `src/services/authService.ts` - Presence on logout, push token updates
+- `src/screens/ChatScreen.tsx` - **Fixed keyExtractor for FlatList**
 - `App.tsx` - Presence setup, push notifications, improved AppState handling
 - `app.json` - Removed invalid projectId
 
@@ -461,10 +466,23 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 - NetInfo listener dependencies can cause stale state issues
 - useCallback essential for AppState change handlers
 - Presence data should be mirrored between RTDB and Firestore
+- **Optimistic updates + real-time listeners = remove temp data, don't merge**
+- **Race condition: Firestore can be faster than local sendMessage completion**
+- **Use refs for callbacks to prevent useEffect dependency re-renders**
+- **FlatList keyExtractor should use stable keys, not Math.random()**
+- **NetInfo listener should only set up once on component mount**
 
 ---
 
 ## Recent Accomplishments
+
+### October 22, 2025
+- ✅ **Fixed Critical UI Bugs**
+- ✅ Fixed duplicate key warnings in React Native FlatList
+- ✅ Resolved race condition in optimistic message updates
+- ✅ Fixed network reconnection causing UI flicker
+- ✅ Optimized ConnectionStatus component with refs
+- ✅ Changed message confirmation strategy (remove temp instead of merge)
 
 ### October 21, 2025
 - ✅ **Completed Bug Fixes & Optimizations (Phase 9.5)**
@@ -640,6 +658,11 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 23. **Optional props enable gradual features** - senderName prop added without breaking existing code
 24. **Conditional rendering by chat.type** - Clean way to handle direct vs group differences
 25. **Chips UI pattern for multi-select** - Intuitive way to show selected items with removal
+26. **Optimistic updates strategy** - Remove temp messages instead of merging to avoid duplicates
+27. **Race conditions with Firestore** - Real-time listener can be faster than sendMessage
+28. **Refs for callback stability** - Prevent useEffect re-renders when callbacks change
+29. **Stable FlatList keys** - Use index-based fallback, never Math.random()
+30. **One-time useEffect setup** - Empty dependency array for listeners that shouldn't re-subscribe
 
 ---
 
