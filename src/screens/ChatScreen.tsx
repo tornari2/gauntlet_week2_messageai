@@ -23,6 +23,7 @@ import { useMessageStore } from '../stores/messageStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { useNetworkStore } from '../stores/networkStore';
+import { useNotificationStore } from '../stores/notificationStore';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageInput } from '../components/MessageInput';
 import { OnlineIndicator } from '../components/OnlineIndicator';
@@ -46,6 +47,7 @@ export const ChatScreen: React.FC = () => {
   const { user } = useAuthStore();
   const { chats } = useChatStore();
   const { isConnected } = useNetworkStore();
+  const { setActiveChatId } = useNotificationStore();
   const {
     messages,
     loading,
@@ -61,6 +63,16 @@ export const ChatScreen: React.FC = () => {
   // Get the current chat to find the other user
   const currentChat = chats.find(c => c.id === chatId);
   const isGroupChat = currentChat?.type === 'group';
+  
+  // Set active chat ID when entering the screen
+  useEffect(() => {
+    setActiveChatId(chatId);
+    
+    return () => {
+      // Clear active chat ID when leaving the screen
+      setActiveChatId(null);
+    };
+  }, [chatId, setActiveChatId]);
   
   // Get chat participants and their names
   useEffect(() => {

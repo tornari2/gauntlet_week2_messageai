@@ -1,25 +1,21 @@
 /**
  * Notification Service
  * 
- * Handles push notification registration, permissions, and token management
+ * Handles local notifications, in-app banners, and notification permissions.
+ * Uses local notifications instead of push notifications to work with Expo Go.
  */
 
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
+import { useNotificationStore } from '../stores/notificationStore';
+import { NotificationData } from '../components/NotificationBanner';
 
 /**
- * Register for push notifications and get Expo push token
- * @returns Expo push token or null if registration failed
+ * Register for local notifications and request permissions
+ * @returns true if permissions granted, false otherwise
  */
-export async function registerForPushNotifications(): Promise<string | null> {
+export async function registerForLocalNotifications(): Promise<boolean> {
   try {
-    // Check if running on a physical device
-    if (!Device.isDevice) {
-      console.log('Must use physical device for Push Notifications');
-      return null;
-    }
-
     // Check existing permissions
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -32,28 +28,26 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     // Check if permission was granted
     if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
-      return null;
+      console.log('Failed to get notification permissions!');
+      return false;
     }
-
-    // Get the Expo push token
-    // Note: projectId is optional for Expo Go, but required for standalone builds
-    const tokenData = await Notifications.getExpoPushTokenAsync();
 
     // Android-specific channel setup
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
+      await Notifications.setNotificationChannelAsync('messages', {
+        name: 'Messages',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#25D366',
+        sound: 'default',
       });
     }
 
-    return tokenData.data;
+    console.log('✅ Local notifications registered successfully');
+    return true;
   } catch (error) {
-    console.error('Error registering for push notifications:', error);
-    return null;
+    console.error('Error registering for local notifications:', error);
+    return false;
   }
 }
 
@@ -64,7 +58,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 export function setNotificationHandler() {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
+      shouldShowAlert: false, // We handle this with in-app banner
       shouldPlaySound: true,
       shouldSetBadge: true,
     }),
@@ -72,7 +66,17 @@ export function setNotificationHandler() {
 }
 
 /**
- * Schedule a local notification (for testing)
+ * Show an in-app notification banner (when app is in foreground)
+ * @param notification - Notification data to display
+ */
+export function showInAppNotification(notification: NotificationData): void {
+  const notificationStore = useNotificationStore.getState();
+  notificationStore.showNotification(notification);
+}
+
+/**
+ * Schedule a local notification
+ * Shown when app is in background or not in the specific chat
  * @param title - Notification title
  * @param body - Notification body
  * @param data - Custom data to include
@@ -89,6 +93,7 @@ export async function scheduleLocalNotification(
         body,
         data,
         sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
       },
       trigger: null, // Show immediately
     });
@@ -96,6 +101,58 @@ export async function scheduleLocalNotification(
   } catch (error) {
     console.error('Error scheduling local notification:', error);
     throw error;
+  }
+}
+
+/**
+ * Trigger notification for new message
+ * Shows in-app banner if app is foreground, local notification if background
+ * @param chatId - Chat ID
+ * @param chatName - Name of the chat/sender
+ * @param messageText - Message content
+ * @param senderId - ID of the sender
+ */
+export async function triggerMessageNotification(
+  chatId: string,
+  chatName: string,
+  messageText: string,
+  senderId: string
+): Promise<void> {
+  try {
+    const appState = AppState.currentState;
+    const notificationStore = useNotificationStore.getState();
+    const activeChatId = notificationStore.activeChatId;
+
+    // Don't notify if user is viewing this chat
+    if (activeChatId === chatId) {
+      console.log('🔕 User is viewing this chat, no notification');
+      return;
+    }
+
+    const notification: NotificationData = {
+      id: `${chatId}_${Date.now()}`,
+      title: chatName,
+      body: messageText,
+      chatId,
+      senderId,
+      timestamp: Date.now(),
+    };
+
+    // If app is in foreground, show in-app banner
+    if (appState === 'active') {
+      console.log('🔔 Showing in-app notification banner');
+      showInAppNotification(notification);
+    } else {
+      // If app is in background, show local notification
+      console.log('🔔 Showing local notification (app in background)');
+      await scheduleLocalNotification(
+        chatName,
+        messageText,
+        { chatId, senderId }
+      );
+    }
+  } catch (error) {
+    console.error('Error triggering message notification:', error);
   }
 }
 
@@ -151,9 +208,11 @@ export async function getBadgeCount(): Promise<number> {
 }
 
 export const notificationService = {
-  registerForPushNotifications,
+  registerForLocalNotifications,
   setNotificationHandler,
   scheduleLocalNotification,
+  triggerMessageNotification,
+  showInAppNotification,
   cancelAllNotifications,
   getNotificationPermissions,
   setBadgeCount,

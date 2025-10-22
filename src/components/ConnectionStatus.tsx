@@ -83,6 +83,7 @@ export const ConnectionStatus: React.FC = () => {
           transform: [{ translateY: slideAnim }],
         },
       ]}
+      pointerEvents={isConnected ? 'none' : 'box-none'} // Don't block touches when connected or hidden
     >
       <View style={[styles.banner, isConnected ? styles.connectedBanner : styles.offlineBanner]}>
         <Text style={styles.text}>

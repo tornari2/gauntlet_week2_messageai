@@ -25,6 +25,7 @@ import {
 } from 'firebase/firestore';
 import { firestore } from './firebase';
 import { Chat, ChatWithDetails, User, Message } from '../types';
+import { sendRealtimeNotification } from './realtimeNotificationService';
 
 /**
  * Subscribe to a user's chats in real-time
@@ -292,6 +293,37 @@ export async function sendMessage(
       lastMessage: text,
       lastMessageTime: serverTimestamp(),
     });
+    
+    // Get chat details to send notifications to other participants
+    const chatSnap = await getDoc(chatRef);
+    if (chatSnap.exists()) {
+      const chatData = chatSnap.data() as Chat;
+      const otherParticipants = chatData.participants.filter(id => id !== senderId);
+      
+      // Get sender's display name for notification
+      const senderName = await getUserDisplayName(senderId);
+      
+      // Determine chat name based on chat type
+      let chatName = senderName;
+      if (chatData.type === 'group' && chatData.groupName) {
+        chatName = `${senderName} in ${chatData.groupName}`;
+      }
+      
+      // Send real-time notifications to all other participants
+      const notificationPromises = otherParticipants.map(participantId =>
+        sendRealtimeNotification(
+          participantId,
+          chatId,
+          chatName,
+          text,
+          senderId
+        ).catch(error => {
+          console.error(`Failed to send notification to ${participantId}:`, error);
+        })
+      );
+      
+      await Promise.all(notificationPromises);
+    }
     
     return messageDoc.id;
   } catch (error) {
