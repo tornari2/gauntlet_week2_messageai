@@ -31,7 +31,11 @@ export const ErrorToast: React.FC<ErrorToastProps> = ({ message, onDismiss }) =>
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
+    console.log('🍞 ErrorToast received message:', message ? `"${message}"` : 'null');
+    
     if (message) {
+      console.log('🍞 Showing toast animation');
+      
       // Clear any existing timer
       if (autoDismissTimer.current) {
         clearTimeout(autoDismissTimer.current);

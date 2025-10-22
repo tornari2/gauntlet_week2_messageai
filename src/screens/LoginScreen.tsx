@@ -3,7 +3,7 @@
  * Allows users to sign in with email and password
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -30,13 +30,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const { login } = useAuthStore();
 
+  // Track error state changes
+  useEffect(() => {
+    console.log('📊 Error state changed to:', error ? `"${error}"` : 'empty');
+  }, [error]);
+
   const handleLogin = async () => {
+    console.log('🔐 Login pressed - email:', email, 'password:', password ? '***' : 'empty');
+    
     // Clear any previous errors
     setError('');
 
     // Validation
     if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password');
+      const msg = 'Please enter both email and password';
+      console.log('❌ Validation failed, setting error:', msg);
+      setError(msg);
+      console.log('🔴 Error state should now be:', msg);
       return;
     }
 
@@ -48,7 +58,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     } catch (error: any) {
       setLocalLoading(false);
       const errorMsg = error.message || 'An error occurred during login';
+      console.log('❌ Login failed, setting error:', errorMsg);
       setError(errorMsg);
+      console.log('🔴 Error state should now be:', errorMsg);
     }
   };
 
