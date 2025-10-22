@@ -397,11 +397,19 @@ export async function createGroupChat(
   groupName: string
 ): Promise<string> {
   try {
+    console.log('🏗️ Creating group chat...');
+    console.log('   Creator ID:', creatorId);
+    console.log('   Participant IDs:', participantIds);
+    console.log('   Group Name:', groupName);
+    
     // Add creator to participants list
     const allParticipants = [creatorId, ...participantIds];
+    console.log('   All Participants:', allParticipants);
     
     // Create new group chat
     const newChatRef = doc(collection(firestore, 'chats'));
+    console.log('   New Chat ID:', newChatRef.id);
+    
     const newChat: Omit<Chat, 'id'> = {
       type: 'group',
       participants: allParticipants,
@@ -409,14 +417,19 @@ export async function createGroupChat(
       lastMessageTime: serverTimestamp() as Timestamp,
       createdAt: serverTimestamp() as Timestamp,
       groupName,
-      // groupPhoto can be added later
+      // Don't include groupPhoto if it's not provided - Firestore doesn't accept undefined
     };
+    
+    console.log('   Chat object:', JSON.stringify(newChat, null, 2));
+    console.log('   About to call setDoc...');
     
     await setDoc(newChatRef, newChat);
     
+    console.log('✅ Group chat created successfully:', newChatRef.id);
     return newChatRef.id;
   } catch (error) {
-    console.error('Error creating group chat:', error);
+    console.error('❌ Error creating group chat:', error);
+    console.error('   Error details:', JSON.stringify(error, null, 2));
     throw new Error('Failed to create group chat');
   }
 }

@@ -61,17 +61,33 @@ export function UserSelector({
       const usersRef = collection(firestore, 'users');
       const usersSnapshot = await getDocs(usersRef);
       
+      console.log('🔍 UserSelector - Current User ID:', currentUserId);
+      
       const users: User[] = [];
       usersSnapshot.forEach((doc) => {
         const userData = doc.data() as User;
+        // IMPORTANT: The UID is the document ID, not in the data
+        const userWithId = {
+          ...userData,
+          uid: doc.id, // Use document ID as UID
+        };
+        
+        console.log('👤 Found user:', userWithId.displayName, 'UID:', userWithId.uid);
+        
         // Exclude current user and any other excluded users
         if (
-          userData.uid !== currentUserId &&
-          !excludeUserIds.includes(userData.uid)
+          userWithId.uid !== currentUserId &&
+          !excludeUserIds.includes(userWithId.uid)
         ) {
-          users.push(userData);
+          console.log('✅ Including user:', userWithId.displayName);
+          users.push(userWithId);
+        } else {
+          console.log('❌ Excluding user:', userWithId.displayName, 
+            'Is current user:', userWithId.uid === currentUserId);
         }
       });
+      
+      console.log('📋 Final user list:', users.length, 'users');
       
       // Sort by display name
       users.sort((a, b) => a.displayName.localeCompare(b.displayName));
@@ -86,15 +102,24 @@ export function UserSelector({
   };
 
   const toggleUserSelection = (userId: string) => {
+    console.log('🔘 Toggle selection for user:', userId);
+    console.log('📋 Current selected IDs:', selectedUserIds);
+    
     if (selectedUserIds.includes(userId)) {
-      onSelectionChange(selectedUserIds.filter((id) => id !== userId));
+      const newSelection = selectedUserIds.filter((id) => id !== userId);
+      console.log('➖ Removing user, new selection:', newSelection);
+      onSelectionChange(newSelection);
     } else {
-      onSelectionChange([...selectedUserIds, userId]);
+      const newSelection = [...selectedUserIds, userId];
+      console.log('➕ Adding user, new selection:', newSelection);
+      onSelectionChange(newSelection);
     }
   };
 
   const renderUserItem = ({ item }: { item: User }) => {
     const isSelected = selectedUserIds.includes(item.uid);
+    
+    console.log('🎨 Rendering user:', item.displayName, 'Selected:', isSelected);
 
     return (
       <TouchableOpacity
@@ -140,7 +165,7 @@ export function UserSelector({
             if (!user) return null;
 
             return (
-              <View key={userId} style={styles.chip}>
+              <View key={`chip-${userId}`} style={styles.chip}>
                 <Text style={styles.chipText}>{user.displayName}</Text>
                 <TouchableOpacity
                   onPress={() => toggleUserSelection(userId)}

@@ -10,6 +10,7 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useMessageStore } from '../stores/messageStore';
 import { useNetworkStore } from '../stores/networkStore';
+import { Colors } from '../constants/Colors';
 
 export const ConnectionStatus: React.FC = () => {
   const [slideAnim] = useState(new Animated.Value(-50));
@@ -94,10 +95,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   offlineBanner: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: Colors.error,
   },
   connectedBanner: {
-    backgroundColor: '#51CF66',
+    backgroundColor: Colors.primary,
   },
   text: {
     color: '#FFFFFF',

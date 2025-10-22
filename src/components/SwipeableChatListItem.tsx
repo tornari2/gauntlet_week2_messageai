@@ -31,8 +31,18 @@ const DELETE_BUTTON_WIDTH = 80;
 
 export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ chat }) => {
   const translateX = useRef(new Animated.Value(0)).current;
+  const isSwipeOpen = useRef(false);
   const deleteChat = useChatStore((state) => state.deleteChat);
   const user = useAuthStore((state) => state.user);
+
+  const closeSwipe = () => {
+    isSwipeOpen.current = false;
+    Animated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 8,
+    }).start();
+  };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -48,12 +58,26 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
         // Only allow left swipe (negative dx)
         if (gestureState.dx < 0) {
           translateX.setValue(gestureState.dx);
+        } else if (isSwipeOpen.current && gestureState.dx > 0) {
+          // Allow right swipe to close when already open
+          const newValue = -DELETE_BUTTON_WIDTH + gestureState.dx;
+          translateX.setValue(Math.min(0, newValue));
         }
       },
       onPanResponderRelease: (_, gestureState) => {
-        
         // If swiped past threshold, show delete button
         if (gestureState.dx < SWIPE_THRESHOLD) {
+          isSwipeOpen.current = true;
+          Animated.spring(translateX, {
+            toValue: -DELETE_BUTTON_WIDTH,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        } else if (isSwipeOpen.current && gestureState.dx > 20) {
+          // Close if swiping right when open
+          closeSwipe();
+        } else if (isSwipeOpen.current) {
+          // Keep open if already open and not enough swipe to close
           Animated.spring(translateX, {
             toValue: -DELETE_BUTTON_WIDTH,
             useNativeDriver: true,
@@ -61,20 +85,20 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
           }).start();
         } else {
           // Otherwise, spring back to original position
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            bounciness: 8,
-          }).start();
+          closeSwipe();
         }
       },
       onPanResponderTerminate: () => {
-        // Spring back if gesture is interrupted
-        Animated.spring(translateX, {
-          toValue: 0,
-          useNativeDriver: true,
-          bounciness: 8,
-        }).start();
+        // Keep open if already open, otherwise close
+        if (isSwipeOpen.current) {
+          Animated.spring(translateX, {
+            toValue: -DELETE_BUTTON_WIDTH,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        } else {
+          closeSwipe();
+        }
       },
     })
   ).current;
@@ -93,12 +117,7 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
           text: 'Cancel',
           style: 'cancel',
           onPress: () => {
-            // Close the swipe
-            Animated.spring(translateX, {
-              toValue: 0,
-              useNativeDriver: true,
-              bounciness: 8,
-            }).start();
+            closeSwipe();
           },
         },
         {
@@ -116,12 +135,7 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
             } catch (error) {
               console.error('Error deleting chat:', error);
               Alert.alert('Error', 'Failed to delete chat. Please try again.');
-              // Reset position on error
-              Animated.spring(translateX, {
-                toValue: 0,
-                useNativeDriver: true,
-                bounciness: 8,
-              }).start();
+              closeSwipe();
             }
           },
         },

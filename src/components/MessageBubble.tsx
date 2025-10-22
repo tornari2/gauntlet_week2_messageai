@@ -9,6 +9,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Message } from '../types';
 import { formatBubbleTime } from '../utils/dateHelpers';
+import { Colors } from '../constants/Colors';
 
 interface MessageBubbleProps {
   message: Message;
@@ -158,14 +159,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   sentBubble: {
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.sentBubble,
     borderBottomRightRadius: 4,
   },
   receivedBubble: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.receivedBubble,
     borderBottomLeftRadius: 4,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: Colors.border,
   },
   pendingBubble: {
     opacity: 0.7,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
   senderName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#25D366',
+    color: Colors.primaryDark,
     marginBottom: 4,
   },
   metaContainer: {
@@ -207,8 +208,9 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   statusIcon: {
-    fontSize: 12,
-    color: '#F0F0F0',
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textLight,
   },
   retryButton: {
     marginTop: 8,

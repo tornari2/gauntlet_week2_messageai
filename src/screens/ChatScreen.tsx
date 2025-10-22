@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -203,40 +204,42 @@ export const ChatScreen: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          testID="back-button"
-        >
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>
-            {isGroupChat ? currentChat?.groupName : chatName}
-          </Text>
-          {isGroupChat ? (
-            <Text style={styles.participantCount}>
-              {participants.length} participant{participants.length !== 1 ? 's' : ''}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            testID="back-button"
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          >
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>
+              {isGroupChat ? currentChat?.groupName : chatName}
             </Text>
-          ) : otherUser ? (
-            <View style={styles.presenceContainer}>
-              <OnlineIndicator 
-                isOnline={otherUser.isOnline}
-                lastSeen={otherUser.lastSeen}
-                showText={true}
-                size="small"
-              />
-            </View>
-          ) : null}
-        </View>
-        <View style={styles.headerRight} />
+            {isGroupChat ? (
+              <Text style={styles.participantCount}>
+                {participants.length} participant{participants.length !== 1 ? 's' : ''}
+              </Text>
+            ) : otherUser ? (
+              <View style={styles.presenceContainer}>
+                <OnlineIndicator 
+                  isOnline={otherUser.isOnline}
+                  lastSeen={otherUser.lastSeen}
+                  showText={true}
+                  size="small"
+                />
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.headerRight} />
       </View>
 
       {/* Messages List */}
@@ -260,11 +263,16 @@ export const ChatScreen: React.FC = () => {
 
       {/* Message Input */}
       <MessageInput onSend={handleSend} disabled={!user} />
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f0f2f5',
@@ -274,17 +282,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    paddingTop: 50, // Account for status bar
-    backgroundColor: '#25D366',
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#1EA952',
+    borderBottomColor: '#E5E5EA',
   },
   backButton: {
-    paddingRight: 12,
+    padding: 8,
+    minWidth: 80,
   },
   backText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -295,14 +303,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#000',
   },
   presenceContainer: {
     marginTop: 2,
   },
   participantCount: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#8E8E93',
     marginTop: 2,
   },
   headerRight: {
