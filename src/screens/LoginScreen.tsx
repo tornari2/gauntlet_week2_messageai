@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  InteractionManager,
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 import { Colors } from '../constants/Colors';
@@ -37,22 +38,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const handleLogin = async () => {
     console.log('🔐 Login pressed - email:', email, 'password:', password ? '***' : 'empty');
-    
-    // Clear any previous errors
-    setError('');
 
     // Validation
     if (!email.trim() || !password.trim()) {
       const msg = 'Please enter both email and password';
       console.log('❌ Validation failed, setting error:', msg);
-      
-      // Use requestAnimationFrame to ensure state update happens in next frame
-      requestAnimationFrame(() => {
-        console.log('🎬 Setting validation error in next animation frame');
-        setError(msg);
-      });
+      setError(msg);
       return;
     }
+
+    // Clear error before attempting login
+    setError('');
 
     try {
       setLocalLoading(true);
@@ -64,10 +60,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       const errorMsg = error.message || 'An error occurred during login';
       console.log('❌ Login failed, setting error:', errorMsg);
       
-      // Use requestAnimationFrame to ensure state update happens in next frame
-      requestAnimationFrame(() => {
-        console.log('🎬 Setting error in next animation frame');
+      // Use InteractionManager to ensure state update happens after all interactions complete
+      InteractionManager.runAfterInteractions(() => {
+        console.log('🎬 Setting error after interactions');
         setError(errorMsg);
+        console.log('✅ Error set to:', errorMsg);
       });
     }
   };
