@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 import { Colors } from '../constants/Colors';
+import { ErrorToast } from '../components/ErrorToast';
 
 interface LoginScreenProps {
   navigation: any;
@@ -65,13 +66,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
-
-        {/* Error Message */}
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
 
         {/* Form */}
         <View style={styles.form}>
@@ -125,6 +119,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Error Toast Popup */}
+      <ErrorToast message={error} onDismiss={() => setError('')} />
     </KeyboardAvoidingView>
   );
 };
@@ -151,20 +148,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
-  },
-  errorContainer: {
-    backgroundColor: '#FFE5E5',
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.error,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-    borderRadius: 8,
-  },
-  errorText: {
-    color: Colors.error,
-    fontSize: 14,
-    fontWeight: '500',
   },
   form: {
     marginBottom: 24,

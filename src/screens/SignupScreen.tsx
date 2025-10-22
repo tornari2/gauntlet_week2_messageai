@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 import { Colors } from '../constants/Colors';
+import { ErrorToast } from '../components/ErrorToast';
 
 interface SignupScreenProps {
   navigation: any;
@@ -99,13 +100,6 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
             <Text style={styles.subtitle}>Sign up to get started</Text>
           </View>
 
-          {/* Error Message */}
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
           {/* Form */}
           <View style={styles.form}>
             <TextInput
@@ -182,6 +176,9 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Error Toast Popup */}
+      <ErrorToast message={error} onDismiss={() => setError('')} />
     </KeyboardAvoidingView>
   );
 };
@@ -211,20 +208,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
-  },
-  errorContainer: {
-    backgroundColor: '#FFE5E5',
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.error,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-    borderRadius: 8,
-  },
-  errorText: {
-    color: Colors.error,
-    fontSize: 14,
-    fontWeight: '500',
   },
   form: {
     marginBottom: 24,
