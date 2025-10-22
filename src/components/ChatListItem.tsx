@@ -137,11 +137,15 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) =
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function - only re-render if these specific props change
+  // Compare online status using boolean conversion to avoid re-render on undefined vs false changes
+  const prevOnline = Boolean(prevProps.chat.otherUserOnline);
+  const nextOnline = Boolean(nextProps.chat.otherUserOnline);
+  
   return (
     prevProps.chat.id === nextProps.chat.id &&
     prevProps.chat.lastMessage === nextProps.chat.lastMessage &&
     prevProps.chat.lastMessageTime === nextProps.chat.lastMessageTime &&
-    prevProps.chat.otherUserOnline === nextProps.chat.otherUserOnline &&
+    prevOnline === nextOnline &&
     prevProps.chat.otherUserLastSeen === nextProps.chat.otherUserLastSeen &&
     prevProps.chat.unreadCount === nextProps.chat.unreadCount &&
     prevProps.chat.otherUserName === nextProps.chat.otherUserName &&

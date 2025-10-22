@@ -17,6 +17,7 @@ import {
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '../services/firebase';
 import { User } from '../types';
+import { Colors } from '../constants/Colors';
 
 interface UserSelectorProps {
   currentUserId: string;
@@ -150,7 +151,7 @@ export function UserSelector({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#25D366" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -293,7 +294,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },

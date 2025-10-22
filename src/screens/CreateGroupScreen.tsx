@@ -160,7 +160,7 @@ export function CreateGroupScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.primary,
   },
   container: {
     flex: 1,
@@ -180,9 +180,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: Colors.primaryDark,
   },
   backButton: {
     marginRight: 12,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 32,
-    color: Colors.primary,
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
   headerTextContainer: {
@@ -199,12 +199,12 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   headerSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   groupNameContainer: {
     padding: 16,
