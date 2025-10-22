@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Timestamp } from 'firebase/firestore';
 import { formatLastSeen } from '../utils/dateHelpers';
+import { Colors } from '../constants/Colors';
 
 interface OnlineIndicatorProps {
   isOnline: boolean;
@@ -72,16 +73,17 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   dot: {
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
   onlineDot: {
-    backgroundColor: '#25D366', // WhatsApp green
+    backgroundColor: Colors.online,
   },
   offlineDot: {
-    backgroundColor: '#8E8E93', // Gray
+    backgroundColor: Colors.offline,
   },
   text: {
     fontSize: 12,

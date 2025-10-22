@@ -28,6 +28,7 @@ import { OnlineIndicator } from '../components/OnlineIndicator';
 import { Message, User } from '../types';
 import { firestore } from '../services/firebase';
 import { chatService } from '../services/chatService';
+import { Colors } from '../constants/Colors';
 
 type ChatScreenRouteProp = RouteProp<MainStackParamList, 'Chat'>;
 
@@ -271,7 +272,7 @@ export const ChatScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.primary,
   },
   container: {
     flex: 1,
@@ -283,16 +284,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: Colors.primaryDark,
   },
   backButton: {
     padding: 8,
     minWidth: 80,
   },
   backText: {
-    color: '#000',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -303,14 +304,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#FFFFFF',
   },
   presenceContainer: {
-    marginTop: 2,
+    marginTop: 4,
+    alignItems: 'center',
   },
   participantCount: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: 'rgba(255, 255, 255, 0.9)',
     marginTop: 2,
   },
   headerRight: {

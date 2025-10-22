@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { OnlineIndicator } from './OnlineIndicator';
+import { Colors } from '../constants/Colors';
 
 type ChatListItemNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ChatsList'>;
 
@@ -165,12 +166,12 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   groupAvatar: {
-    backgroundColor: '#128C7E', // Darker green for groups
+    backgroundColor: Colors.primaryDark,
   },
   avatarText: {
     color: '#fff',
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   unreadBadge: {
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     minWidth: 24,
     height: 24,
