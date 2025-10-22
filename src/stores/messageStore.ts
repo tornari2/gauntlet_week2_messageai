@@ -84,30 +84,42 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         msg => (msg.pending || msg.failed) && msg.tempId
       );
       
-      // Combine Firestore messages with pending local messages
-      const allMessages = [...messages];
+      // Remove duplicates from Firestore messages FIRST
+      const seenIds = new Set<string>();
+      const uniqueFirestoreMessages: Message[] = [];
+      
+      for (const msg of messages) {
+        const messageId = msg.id;
+        if (!seenIds.has(messageId)) {
+          seenIds.add(messageId);
+          uniqueFirestoreMessages.push(msg);
+        }
+      }
+      
+      // Combine deduplicated Firestore messages with pending local messages
+      const allMessages = [...uniqueFirestoreMessages];
       
       // Add pending messages that aren't already represented in Firestore
       pendingMessages.forEach(pendingMsg => {
-        const existsInFirestore = messages.some(m => 
-          m.id === pendingMsg.id || 
-          m.tempId === pendingMsg.tempId ||
-          (pendingMsg.tempId && m.id === pendingMsg.id)
-        );
+        const existsInFirestore = uniqueFirestoreMessages.some(m => {
+          // Check if Firestore has a message with the same ID
+          if (m.id === pendingMsg.id) return true;
+          // Check if Firestore has a message whose ID matches the pending message's tempId
+          // (This handles the case where a pending message was confirmed and now exists in Firestore)
+          if (pendingMsg.tempId && m.id === pendingMsg.tempId) return true;
+          // Check if they have the same tempId
+          if (m.tempId && pendingMsg.tempId && m.tempId === pendingMsg.tempId) return true;
+          return false;
+        });
         if (!existsInFirestore) {
           allMessages.push(pendingMsg);
         }
       });
       
-      // Remove duplicates based on ID (keep the first occurrence)
-      const uniqueMessages = allMessages.filter((msg, index, self) => {
-        return index === self.findIndex(m => m.id === msg.id);
-      });
-      
       return {
         messages: {
           ...state.messages,
-          [chatId]: uniqueMessages.sort((a, b) => {
+          [chatId]: allMessages.sort((a, b) => {
             const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toMillis();
             const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toMillis();
             return aTime - bTime;
@@ -166,14 +178,18 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     set((state) => {
       const existingMessages = state.messages[chatId] || [];
       
+      const updatedMessages = existingMessages.map((m) => {
+        // Match by ID or tempId
+        if (m.id === messageId || m.tempId === messageId) {
+          return { ...m, ...updates };
+        }
+        return m;
+      });
+      
       return {
         messages: {
           ...state.messages,
-          [chatId]: existingMessages.map((m) =>
-            m.id === messageId || m.tempId === messageId
-              ? { ...m, ...updates }
-              : m
-          ),
+          [chatId]: updatedMessages,
         },
       };
     });
@@ -310,15 +326,17 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     
     try {
       // Send to server (we're online)
-      console.log('📡 Sending message to server...');
       const realMessageId = await chatService.sendMessage(chatId, text, senderId);
       
-      // Update optimistic message with real ID and remove pending state
-      console.log('✅ Message sent successfully:', realMessageId);
-      get().updateMessage(chatId, tempId, {
-        id: realMessageId,
-        pending: false,
-        tempId: undefined,
+      // Remove the optimistic/temp message - Firestore will provide the real one
+      set((state) => {
+        const existingMessages = state.messages[chatId] || [];
+        return {
+          messages: {
+            ...state.messages,
+            [chatId]: existingMessages.filter(m => m.tempId !== tempId),
+          },
+        };
       });
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -361,11 +379,15 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       // Retry sending
       const realMessageId = await chatService.sendMessage(chatId, failedMessage.text, failedMessage.senderId);
       
-      // Update with real ID
-      get().updateMessage(chatId, tempId, {
-        id: realMessageId,
-        pending: false,
-        tempId: undefined,
+      // Remove the temp message - Firestore will provide the real one
+      set((state) => {
+        const existingMessages = state.messages[chatId] || [];
+        return {
+          messages: {
+            ...state.messages,
+            [chatId]: existingMessages.filter(m => m.tempId !== tempId),
+          },
+        };
       });
     } catch (error) {
       console.error('Error retrying message:', error);
@@ -439,26 +461,27 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         
         try {
           // Try to send the message
-          console.log(`📤 Attempting to send queued message for chat ${chatId}`);
           const realMessageId = await chatService.sendMessage(
             chatId,
             message.text,
             message.senderId
           );
           
-          // Update message in store with real ID
+          // Remove the temp message from store - Firestore will provide the real one
           if (message.tempId) {
-            get().updateMessage(chatId, message.tempId, {
-              id: realMessageId,
-              pending: false,
-              failed: false,
-              tempId: undefined,
+            set((state) => {
+              const existingMessages = state.messages[chatId] || [];
+              return {
+                messages: {
+                  ...state.messages,
+                  [chatId]: existingMessages.filter(m => m.tempId !== message.tempId),
+                },
+              };
             });
           }
           
           // Remove from queue
           await storageService.removeFromOfflineQueue(i);
-          console.log(`✅ Successfully sent queued message for chat ${chatId}`);
         } catch (error) {
           console.error(`❌ Failed to send queued message for chat ${chatId}:`, error);
           // Keep in queue for next retry, but mark as failed in UI

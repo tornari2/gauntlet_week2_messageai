@@ -5,21 +5,27 @@
  * Also processes the offline message queue when connection is restored.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useMessageStore } from '../stores/messageStore';
 import { useNetworkStore } from '../stores/networkStore';
-import { useChatStore } from '../stores/chatStore';
-import { useAuthStore } from '../stores/authStore';
 import { Colors } from '../constants/Colors';
 
 export const ConnectionStatus: React.FC = () => {
   const [slideAnim] = useState(new Animated.Value(-50));
   const { isConnected, setConnected } = useNetworkStore();
   const processOfflineQueue = useMessageStore((state) => state.processOfflineQueue);
-  const user = useAuthStore((state) => state.user);
-  const subscribeToChats = useChatStore((state) => state.subscribeToChats);
+  
+  // Use refs to avoid re-renders when these callbacks change
+  const processOfflineQueueRef = useRef(processOfflineQueue);
+  const setConnectedRef = useRef(setConnected);
+  
+  // Keep refs up to date
+  useEffect(() => {
+    processOfflineQueueRef.current = processOfflineQueue;
+    setConnectedRef.current = setConnected;
+  }, [processOfflineQueue, setConnected]);
 
   useEffect(() => {
     console.log('🔌 ConnectionStatus: Setting up NetInfo listener');
@@ -28,33 +34,28 @@ export const ConnectionStatus: React.FC = () => {
     NetInfo.fetch().then((state) => {
       const connected = state.isConnected ?? false;
       console.log('📶 Initial network status:', connected ? 'CONNECTED' : 'DISCONNECTED', 'Details:', state);
-      setConnected(connected);
+      setConnectedRef.current(connected);
     });
 
     // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener((state) => {
       const connected = state.isConnected ?? false;
       console.log('📶 Network status changed:', connected ? 'CONNECTED ✅' : 'DISCONNECTED ❌');
-      console.log('📶 NetInfo details:', JSON.stringify(state, null, 2));
       
       // Check previous state from store
       const prevConnected = useNetworkStore.getState().isConnected;
       console.log('📶 Previous:', prevConnected, '→ New:', connected);
       
       // Update global network store
-      setConnected(connected);
+      setConnectedRef.current(connected);
       
-      // If reconnected, process offline queue and refresh chats (for presence updates)
+      // If reconnected, process offline queue
       if (connected && !prevConnected) {
         console.log('✅ Connection restored, processing offline queue');
-        processOfflineQueue();
+        processOfflineQueueRef.current();
         
-        // Refresh chat subscriptions to get updated presence data
-        if (user) {
-          console.log('🔄 Refreshing chat subscriptions for updated presence');
-          // The existing subscription will automatically update when Firestore reconnects
-          // But we can trigger a manual refresh if needed
-        }
+        // Firestore subscriptions will automatically reconnect and update
+        console.log('🔄 Firestore will automatically refresh on reconnect');
       }
     });
 
@@ -62,7 +63,8 @@ export const ConnectionStatus: React.FC = () => {
       console.log('🔌 ConnectionStatus: Cleaning up NetInfo listener');
       unsubscribe();
     };
-  }, [processOfflineQueue, setConnected, user, subscribeToChats]);
+    // Empty dependency array - only set up once on mount
+  }, []);
 
   useEffect(() => {
     // Animate banner in/out based on connection status

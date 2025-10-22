@@ -259,7 +259,7 @@ export const ChatScreen: React.FC = () => {
           ref={flatListRef}
           data={chatMessages}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id || item.tempId || Math.random().toString()}
+          keyExtractor={(item, index) => item.id || item.tempId || `msg-${index}`}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
           ListEmptyComponent={renderEmpty}
