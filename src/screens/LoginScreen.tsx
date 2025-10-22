@@ -3,7 +3,7 @@
  * Allows users to sign in with email and password
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -30,22 +30,36 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const { login } = useAuthStore();
 
+  // Debug: Monitor error state changes
+  useEffect(() => {
+    console.log('📊 LoginScreen - Error state changed to:', error ? `"${error}"` : 'null');
+  }, [error]);
+
   const handleLogin = async () => {
     // Clear any previous errors
     setError('');
+    console.log('🔐 Login button pressed');
 
     // Validation
     if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password');
+      console.log('❌ Validation failed: empty fields');
+      const errorMsg = 'Please enter both email and password';
+      console.log('🔴 Setting error state:', errorMsg);
+      setError(errorMsg);
       return;
     }
 
     try {
       setLocalLoading(true);
+      console.log('📤 Attempting login with:', email);
       await login(email.trim(), password);
+      console.log('✅ Login successful');
       // Navigation will happen automatically when auth state changes
     } catch (error: any) {
-      setError(error.message || 'An error occurred during login');
+      const errorMsg = error.message || 'An error occurred during login';
+      console.log('❌ Login failed:', errorMsg);
+      console.log('🔴 Setting error state:', errorMsg);
+      setError(errorMsg);
     } finally {
       setLocalLoading(false);
     }
@@ -121,7 +135,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       </View>
 
       {/* Error Toast Popup */}
-      <ErrorToast message={error} onDismiss={() => setError('')} />
+      <ErrorToast 
+        message={error} 
+        onDismiss={() => {
+          console.log('🗑️ ErrorToast dismissed');
+          setError('');
+        }} 
+      />
     </KeyboardAvoidingView>
   );
 };
