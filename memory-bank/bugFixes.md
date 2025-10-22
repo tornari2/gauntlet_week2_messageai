@@ -2,6 +2,44 @@
 
 ## October 22, 2025
 
+### Console Error Banners & Spinner Flicker
+**Status:** ✅ Fixed
+**Commit:** 6016893
+
+**Issues Fixed:**
+
+1. **Console Error Banners**
+   - **Problem:** Firebase auth errors (auth/invalid-email, etc.) appearing as console.error logs
+   - **Impact:** Cluttered console output, confusing error display
+   - **Fix:**
+     - Removed console.error from authStore login/signup methods
+     - Removed console.error from authService signIn/signUp functions
+     - Errors are already handled and displayed in UI with inline error messages
+   - **Files Changed:**
+     - `src/stores/authStore.ts`
+     - `src/services/authService.ts`
+
+2. **Chat List Spinner Flicker**
+   - **Problem:** Loading spinner flashing on ChatsListScreen when initially loading
+   - **Impact:** Jarring visual experience, double spinners (empty state + FlatList refresh)
+   - **Root Cause:** 
+     - `subscribeToChats` always set `loading: true` even on re-subscription
+     - FlatList `refreshing={loading}` prop showed pull-to-refresh spinner unnecessarily
+   - **Fix:**
+     - Only set loading on initial load (when chats array is empty)
+     - Removed pull-to-refresh from FlatList (real-time updates make it unnecessary)
+   - **Files Changed:**
+     - `src/stores/chatStore.ts`
+     - `src/screens/ChatsListScreen.tsx`
+
+**Result:**
+- Clean console output with no redundant error logs
+- Smooth chat list loading without spinner flicker
+- Better loading state management
+- Removed unnecessary pull-to-refresh feature
+
+---
+
 ### Auth Screen UX Improvements
 **Status:** ✅ Fixed
 **Commit:** d2f455b
