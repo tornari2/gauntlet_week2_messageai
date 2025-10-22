@@ -109,6 +109,18 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
           if (pendingMsg.tempId && m.id === pendingMsg.tempId) return true;
           // Check if they have the same tempId
           if (m.tempId && pendingMsg.tempId && m.tempId === pendingMsg.tempId) return true;
+          
+          // IMPORTANT: Check for duplicate content (same sender, text, and similar timestamp)
+          // This prevents the flicker when Firestore update arrives before we remove the temp message
+          if (m.senderId === pendingMsg.senderId && m.text === pendingMsg.text) {
+            const mTime = m.timestamp instanceof Date ? m.timestamp.getTime() : m.timestamp.toMillis();
+            const pendingTime = pendingMsg.timestamp instanceof Date ? pendingMsg.timestamp.getTime() : pendingMsg.timestamp.toMillis();
+            // If timestamps are within 5 seconds, consider them the same message
+            if (Math.abs(mTime - pendingTime) < 5000) {
+              return true;
+            }
+          }
+          
           return false;
         });
         if (!existsInFirestore) {
