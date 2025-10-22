@@ -23,7 +23,8 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import { firestore } from './firebase';
+import { ref, onValue } from 'firebase/database';
+import { firestore, database } from './firebase';
 import { Chat, ChatWithDetails, User, Message } from '../types';
 import { sendRealtimeNotification } from './realtimeNotificationService';
 
@@ -79,24 +80,22 @@ export function subscribeToUserChats(
             newUserIds.add(otherUserId);
             const otherUserName = await getUserDisplayName(otherUserId);
             
-            // Get the other user's online status and last seen (initial load)
-            const otherUserRef = doc(firestore, 'users', otherUserId);
-            const otherUserSnap = await getDoc(otherUserRef);
-            const otherUserData = otherUserSnap.exists() ? otherUserSnap.data() : null;
+            // Get the other user's online status from RTDB (initial load)
+            const { get } = await import('firebase/database');
+            const otherUserStatusRef = ref(database, `/status/${otherUserId}`);
+            let isOnline = false;
+            let lastSeen = new Date();
             
-            // Check if user is truly online based on lastActive timestamp
-            // User is offline if lastActive is older than 15 seconds
-            const isReallyOnline = () => {
-              if (!otherUserData?.isOnline) return false;
-              if (!otherUserData?.lastActive) return otherUserData.isOnline;
-              
-              const lastActive = otherUserData.lastActive.toDate?.() || new Date(otherUserData.lastActive);
-              const now = new Date();
-              const secondsSinceActive = (now.getTime() - lastActive.getTime()) / 1000;
-              
-              // Consider offline if no heartbeat in last 15 seconds
-              return secondsSinceActive < 15;
-            };
+            try {
+              const statusSnapshot = await get(otherUserStatusRef);
+              if (statusSnapshot.exists()) {
+                const rtdbStatus = statusSnapshot.val();
+                isOnline = rtdbStatus.state === 'online';
+                lastSeen = rtdbStatus.last_changed ? new Date(rtdbStatus.last_changed) : new Date();
+              }
+            } catch (error) {
+              console.error(`Error fetching initial RTDB status for ${otherUserId}:`, error);
+            }
             
             const chatWithDetails: ChatWithDetails = {
               id: docSnap.id,
@@ -106,8 +105,8 @@ export function subscribeToUserChats(
               lastMessageTime: chatData.lastMessageTime,
               createdAt: chatData.createdAt,
               otherUserName,
-              otherUserOnline: isReallyOnline(),
-              otherUserLastSeen: otherUserData?.lastSeen?.toDate() || new Date(),
+              otherUserOnline: isOnline,
+              otherUserLastSeen: lastSeen,
               unreadCount,
             };
             
@@ -115,33 +114,18 @@ export function subscribeToUserChats(
             
             // Subscribe to this user's status changes if not already subscribed
             if (!userStatusUnsubscribers.has(otherUserId)) {
-              console.log(`👂 Setting up status subscription for user:`, otherUserId);
-              const userStatusUnsubscribe = onSnapshot(
-                doc(firestore, 'users', otherUserId),
-                (userDoc) => {
-                  if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    
-                    // Check if user is truly online based on lastActive timestamp
-                    const isReallyOnline = () => {
-                      if (!userData.isOnline) return false;
-                      if (!userData.lastActive) return userData.isOnline;
-                      
-                      const lastActive = userData.lastActive.toDate?.() || new Date(userData.lastActive);
-                      const now = new Date();
-                      const secondsSinceActive = (now.getTime() - lastActive.getTime()) / 1000;
-                      
-                      // Consider offline if no heartbeat in last 15 seconds
-                      return secondsSinceActive < 15;
-                    };
-                    
-                    const actualOnlineStatus = isReallyOnline();
-                    
-                    console.log(`📡 Status update received for user ${otherUserId}:`, {
-                      isOnline: userData.isOnline,
-                      lastActive: userData.lastActive,
-                      actualOnlineStatus,
-                      lastSeen: userData.lastSeen
+              console.log(`👂 Setting up RTDB status subscription for user:`, otherUserId);
+              // Watch Realtime Database for presence (works with onDisconnect)
+              const userStatusRef = ref(database, `/status/${otherUserId}`);
+              const userStatusUnsubscribe = onValue(
+                userStatusRef,
+                (snapshot) => {
+                  const rtdbStatus = snapshot.val();
+                  if (rtdbStatus) {
+                    const isOnline = rtdbStatus.state === 'online';
+                    console.log(`📡 RTDB status update for user ${otherUserId}:`, {
+                      isOnline,
+                      last_changed: rtdbStatus.last_changed
                     });
                     
                     // Update this user's status in all chats
@@ -149,18 +133,18 @@ export function subscribeToUserChats(
                       if (chat.type === 'direct' && chat.participants.includes(otherUserId)) {
                         return {
                           ...chat,
-                          otherUserOnline: actualOnlineStatus,
-                          otherUserLastSeen: userData.lastSeen?.toDate() || new Date(),
+                          otherUserOnline: isOnline,
+                          otherUserLastSeen: rtdbStatus.last_changed ? new Date(rtdbStatus.last_changed) : new Date(),
                         };
                       }
                       return chat;
                     });
-                    console.log(`🔄 Updating chat list with new status for ${otherUserId}`);
+                    console.log(`🔄 Updating chat list with RTDB status for ${otherUserId}`);
                     onChatsUpdate([...latestChats]);
                   }
                 },
                 (error) => {
-                  console.error(`Error subscribing to user ${otherUserId} status:`, error);
+                  console.error(`Error subscribing to user ${otherUserId} RTDB status:`, error);
                 }
               );
               userStatusUnsubscribers.set(otherUserId, userStatusUnsubscribe);
