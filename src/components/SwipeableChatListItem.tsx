@@ -26,7 +26,7 @@ interface SwipeableChatListItemProps {
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const SWIPE_THRESHOLD = -SCREEN_WIDTH * 0.3; // Swipe 30% of screen to activate delete
+const SWIPE_THRESHOLD = -SCREEN_WIDTH * 0.4; // Swipe 40% of screen to activate delete (was 30%)
 const DELETE_BUTTON_WIDTH = 80;
 
 export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ chat }) => {
@@ -40,7 +40,8 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
     Animated.spring(translateX, {
       toValue: 0,
       useNativeDriver: true,
-      bounciness: 8,
+      tension: 40,
+      friction: 8,
     }).start();
   };
 
@@ -71,17 +72,19 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
           Animated.spring(translateX, {
             toValue: -DELETE_BUTTON_WIDTH,
             useNativeDriver: true,
-            bounciness: 0,
+            tension: 50,
+            friction: 7,
           }).start();
-        } else if (isSwipeOpen.current && gestureState.dx > 20) {
-          // Close if swiping right when open
+        } else if (isSwipeOpen.current && gestureState.dx > 30) {
+          // Close if swiping right when open (increased threshold from 20 to 30)
           closeSwipe();
         } else if (isSwipeOpen.current) {
           // Keep open if already open and not enough swipe to close
           Animated.spring(translateX, {
             toValue: -DELETE_BUTTON_WIDTH,
             useNativeDriver: true,
-            bounciness: 0,
+            tension: 50,
+            friction: 7,
           }).start();
         } else {
           // Otherwise, spring back to original position
@@ -89,12 +92,13 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
         }
       },
       onPanResponderTerminate: () => {
-        // Keep open if already open, otherwise close
+        // Keep open if already open, otherwise close with slower animation
         if (isSwipeOpen.current) {
           Animated.spring(translateX, {
             toValue: -DELETE_BUTTON_WIDTH,
             useNativeDriver: true,
-            bounciness: 0,
+            tension: 50,
+            friction: 7,
           }).start();
         } else {
           closeSwipe();

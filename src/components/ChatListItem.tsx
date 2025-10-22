@@ -141,10 +141,14 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) =
   const prevOnline = Boolean(prevProps.chat.otherUserOnline);
   const nextOnline = Boolean(nextProps.chat.otherUserOnline);
   
+  // Compare timestamps by converting to milliseconds to avoid object reference changes
+  const prevTime = prevProps.chat.lastMessageTime?.toMillis?.() || 0;
+  const nextTime = nextProps.chat.lastMessageTime?.toMillis?.() || 0;
+  
   return (
     prevProps.chat.id === nextProps.chat.id &&
     prevProps.chat.lastMessage === nextProps.chat.lastMessage &&
-    prevProps.chat.lastMessageTime === nextProps.chat.lastMessageTime &&
+    prevTime === nextTime &&
     prevOnline === nextOnline &&
     prevProps.chat.otherUserLastSeen === nextProps.chat.otherUserLastSeen &&
     prevProps.chat.unreadCount === nextProps.chat.unreadCount &&
