@@ -33,7 +33,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   // Debug: Monitor error state changes
   useEffect(() => {
     console.log('📊 LoginScreen - Error state changed to:', error ? `"${error}"` : 'null');
+    console.log('📊 ErrorToast will receive message prop:', error || 'null');
   }, [error]);
+
+  // Log every render
+  console.log('🔄 LoginScreen rendering, error state:', error ? `"${error}"` : 'null');
 
   const handleLogin = async () => {
     // Clear any previous errors
@@ -60,6 +64,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       console.log('❌ Login failed:', errorMsg);
       console.log('🔴 Setting error state:', errorMsg);
       setError(errorMsg);
+      // Force immediate check
+      setTimeout(() => {
+        console.log('⏱️  Checking error state after 100ms:', errorMsg);
+      }, 100);
     } finally {
       setLocalLoading(false);
     }
