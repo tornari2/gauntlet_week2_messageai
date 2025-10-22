@@ -45,8 +45,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     if (!email.trim() || !password.trim()) {
       const msg = 'Please enter both email and password';
       console.log('❌ Validation failed, setting error:', msg);
-      setError(msg);
-      console.log('🔴 Error state should now be:', msg);
+      
+      // Use requestAnimationFrame to ensure state update happens in next frame
+      requestAnimationFrame(() => {
+        console.log('🎬 Setting validation error in next animation frame');
+        setError(msg);
+      });
       return;
     }
 
@@ -59,8 +63,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setLocalLoading(false);
       const errorMsg = error.message || 'An error occurred during login';
       console.log('❌ Login failed, setting error:', errorMsg);
-      setError(errorMsg);
-      console.log('🔴 Error state should now be:', errorMsg);
+      
+      // Use requestAnimationFrame to ensure state update happens in next frame
+      requestAnimationFrame(() => {
+        console.log('🎬 Setting error in next animation frame');
+        setError(errorMsg);
+      });
     }
   };
 
