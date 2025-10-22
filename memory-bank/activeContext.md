@@ -5,7 +5,39 @@
 **Date Updated:** October 22, 2025
 **Next Action:** Clean up debug logging and continue UI polish
 
-## Recent Completion: Chat List Flicker on Foreground Fixed ✅
+## Recent Completion: Heartbeat System for Fast Offline Detection ✅
+**Status:** COMPLETE
+**Date:** October 22, 2025
+**Commit:** 90170c4
+
+### The Issue
+When users force-closed the app, they still appeared online for 30-60+ seconds on other users' screens, creating confusion.
+
+### Root Cause
+Firebase's `onDisconnect()` is designed for graceful disconnects. Force-killing an app creates an abrupt disconnection that Firebase's server takes a long time to detect (30-60+ seconds).
+
+### The Solution
+Implemented a heartbeat-based presence system:
+- Updates `lastActive` timestamp every 5 seconds
+- Users considered offline if `lastActive` > 15 seconds old
+- Much faster than relying solely on Firebase's onDisconnect()
+
+### How It Works
+1. Login starts heartbeat interval (5 second updates)
+2. Each heartbeat updates Firestore with current timestamp
+3. Other users check age of `lastActive` timestamp
+4. If older than 15 seconds → show as offline
+5. Cleanup stops heartbeat on logout
+
+### Result
+- ✅ Force-killed apps show offline within ~15 seconds
+- ✅ More responsive presence system
+- ✅ Better user experience
+- ✅ Firebase onDisconnect() remains as backup
+
+---
+
+## Previous Completion: Chat List Flicker on Foreground Fixed ✅
 **Status:** COMPLETE
 **Date:** October 22, 2025
 **Commit:** 970f0b2
