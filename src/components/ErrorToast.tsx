@@ -14,10 +14,11 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const TOAST_HEIGHT = 80;
+const TOAST_HEIGHT = 120;
 const ANIMATION_DURATION = 300;
 const AUTO_DISMISS_DELAY = 4000;
 
@@ -29,9 +30,12 @@ interface ErrorToastProps {
 export const ErrorToast: React.FC<ErrorToastProps> = ({ message, onDismiss }) => {
   const slideAnim = useRef(new Animated.Value(TOAST_HEIGHT)).current;
   const autoDismissTimer = useRef<NodeJS.Timeout | null>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (message) {
+      console.log('🍞 ErrorToast: Showing toast with message:', message);
+      
       // Clear any existing timer
       if (autoDismissTimer.current) {
         clearTimeout(autoDismissTimer.current);
@@ -88,9 +92,11 @@ export const ErrorToast: React.FC<ErrorToastProps> = ({ message, onDismiss }) =>
       style={[
         styles.container,
         {
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 20,
           transform: [{ translateY: slideAnim }],
         },
       ]}
+      pointerEvents="box-none"
     >
       <View style={styles.content}>
         <View style={styles.iconContainer}>
@@ -127,7 +133,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
-    marginBottom: 20,
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,
