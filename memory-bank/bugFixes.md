@@ -2,6 +2,46 @@
 
 ## October 22, 2025
 
+### Users Going Offline When App Backgrounded
+**Status:** ✅ Fixed
+**Commit:** 0e24872
+
+**The Problem:**
+Users were being marked as offline whenever the app went to background (switching to another app, receiving a phone call, home screen, etc.). This created a poor user experience as users appeared offline even though they were still actively using their device.
+
+**Root Cause:**
+In `App.tsx`, the `handleAppStateChange()` function was calling `updatePresence(user.uid, false)` whenever the app state changed from `active` to `inactive` or `background`:
+
+```typescript
+// App is going to background
+if (appState.current === 'active' && nextAppState.match(/inactive|background/)) {
+  await updatePresence(user.uid, false);  // ❌ Too aggressive!
+}
+```
+
+This was too aggressive - backgrounding an app doesn't mean the user is offline.
+
+**The Fix:**
+Removed the code that sets users offline when the app goes to background. Users now stay online when backgrounded and only go offline when:
+
+1. **Network connection is lost** - Firebase Realtime Database's `onDisconnect()` handler automatically detects this
+2. **App is completely killed/closed** - Firebase's `onDisconnect()` handler triggers
+3. **User explicitly logs out** - `authService.signOut()` calls `setUserOffline()`
+
+Kept the foreground handler to ensure users are marked online when returning to the app.
+
+**Files Changed:**
+- `App.tsx` - Removed background offline logic, added explanatory comments
+
+**Result:**
+- ✅ Users stay online when app is backgrounded
+- ✅ More accurate online status representation
+- ✅ Better user experience
+- ✅ Firebase's automatic disconnect detection handles true offline scenarios
+- ✅ Online status only changes for meaningful events (logout, disconnect, app kill)
+
+---
+
 ### Critical: LoginScreen Unmounting During Auth + Error Toast Not Appearing
 **Status:** ✅ Fixed
 **Commit:** d83ba78

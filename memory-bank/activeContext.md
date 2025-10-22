@@ -5,7 +5,29 @@
 **Date Updated:** October 22, 2025
 **Next Action:** Clean up debug logging and continue UI polish
 
-## Recent Completion: CRITICAL BUG FIX - Error Toast Now Working! 🎉
+## Recent Completion: Presence System - Background Behavior Fixed ✅
+**Status:** COMPLETE
+**Date:** October 22, 2025
+**Commit:** 0e24872
+
+### The Issue
+Users were being marked offline whenever they backgrounded the app (switching apps, receiving calls, etc.), creating a poor user experience.
+
+### The Fix
+Removed the aggressive "set offline on background" behavior from `handleAppStateChange()`. Users now stay online when backgrounded and only go offline when:
+- Network connection is lost (Firebase `onDisconnect()` auto-handles)
+- App is completely killed/closed (Firebase `onDisconnect()` auto-handles)
+- User explicitly logs out (`authService.signOut()` calls `setUserOffline()`)
+
+### Result
+- ✅ Better online status accuracy
+- ✅ Users stay online while app is backgrounded
+- ✅ Firebase Realtime Database handles true disconnects automatically
+- ✅ More natural user experience
+
+---
+
+## Previous Completion: CRITICAL BUG FIX - Error Toast Now Working! 🎉
 **Status:** COMPLETE ✅
 **Date:** October 22, 2025
 **Commit:** d83ba78
