@@ -90,17 +90,24 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       // Add pending messages that aren't already represented in Firestore
       pendingMessages.forEach(pendingMsg => {
         const existsInFirestore = messages.some(m => 
-          m.id === pendingMsg.id || m.tempId === pendingMsg.tempId
+          m.id === pendingMsg.id || 
+          m.tempId === pendingMsg.tempId ||
+          (pendingMsg.tempId && m.id === pendingMsg.id)
         );
         if (!existsInFirestore) {
           allMessages.push(pendingMsg);
         }
       });
       
+      // Remove duplicates based on ID (keep the first occurrence)
+      const uniqueMessages = allMessages.filter((msg, index, self) => {
+        return index === self.findIndex(m => m.id === msg.id);
+      });
+      
       return {
         messages: {
           ...state.messages,
-          [chatId]: allMessages.sort((a, b) => {
+          [chatId]: uniqueMessages.sort((a, b) => {
             const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : a.timestamp.toMillis();
             const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : b.timestamp.toMillis();
             return aTime - bTime;
