@@ -58,18 +58,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       console.log('📤 Attempting login with:', email);
       await login(email.trim(), password);
       console.log('✅ Login successful');
+      setLocalLoading(false);
       // Navigation will happen automatically when auth state changes
     } catch (error: any) {
+      setLocalLoading(false);
+      
       const errorMsg = error.message || 'An error occurred during login';
       console.log('❌ Login failed:', errorMsg);
       console.log('🔴 Setting error state:', errorMsg);
-      setError(errorMsg);
-      // Force immediate check
+      
+      // Use setTimeout to ensure state update happens in next tick
       setTimeout(() => {
-        console.log('⏱️  Checking error state after 100ms:', errorMsg);
-      }, 100);
-    } finally {
-      setLocalLoading(false);
+        console.log('🔴 Actually setting error now:', errorMsg);
+        setError(errorMsg);
+      }, 0);
+      
+      // Check after delay
+      setTimeout(() => {
+        console.log('⏱️  Checking error state after 200ms');
+      }, 200);
     }
   };
 
