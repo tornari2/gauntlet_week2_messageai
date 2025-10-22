@@ -2,6 +2,57 @@
 
 ## October 22, 2025
 
+### Chat List Flicker on App Foreground
+**Status:** ✅ Fixed
+**Commit:** 970f0b2
+
+**The Problem:**
+Brief visual flicker of last messages on the chat list when backgrounding and then foregrounding the app. The last message would flash/flicker momentarily.
+
+**Root Cause:**
+When the app returned to foreground:
+1. `handleAppStateChange` called `updatePresence(user.uid, true)`
+2. Presence update triggered Firebase real-time subscription
+3. Chat list data updated with new online status
+4. FlatList recalculated item layouts on re-render
+5. Brief flash occurred during layout recalculation
+
+**The Fix:**
+Added FlatList performance optimizations to prevent layout recalculations:
+
+```typescript
+// Fixed item layout prevents re-calculations
+const getItemLayout = (_: any, index: number) => ({
+  length: 88, // Height of ChatListItem (padding 16 * 2 + avatar 56)
+  offset: 88 * index,
+  index,
+});
+
+<FlatList
+  getItemLayout={getItemLayout}
+  removeClippedSubviews={true}
+  maxToRenderPerBatch={10}
+  windowSize={10}
+  initialNumToRender={10}
+/>
+```
+
+**Optimizations Applied:**
+1. **`getItemLayout`** - Provides fixed item dimensions upfront, preventing FlatList from recalculating layouts
+2. **`removeClippedSubviews`** - Only renders visible items, reduces memory usage
+3. **Render batching** - `maxToRenderPerBatch`, `windowSize`, `initialNumToRender` for smoother rendering
+
+**Files Changed:**
+- `src/screens/ChatsListScreen.tsx` - Added FlatList performance props
+
+**Result:**
+- ✅ No more flicker when app returns to foreground
+- ✅ Smoother scrolling performance
+- ✅ Better memory efficiency
+- ✅ Fixed item layout prevents unnecessary layout recalculations
+
+---
+
 ### Users Going Offline When App Backgrounded
 **Status:** ✅ Fixed
 **Commit:** 0e24872

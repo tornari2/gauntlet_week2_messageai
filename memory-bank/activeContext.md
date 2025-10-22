@@ -5,7 +5,31 @@
 **Date Updated:** October 22, 2025
 **Next Action:** Clean up debug logging and continue UI polish
 
-## Recent Completion: Presence System - Background Behavior Fixed ✅
+## Recent Completion: Chat List Flicker on Foreground Fixed ✅
+**Status:** COMPLETE
+**Date:** October 22, 2025
+**Commit:** 970f0b2
+
+### The Issue
+Brief visual flicker of last messages on chat list when backgrounding and foregrounding the app.
+
+### Root Cause
+FlatList was recalculating item layouts on re-render when presence updates came through after foregrounding.
+
+### The Fix
+Added FlatList performance optimizations:
+- `getItemLayout` - Fixed item dimensions (88px) to prevent layout recalculations
+- `removeClippedSubviews` - Only render visible items
+- Render batching optimizations (`maxToRenderPerBatch`, `windowSize`, `initialNumToRender`)
+
+### Result
+- ✅ No more flicker on foreground
+- ✅ Smoother scrolling
+- ✅ Better memory efficiency
+
+---
+
+## Previous Completion: Presence System - Background Behavior Fixed ✅
 **Status:** COMPLETE
 **Date:** October 22, 2025
 **Commit:** 0e24872
