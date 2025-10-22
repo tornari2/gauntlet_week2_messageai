@@ -3,7 +3,7 @@
  * Allows users to sign in with email and password
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -30,63 +30,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const { login } = useAuthStore();
 
-  // Debug: Monitor error state changes
-  useEffect(() => {
-    console.log('📊 LoginScreen - Error state changed to:', error ? `"${error}"` : 'null');
-    console.log('📊 ErrorToast will receive message prop:', error || 'null');
-  }, [error]);
-
-  // Log every render
-  console.log('🔄 LoginScreen rendering, error state:', error ? `"${error}"` : 'null');
-
   const handleLogin = async () => {
     // Clear any previous errors
     setError('');
-    console.log('🔐 Login button pressed');
 
     // Validation
     if (!email.trim() || !password.trim()) {
-      console.log('❌ Validation failed: empty fields');
-      const errorMsg = 'Please enter both email and password';
-      console.log('🔴 Setting error state:', errorMsg);
-      setError(errorMsg);
+      setError('Please enter both email and password');
       return;
     }
 
     try {
       setLocalLoading(true);
-      console.log('📤 Attempting login with:', email);
       await login(email.trim(), password);
-      console.log('✅ Login successful');
       setLocalLoading(false);
       // Navigation will happen automatically when auth state changes
     } catch (error: any) {
       setLocalLoading(false);
-      
       const errorMsg = error.message || 'An error occurred during login';
-      console.log('❌ Login failed:', errorMsg);
-      console.log('🔴 Setting error state:', errorMsg);
-      
-      // Use setTimeout to ensure state update happens in next tick
-      setTimeout(() => {
-        console.log('🔴 Actually setting error now:', errorMsg);
-        setError(errorMsg);
-      }, 0);
-      
-      // Check after delay
-      setTimeout(() => {
-        console.log('⏱️  Checking error state after 200ms');
-      }, 200);
+      setError(errorMsg);
     }
   };
 
   const navigateToSignup = () => {
     navigation.navigate('Signup');
-  };
-
-  const testToast = () => {
-    console.log('🧪 TEST: Setting test error message');
-    setError('This is a test error message!');
   };
 
   return (
@@ -139,14 +106,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               <Text style={styles.buttonText}>Login</Text>
             )}
           </TouchableOpacity>
-
-          {/* Test Toast Button */}
-          <TouchableOpacity
-            style={[styles.button, styles.testButton]}
-            onPress={testToast}
-          >
-            <Text style={styles.buttonText}>🧪 Test Toast</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Footer */}
@@ -165,10 +124,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       {/* Error Toast Popup */}
       <ErrorToast 
         message={error} 
-        onDismiss={() => {
-          console.log('🗑️ ErrorToast dismissed');
-          setError('');
-        }} 
+        onDismiss={() => setError('')} 
       />
     </KeyboardAvoidingView>
   );
@@ -220,10 +176,6 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
-  },
-  testButton: {
-    backgroundColor: '#FF6B6B',
-    marginTop: 12,
   },
   buttonText: {
     color: '#fff',

@@ -12,12 +12,10 @@ import {
   StyleSheet,
   Animated,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 const TOAST_HEIGHT = 120;
 const ANIMATION_DURATION = 300;
 const AUTO_DISMISS_DELAY = 4000;
@@ -34,8 +32,6 @@ export const ErrorToast: React.FC<ErrorToastProps> = ({ message, onDismiss }) =>
 
   useEffect(() => {
     if (message) {
-      console.log('🍞 ErrorToast: Showing toast with message:', message);
-      
       // Clear any existing timer
       if (autoDismissTimer.current) {
         clearTimeout(autoDismissTimer.current);
