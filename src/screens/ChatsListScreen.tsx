@@ -59,6 +59,13 @@ export const ChatsListScreen: React.FC = () => {
     <SwipeableChatListItem chat={item} />
   );
 
+  // Fixed item layout to prevent re-calculations and flicker
+  const getItemLayout = (_: any, index: number) => ({
+    length: 88, // Height of ChatListItem (padding 16 * 2 + avatar 56)
+    offset: 88 * index,
+    index,
+  });
+
   const renderEmptyState = () => {
     if (loading) {
       return (
@@ -100,8 +107,13 @@ export const ChatsListScreen: React.FC = () => {
         data={chats}
         renderItem={renderChatItem}
         keyExtractor={(item) => item.id}
+        getItemLayout={getItemLayout}
         contentContainerStyle={chats.length === 0 ? styles.emptyList : undefined}
         ListEmptyComponent={renderEmptyState}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
       />
 
       {/* Floating action button for creating new group */}
