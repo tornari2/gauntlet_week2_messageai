@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  InteractionManager,
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 import { Colors } from '../constants/Colors';
@@ -27,13 +26,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{ message: string; timestamp: number } | null>(null);
 
   const { login } = useAuthStore();
 
   // Track error state changes
   useEffect(() => {
-    console.log('📊 Error state changed to:', error ? `"${error}"` : 'empty');
+    console.log('📊 Error state changed to:', error ? `"${error.message}" at ${error.timestamp}` : 'empty');
   }, [error]);
 
   const handleLogin = async () => {
@@ -43,29 +42,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     if (!email.trim() || !password.trim()) {
       const msg = 'Please enter both email and password';
       console.log('❌ Validation failed, setting error:', msg);
-      setError(msg);
+      setError({ message: msg, timestamp: Date.now() });
       return;
     }
 
     // Clear error before attempting login
-    setError('');
+    setError(null);
 
     try {
       setLocalLoading(true);
       await login(email.trim(), password);
       setLocalLoading(false);
       // Navigation will happen automatically when auth state changes
-    } catch (error: any) {
+    } catch (err: any) {
       setLocalLoading(false);
-      const errorMsg = error.message || 'An error occurred during login';
+      const errorMsg = err.message || 'An error occurred during login';
       console.log('❌ Login failed, setting error:', errorMsg);
       
-      // Use InteractionManager to ensure state update happens after all interactions complete
-      InteractionManager.runAfterInteractions(() => {
-        console.log('🎬 Setting error after interactions');
-        setError(errorMsg);
-        console.log('✅ Error set to:', errorMsg);
-      });
+      // Set error with timestamp to force new object reference
+      const errorObj = { message: errorMsg, timestamp: Date.now() };
+      console.log('🎬 Setting error directly (no timing tricks):', errorObj);
+      setError(errorObj);
+      console.log('✅ setError called with:', errorObj);
     }
   };
 
@@ -140,8 +138,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       {/* Error Toast Popup */}
       <ErrorToast 
-        message={error} 
-        onDismiss={() => setError('')} 
+        message={error?.message || null} 
+        onDismiss={() => setError(null)} 
       />
     </KeyboardAvoidingView>
   );
