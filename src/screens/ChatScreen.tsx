@@ -78,6 +78,31 @@ export const ChatScreen: React.FC = () => {
   const currentChat = chats.find(c => c.id === chatId);
   const isGroupChat = currentChat?.type === 'group';
   
+  // Debug: Log when otherUser state changes
+  useEffect(() => {
+    if (otherUser) {
+      console.log(`[ChatScreen] 🔄 otherUser state updated:`, {
+        uid: otherUser.uid,
+        displayName: otherUser.displayName,
+        isOnline: otherUser.isOnline,
+        lastSeen: otherUser.lastSeen,
+      });
+    }
+  }, [otherUser]);
+  
+  // Debug: Log when participantUsers state changes
+  useEffect(() => {
+    if (participantUsers.length > 0) {
+      console.log(`[ChatScreen] 🔄 participantUsers state updated:`, 
+        participantUsers.map(u => ({
+          uid: u.uid,
+          displayName: u.displayName,
+          isOnline: u.isOnline,
+        }))
+      );
+    }
+  }, [participantUsers]);
+  
   // Set active chat ID when entering the screen
   useEffect(() => {
     setActiveChatId(chatId);
