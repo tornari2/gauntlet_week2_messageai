@@ -30,18 +30,27 @@ export const ConnectionStatus: React.FC = () => {
   useEffect(() => {
     // Fetch initial state
     NetInfo.fetch().then((state) => {
-      const connected = state.isConnected ?? false;
+      // Consider connected only if we have internet reachability
+      const connected = (state.isConnected && state.isInternetReachable !== false) ?? false;
+      console.log('[ConnectionStatus] Initial network state:', { 
+        isConnected: state.isConnected,
+        isInternetReachable: state.isInternetReachable,
+        computed: connected 
+      });
       setConnectedRef.current(connected);
     });
 
     // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const connected = state.isConnected ?? false;
+      // Consider connected only if we have internet reachability
+      // isInternetReachable can be null (unknown), true, or false
+      // We treat null as potentially connected (optimistic)
+      const connected = (state.isConnected && state.isInternetReachable !== false) ?? false;
       console.log('[ConnectionStatus] Network state changed:', { 
         isConnected: state.isConnected,
         isInternetReachable: state.isInternetReachable,
         type: state.type,
-        connected 
+        computed: connected 
       });
       
       // Check previous state from store
