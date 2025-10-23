@@ -62,11 +62,10 @@ export const ConnectionStatus: React.FC = () => {
         setConnected(connected);
         console.log('[ConnectionStatus] Updated store to:', connected);
         
-        // If reconnected, process offline queue
+        // If reconnected, Firestore will automatically sync pending writes
         if (connected && !prevConnected) {
-          console.log('[ConnectionStatus] 🎉 Reconnected! Processing offline queue...');
-          processOfflineQueueRef.current();
-          // Firestore subscriptions will automatically reconnect and update
+          console.log('[ConnectionStatus] 🎉 Reconnected! Firestore will auto-sync pending messages...');
+          // No need to manually process queue - Firestore handles it automatically
         }
         
         console.log('[ConnectionStatus] ✅ NetInfo event processed successfully');

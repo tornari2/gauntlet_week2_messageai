@@ -312,62 +312,43 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       senderId,
       timestamp: new Date(),
       readBy: [senderId],
-      pending: true,
+      pending: !isConnected, // Only mark as pending if offline
     };
     
     // Add optimistic message immediately
     get().addMessage(chatId, optimisticMessage);
     
-    // If offline, add to queue immediately and keep as pending
-    if (!isConnected) {
-      console.log('📴 Device is offline, queuing message');
-      try {
-        await storageService.addToOfflineQueue(chatId, optimisticMessage);
-        console.log('✅ Message added to offline queue, will remain pending');
-        // Keep message as pending (don't mark as failed yet)
-      } catch (queueError) {
-        console.error('❌ Error adding to offline queue:', queueError);
-        // Mark as failed if we can't even queue it
-        get().updateMessage(chatId, tempId, {
-          pending: false,
-          failed: true,
-        });
-      }
-      return;
-    }
-    
     try {
-      // Send to server (we're online)
+      // ALWAYS try to send to Firestore, even if offline
+      // Firestore's built-in offline persistence will handle queueing
       const realMessageId = await chatService.sendMessage(chatId, text, senderId);
       
-      // Remove the optimistic/temp message - Firestore will provide the real one
-      set((state) => {
-        const existingMessages = state.messages[chatId] || [];
-        return {
-          messages: {
-            ...state.messages,
-            [chatId]: existingMessages.filter(m => m.tempId !== tempId),
-          },
-        };
-      });
+      // If we're online, remove the temp message - Firestore will provide the real one
+      if (isConnected) {
+        set((state) => {
+          const existingMessages = state.messages[chatId] || [];
+          return {
+            messages: {
+              ...state.messages,
+              [chatId]: existingMessages.filter(m => m.tempId !== tempId),
+            },
+          };
+        });
+      } else {
+        // If offline, Firestore cached the write
+        // Keep the temp message as pending
+        // When we reconnect, Firestore will sync and add the real message
+        // The subscribeToMessages will receive it and we'll remove the temp
+        console.log('📴 Message sent to Firestore cache, will sync when online');
+      }
     } catch (error) {
       console.error('❌ Error sending message:', error);
-      
-      // Add to offline queue for retry when connection restored
-      try {
-        await storageService.addToOfflineQueue(chatId, optimisticMessage);
-        console.log('Message added to offline queue');
-      } catch (queueError) {
-        console.error('Error adding to offline queue:', queueError);
-      }
       
       // Mark message as failed
       get().updateMessage(chatId, tempId, {
         pending: false,
         failed: true,
       });
-      
-      throw error;
     }
   },
   
