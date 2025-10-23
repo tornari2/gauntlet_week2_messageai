@@ -143,13 +143,15 @@ export const ChatScreen: React.FC = () => {
       
       // Subscribe to RTDB for real-time presence
       const statusRef = ref(database, `/status/${uid}`);
+      console.log(`[ChatScreen] 📡 Setting up RTDB for group participant: ${uid}`);
       const rtdbUnsub = onValue(
         statusRef,
         (snapshot) => {
           const status = snapshot.val();
           const isOnline = status ? status.state === 'online' : false;
-          setParticipantUsers(prev =>
-            prev.map(u =>
+          console.log(`[ChatScreen] 🔔 Group presence update for ${uid}:`, { status, isOnline });
+          setParticipantUsers(prev => {
+            const updated = prev.map(u =>
               u.uid === uid
                 ? { 
                     ...u, 
@@ -157,8 +159,10 @@ export const ChatScreen: React.FC = () => {
                     lastSeen: status?.last_changed ? new Date(status.last_changed) : u.lastSeen 
                   }
                 : u
-            )
-          );
+            );
+            console.log(`[ChatScreen] 📝 Updated participantUsers:`, updated.map(u => ({ uid: u.uid, name: u.displayName, isOnline: u.isOnline })));
+            return updated;
+          });
         },
         (error) => {
           console.error(`[ChatScreen] ❌ ERROR subscribing to RTDB for group participant ${uid}:`, error);
