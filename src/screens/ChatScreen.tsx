@@ -120,26 +120,33 @@ export const ChatScreen: React.FC = () => {
     participantIds.forEach(uid => {
       // Subscribe to Firestore for profile data FIRST
       const userDocRef = doc(firestore, 'users', uid);
-      const firestoreUnsub = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setParticipantUsers(prev => {
-            const others = prev.filter(u => u.uid !== uid);
-            const existing = prev.find(u => u.uid === uid);
-            return [...others, {
-              uid: docSnap.id,
-              email: data.email || '',
-              displayName: data.displayName || '',
-              photoURL: data.photoURL || null,
-              // If we're offline, show everyone as offline to prevent flicker
-              isOnline: isConnected ? (existing?.isOnline ?? data.isOnline ?? false) : false,
-              lastSeen: existing?.lastSeen ?? data.lastSeen?.toDate() ?? new Date(),
-              avatarColor: data.avatarColor,
-              createdAt: data.createdAt?.toDate() || new Date(),
-            }];
-          });
+      const firestoreUnsub = onSnapshot(
+        userDocRef, 
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setParticipantUsers(prev => {
+              const others = prev.filter(u => u.uid !== uid);
+              const existing = prev.find(u => u.uid === uid);
+              return [...others, {
+                uid: docSnap.id,
+                email: data.email || '',
+                displayName: data.displayName || '',
+                photoURL: data.photoURL || null,
+                // If we're offline, show everyone as offline to prevent flicker
+                isOnline: isConnected ? (existing?.isOnline ?? data.isOnline ?? false) : false,
+                lastSeen: existing?.lastSeen ?? data.lastSeen?.toDate() ?? new Date(),
+                avatarColor: data.avatarColor,
+                createdAt: data.createdAt?.toDate() || new Date(),
+              }];
+            });
+          }
+        },
+        (error) => {
+          console.log(`[ChatScreen] ⚠️ Firestore error for participant ${uid} (likely offline):`, error.message);
+          // Don't clear the participant - keep cached data
         }
-      });
+      );
       unsubscribers.push(firestoreUnsub);
     });
     
@@ -184,7 +191,7 @@ export const ChatScreen: React.FC = () => {
       clearTimeout(rtdbTimeout);
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [currentChat?.id, user?.uid]);
+  }, [currentChat?.id, currentChat?.type, user?.uid, isConnected]);
   
   // Update participant online status when network connection changes
   useEffect(() => {
