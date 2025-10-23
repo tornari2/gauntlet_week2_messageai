@@ -40,30 +40,38 @@ export const ConnectionStatus: React.FC = () => {
 
     // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener((state) => {
-      // Consider connected only if we have internet reachability
-      // isInternetReachable can be null (unknown), true, or false
-      // We treat null as potentially connected (optimistic)
-      const connected = (state.isConnected && state.isInternetReachable !== false) ?? false;
-      console.log('[ConnectionStatus] Network state changed:', { 
-        isConnected: state.isConnected,
-        isInternetReachable: state.isInternetReachable,
-        type: state.type,
-        computed: connected 
-      });
-      
-      // Check previous state from store
-      const prevConnected = useNetworkStore.getState().isConnected;
-      console.log('[ConnectionStatus] Previous connected state:', prevConnected);
-      
-      // Update global network store - call the function directly!
-      setConnected(connected);
-      console.log('[ConnectionStatus] Updated store to:', connected);
-      
-      // If reconnected, process offline queue
-      if (connected && !prevConnected) {
-        console.log('[ConnectionStatus] 🎉 Reconnected! Processing offline queue...');
-        processOfflineQueueRef.current();
-        // Firestore subscriptions will automatically reconnect and update
+      try {
+        console.log('[ConnectionStatus] 🔵 NetInfo event fired, processing...');
+        
+        // Consider connected only if we have internet reachability
+        // isInternetReachable can be null (unknown), true, or false
+        // We treat null as potentially connected (optimistic)
+        const connected = (state.isConnected && state.isInternetReachable !== false) ?? false;
+        console.log('[ConnectionStatus] Network state changed:', { 
+          isConnected: state.isConnected,
+          isInternetReachable: state.isInternetReachable,
+          type: state.type,
+          computed: connected 
+        });
+        
+        // Check previous state from store
+        const prevConnected = useNetworkStore.getState().isConnected;
+        console.log('[ConnectionStatus] Previous connected state:', prevConnected);
+        
+        // Update global network store - call the function directly!
+        setConnected(connected);
+        console.log('[ConnectionStatus] Updated store to:', connected);
+        
+        // If reconnected, process offline queue
+        if (connected && !prevConnected) {
+          console.log('[ConnectionStatus] 🎉 Reconnected! Processing offline queue...');
+          processOfflineQueueRef.current();
+          // Firestore subscriptions will automatically reconnect and update
+        }
+        
+        console.log('[ConnectionStatus] ✅ NetInfo event processed successfully');
+      } catch (error) {
+        console.error('[ConnectionStatus] ❌ ERROR in NetInfo listener:', error);
       }
     });
 

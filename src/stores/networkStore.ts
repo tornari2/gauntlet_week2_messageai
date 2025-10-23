@@ -31,22 +31,10 @@ export const useNetworkStore = create<NetworkState & NetworkActions>((set, get) 
       return;
     }
     
-    // Fetch initial state
-    NetInfo.fetch().then((state) => {
-      const connected = state.isConnected ?? true;
-      set({ isConnected: connected, isInitialized: true });
-    });
-    
-    // Subscribe to network state updates
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const connected = state.isConnected ?? true;
-      set({ isConnected: connected });
-    });
-    
     set({ isInitialized: true });
     
-    // Note: In a real app, you'd want to clean this up, but for a global store
-    // that exists for the app lifetime, we can let it persist
+    // Note: Network state is now managed by ConnectionStatus component
+    // which calls setConnected() to update this store
   },
 }));
 
