@@ -1,7 +1,7 @@
 /**
  * ConnectionStatus Component
  * 
- * Displays a banner at the top of the screen when the app is offline or reconnecting.
+ * Displays a banner at the bottom of the screen when the app is offline or reconnecting.
  * Also processes the offline message queue when connection is restored.
  */
 
@@ -13,7 +13,7 @@ import { useNetworkStore } from '../stores/networkStore';
 import { Colors } from '../constants/Colors';
 
 export const ConnectionStatus: React.FC = () => {
-  const [slideAnim] = useState(new Animated.Value(-50));
+  const [slideAnim] = useState(new Animated.Value(50)); // Start hidden below screen
   const { isConnected, setConnected } = useNetworkStore();
   const processOfflineQueue = useMessageStore((state) => state.processOfflineQueue);
   
@@ -60,7 +60,7 @@ export const ConnectionStatus: React.FC = () => {
   useEffect(() => {
     // Animate banner in/out based on connection status
     Animated.timing(slideAnim, {
-      toValue: isConnected ? -50 : 0,
+      toValue: isConnected ? 50 : 0, // Slide down when offline, hide when connected
       duration: 300,
       useNativeDriver: true,
     }).start();
@@ -88,7 +88,7 @@ export const ConnectionStatus: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 0,
+    bottom: 0, // Changed from top to bottom
     left: 0,
     right: 0,
     zIndex: 1000,
