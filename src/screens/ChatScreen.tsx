@@ -206,9 +206,10 @@ export const ChatScreen: React.FC = () => {
       });
     
     return () => {
+      console.log(`[ChatScreen] 🧹 Cleaning up ${unsubscribers.length} group participant RTDB listeners`);
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [currentChat, user]);
+  }, [currentChat?.id, user?.uid]); // Only depend on IDs, not full objects
   
   // Auto-read messages when screen is focused
   useFocusEffect(
@@ -303,10 +304,11 @@ export const ChatScreen: React.FC = () => {
     );
     
     return () => {
+      console.log(`[ChatScreen] 🧹 Cleaning up RTDB listener for ${otherUserId}`);
       firestoreUnsubscribe();
       rtdbUnsubscribe();
     };
-  }, [currentChat, user]);
+  }, [currentChat?.id, user?.uid]); // Only depend on IDs, not full objects
 
   // Subscribe to messages on mount
   useEffect(() => {
