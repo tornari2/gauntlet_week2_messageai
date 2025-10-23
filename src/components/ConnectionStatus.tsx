@@ -97,7 +97,7 @@ export const ConnectionStatus: React.FC = () => {
       clearInterval(pollInterval);
     };
     // Empty dependency array - only set up once on mount
-  }, [setConnected]); // Add setConnected as dependency
+  }, []); // setConnected is stable, no dependencies needed
 
   useEffect(() => {
     // Animate banner in/out based on connection status
