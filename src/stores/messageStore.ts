@@ -90,12 +90,20 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       const seenIds = new Set<string>();
       const uniqueFirestoreMessages: Message[] = [];
       
+      console.log(`[setMessages] Processing ${messages.length} Firestore messages, isConnected: ${isConnected}`);
+      
       for (const msg of messages) {
         const messageId = msg.id;
         
         // Skip messages with tempId if we're offline (they're from cache, not confirmed)
         if (!isConnected && msg.tempId && msg.tempId.startsWith('temp_')) {
+          console.log(`[setMessages] ⚠️ SKIPPING cached message with tempId while offline: ${msg.tempId}`);
           continue;
+        }
+        
+        // Also log if message has no real ID (just temp)
+        if (msg.id && msg.id.startsWith('temp_')) {
+          console.log(`[setMessages] 📝 Message has temp ID: ${msg.id}, pending: ${msg.pending}, offline: ${!isConnected}`);
         }
         
         if (!seenIds.has(messageId)) {
@@ -103,6 +111,8 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
           uniqueFirestoreMessages.push(msg);
         }
       }
+      
+      console.log(`[setMessages] After filtering: ${uniqueFirestoreMessages.length} Firestore messages, ${pendingMessages.length} pending`);
       
       // Combine deduplicated Firestore messages with pending local messages
       const allMessages = [...uniqueFirestoreMessages];
