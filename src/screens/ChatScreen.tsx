@@ -78,30 +78,9 @@ export const ChatScreen: React.FC = () => {
   const currentChat = chats.find(c => c.id === chatId);
   const isGroupChat = currentChat?.type === 'group';
   
-  // Debug: Log when otherUser state changes
-  useEffect(() => {
-    if (otherUser) {
-      console.log(`[ChatScreen] 🔄 otherUser state updated:`, {
-        uid: otherUser.uid,
-        displayName: otherUser.displayName,
-        isOnline: otherUser.isOnline,
-        lastSeen: otherUser.lastSeen,
-      });
-    }
-  }, [otherUser]);
-  
-  // Debug: Log when participantUsers state changes
-  useEffect(() => {
-    if (participantUsers.length > 0) {
-      console.log(`[ChatScreen] 🔄 participantUsers state updated:`, 
-        participantUsers.map(u => ({
-          uid: u.uid,
-          displayName: u.displayName,
-          isOnline: u.isOnline,
-        }))
-      );
-    }
-  }, [participantUsers]);
+  // For direct chats, get presence from the chat object (already subscribed via chatService)
+  const directChatOnlineStatus = currentChat?.type === 'direct' ? currentChat.otherUserOnline : undefined;
+  const directChatLastSeen = currentChat?.type === 'direct' ? currentChat.otherUserLastSeen : undefined;
   
   // Set active chat ID when entering the screen
   useEffect(() => {
@@ -127,89 +106,71 @@ export const ChatScreen: React.FC = () => {
     }
   }, [currentChat]);
   
-  // Subscribe to group chat participant presence
+  // Subscribe to group chat participant data and presence
   useEffect(() => {
     if (!currentChat || currentChat.type !== 'group' || !user) {
+      setParticipantUsers([]);
       return;
     }
     
     const unsubscribers: (() => void)[] = [];
+    const participantIds = currentChat.participants.filter(uid => uid !== user.uid);
     
-    // Load initial participant data from Firestore
-    Promise.all(
-      currentChat.participants
-        .filter(uid => uid !== user.uid) // Exclude current user
-        .map(uid => {
-          const userDocRef = doc(firestore, 'users', uid);
-          return onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              setParticipantUsers(prev => {
-                const others = prev.filter(u => u.uid !== uid);
-                return [...others, {
-                  uid: docSnap.id,
-                  email: data.email || '',
-                  displayName: data.displayName || '',
-                  photoURL: data.photoURL || null,
-                  isOnline: data.isOnline || false,
-                  lastSeen: data.lastSeen?.toDate() || new Date(),
-                  avatarColor: data.avatarColor,
-                  createdAt: data.createdAt?.toDate() || new Date(),
-                }];
-              });
-            }
+    // For each participant, subscribe to both Firestore (profile) and RTDB (presence)
+    participantIds.forEach(uid => {
+      // Subscribe to Firestore for profile data
+      const userDocRef = doc(firestore, 'users', uid);
+      const firestoreUnsub = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setParticipantUsers(prev => {
+            const others = prev.filter(u => u.uid !== uid);
+            const existing = prev.find(u => u.uid === uid);
+            return [...others, {
+              uid: docSnap.id,
+              email: data.email || '',
+              displayName: data.displayName || '',
+              photoURL: data.photoURL || null,
+              isOnline: existing?.isOnline ?? data.isOnline ?? false, // Keep RTDB value if we have it
+              lastSeen: existing?.lastSeen ?? data.lastSeen?.toDate() ?? new Date(),
+              avatarColor: data.avatarColor,
+              createdAt: data.createdAt?.toDate() || new Date(),
+            }];
           });
-        })
-    ).then(unsubs => {
-      unsubscribers.push(...unsubs);
+        }
+      });
+      unsubscribers.push(firestoreUnsub);
+      
+      // Subscribe to RTDB for real-time presence
+      const statusRef = ref(database, `/status/${uid}`);
+      const rtdbUnsub = onValue(
+        statusRef,
+        (snapshot) => {
+          const status = snapshot.val();
+          const isOnline = status ? status.state === 'online' : false;
+          setParticipantUsers(prev =>
+            prev.map(u =>
+              u.uid === uid
+                ? { 
+                    ...u, 
+                    isOnline, 
+                    lastSeen: status?.last_changed ? new Date(status.last_changed) : u.lastSeen 
+                  }
+                : u
+            )
+          );
+        },
+        (error) => {
+          console.error(`[ChatScreen] ❌ ERROR subscribing to RTDB for group participant ${uid}:`, error);
+        }
+      );
+      unsubscribers.push(rtdbUnsub);
     });
     
-    // Subscribe to RTDB for real-time presence updates
-    currentChat.participants
-      .filter(uid => uid !== user.uid)
-      .forEach(uid => {
-        const statusRef = ref(database, `/status/${uid}`);
-        console.log(`[ChatScreen] Setting up RTDB listener for group participant: ${uid}`);
-        const unsubscribe = onValue(
-          statusRef,
-          (snapshot) => {
-            const status = snapshot.val();
-            console.log(`[ChatScreen] RTDB group presence update for ${uid}:`, status);
-            // Handle both online and offline states
-            if (status) {
-              const isOnline = status.state === 'online';
-              console.log(`[ChatScreen] Setting participant ${uid} to ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
-              setParticipantUsers(prev =>
-                prev.map(u =>
-                  u.uid === uid
-                    ? { ...u, isOnline, lastSeen: status.last_changed ? new Date(status.last_changed) : u.lastSeen }
-                    : u
-                )
-              );
-            } else {
-              // If status is null/undefined, user is offline
-              console.log(`[ChatScreen] Status is null for participant ${uid}, setting to OFFLINE`);
-              setParticipantUsers(prev =>
-                prev.map(u =>
-                  u.uid === uid
-                    ? { ...u, isOnline: false, lastSeen: new Date() }
-                    : u
-                )
-              );
-            }
-          },
-          (error) => {
-            console.error(`[ChatScreen] ❌ ERROR subscribing to RTDB for group participant ${uid}:`, error);
-          }
-        );
-        unsubscribers.push(unsubscribe);
-      });
-    
     return () => {
-      console.log(`[ChatScreen] 🧹 Cleaning up ${unsubscribers.length} group participant RTDB listeners`);
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [currentChat?.id, user?.uid]); // Only depend on IDs, not full objects
+  }, [currentChat?.id, user?.uid]);
   
   // Auto-read messages when screen is focused
   useFocusEffect(
@@ -242,73 +203,40 @@ export const ChatScreen: React.FC = () => {
     }, [chatId, user, chatMessages])
   );
   
-  // Subscribe to other user's presence
+  // Load other user's profile for direct chats (for display name only - presence comes from chat object)
   useEffect(() => {
     if (!currentChat || currentChat.type !== 'direct' || !user) {
+      setOtherUser(null);
       return;
     }
     
-    // Get the other user ID
     const otherUserId = currentChat.participants.find(p => p !== user.uid);
     if (!otherUserId) {
+      setOtherUser(null);
       return;
     }
     
-    // First, get initial user data from Firestore
+    // Just load the user profile - presence is already tracked in currentChat object
     const userDocRef = doc(firestore, 'users', otherUserId);
-    const firestoreUnsubscribe = onSnapshot(userDocRef, (doc) => {
+    const unsubscribe = onSnapshot(userDocRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
-        setOtherUser(prev => ({
+        setOtherUser({
           uid: doc.id,
           email: data.email || '',
           displayName: data.displayName || '',
           photoURL: data.photoURL || null,
-          isOnline: prev?.isOnline ?? data.isOnline ?? false, // Keep RTDB value if we have it
-          lastSeen: data.lastSeen?.toDate() || new Date(),
+          isOnline: directChatOnlineStatus ?? false, // Use presence from chat object
+          lastSeen: directChatLastSeen || data.lastSeen?.toDate() || new Date(),
           createdAt: data.createdAt?.toDate() || new Date(),
-        }));
+        });
       }
     });
     
-    // Subscribe to Realtime Database for instant presence updates (works with onDisconnect)
-    const userStatusRef = ref(database, `/status/${otherUserId}`);
-    console.log(`[ChatScreen] Setting up RTDB listener for direct chat user: ${otherUserId}`);
-    const rtdbUnsubscribe = onValue(
-      userStatusRef,
-      (snapshot) => {
-        const status = snapshot.val();
-        console.log(`[ChatScreen] RTDB presence update for ${otherUserId}:`, status);
-        // Handle both online and offline states
-        if (status) {
-          const isOnline = status.state === 'online';
-          console.log(`[ChatScreen] Setting user ${otherUserId} to ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
-          setOtherUser(prev => prev ? {
-            ...prev,
-            isOnline,
-            lastSeen: status.last_changed ? new Date(status.last_changed) : prev.lastSeen,
-          } : null);
-        } else {
-          // If status is null/undefined, user is offline
-          console.log(`[ChatScreen] Status is null for ${otherUserId}, setting to OFFLINE`);
-          setOtherUser(prev => prev ? {
-            ...prev,
-            isOnline: false,
-            lastSeen: new Date(),
-          } : null);
-        }
-      },
-      (error) => {
-        console.error(`[ChatScreen] ❌ ERROR subscribing to RTDB for ${otherUserId}:`, error);
-      }
-    );
-    
     return () => {
-      console.log(`[ChatScreen] 🧹 Cleaning up RTDB listener for ${otherUserId}`);
-      firestoreUnsubscribe();
-      rtdbUnsubscribe();
+      unsubscribe();
     };
-  }, [currentChat?.id, user?.uid]); // Only depend on IDs, not full objects
+  }, [currentChat?.id, user?.uid, directChatOnlineStatus, directChatLastSeen]);
 
   // Subscribe to messages on mount
   useEffect(() => {
