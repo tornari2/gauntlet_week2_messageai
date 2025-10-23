@@ -37,15 +37,24 @@ export const ConnectionStatus: React.FC = () => {
     // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener((state) => {
       const connected = state.isConnected ?? false;
+      console.log('[ConnectionStatus] Network state changed:', { 
+        isConnected: state.isConnected,
+        isInternetReachable: state.isInternetReachable,
+        type: state.type,
+        connected 
+      });
       
       // Check previous state from store
       const prevConnected = useNetworkStore.getState().isConnected;
+      console.log('[ConnectionStatus] Previous connected state:', prevConnected);
       
       // Update global network store
       setConnectedRef.current(connected);
+      console.log('[ConnectionStatus] Updated store to:', connected);
       
       // If reconnected, process offline queue
       if (connected && !prevConnected) {
+        console.log('[ConnectionStatus] 🎉 Reconnected! Processing offline queue...');
         processOfflineQueueRef.current();
         // Firestore subscriptions will automatically reconnect and update
       }
@@ -59,11 +68,14 @@ export const ConnectionStatus: React.FC = () => {
 
   useEffect(() => {
     // Animate banner in/out based on connection status
+    console.log('[ConnectionStatus] Animation effect triggered, isConnected:', isConnected);
     Animated.timing(slideAnim, {
       toValue: isConnected ? 50 : 0, // Slide down when offline, hide when connected
       duration: 300,
       useNativeDriver: true,
-    }).start();
+    }).start(() => {
+      console.log('[ConnectionStatus] Animation completed, banner is now:', isConnected ? 'hidden' : 'visible');
+    });
   }, [isConnected, slideAnim]);
 
   return (
