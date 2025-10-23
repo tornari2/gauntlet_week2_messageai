@@ -19,13 +19,11 @@ export const ConnectionStatus: React.FC = () => {
   
   // Use refs to avoid re-renders when these callbacks change
   const processOfflineQueueRef = useRef(processOfflineQueue);
-  const setConnectedRef = useRef(setConnected);
   
   // Keep refs up to date
   useEffect(() => {
     processOfflineQueueRef.current = processOfflineQueue;
-    setConnectedRef.current = setConnected;
-  }, [processOfflineQueue, setConnected]);
+  }, [processOfflineQueue]);
 
   useEffect(() => {
     // Fetch initial state
@@ -37,7 +35,7 @@ export const ConnectionStatus: React.FC = () => {
         isInternetReachable: state.isInternetReachable,
         computed: connected 
       });
-      setConnectedRef.current(connected);
+      setConnected(connected); // Call the function directly
     });
 
     // Subscribe to network state updates
@@ -57,8 +55,8 @@ export const ConnectionStatus: React.FC = () => {
       const prevConnected = useNetworkStore.getState().isConnected;
       console.log('[ConnectionStatus] Previous connected state:', prevConnected);
       
-      // Update global network store
-      setConnectedRef.current(connected);
+      // Update global network store - call the function directly!
+      setConnected(connected);
       console.log('[ConnectionStatus] Updated store to:', connected);
       
       // If reconnected, process offline queue
@@ -73,7 +71,7 @@ export const ConnectionStatus: React.FC = () => {
       unsubscribe();
     };
     // Empty dependency array - only set up once on mount
-  }, []);
+  }, [setConnected]); // Add setConnected as dependency
 
   useEffect(() => {
     // Animate banner in/out based on connection status
