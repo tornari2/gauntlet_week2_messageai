@@ -131,7 +131,8 @@ export const ChatScreen: React.FC = () => {
               email: data.email || '',
               displayName: data.displayName || '',
               photoURL: data.photoURL || null,
-              isOnline: existing?.isOnline ?? data.isOnline ?? false, // Keep RTDB value if we have it
+              // If we're offline, show everyone as offline to prevent flicker
+              isOnline: isConnected ? (existing?.isOnline ?? data.isOnline ?? false) : false,
               lastSeen: existing?.lastSeen ?? data.lastSeen?.toDate() ?? new Date(),
               avatarColor: data.avatarColor,
               createdAt: data.createdAt?.toDate() || new Date(),
@@ -184,6 +185,16 @@ export const ChatScreen: React.FC = () => {
       unsubscribers.forEach(unsub => unsub());
     };
   }, [currentChat?.id, user?.uid]);
+  
+  // Update participant online status when network connection changes
+  useEffect(() => {
+    if (!isConnected && participantUsers.length > 0) {
+      // If we go offline, immediately show all participants as offline
+      setParticipantUsers(prev => 
+        prev.map(u => ({ ...u, isOnline: false }))
+      );
+    }
+  }, [isConnected, participantUsers.length]);
   
   // Auto-read messages when screen is focused
   useFocusEffect(

@@ -7,7 +7,6 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import NetInfo from '@react-native-community/netinfo';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/stores/authStore';
@@ -154,39 +153,6 @@ export default function App(): React.ReactElement {
       subscription.remove();
     };
   }, [handleAppStateChange]);
-
-  // Subscribe to network changes to update presence immediately when offline
-  useEffect(() => {
-    if (!user) return;
-
-    const unsubscribe = NetInfo.addEventListener(async (state) => {
-      const isConnected = state.isConnected ?? false;
-      
-      // When network is lost, immediately set user offline
-      // This provides faster feedback than waiting for Firebase's onDisconnect (30-60s)
-      if (!isConnected) {
-        console.log('[App] Network lost, setting user offline immediately');
-        try {
-          await updatePresence(user.uid, false);
-        } catch (error) {
-          // Ignore errors - we're offline anyway
-          console.log('[App] Could not update presence (expected when offline)');
-        }
-      } else {
-        // When network is restored, set user online
-        console.log('[App] Network restored, setting user online');
-        try {
-          await updatePresence(user.uid, true);
-        } catch (error) {
-          console.error('[App] Error setting user online:', error);
-        }
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [user]);
 
   return (
     <SafeAreaProvider>
