@@ -285,6 +285,7 @@ export const getAllUsers = async (currentUserId: string): Promise<User[]> => {
         isOnline: data.isOnline || false,
         lastSeen: data.lastSeen || new Date(),
         pushToken: data.pushToken || null,
+        avatarColor: data.avatarColor, // Include avatar color
         createdAt: data.createdAt || new Date(),
       });
     });
