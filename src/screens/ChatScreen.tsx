@@ -145,32 +145,38 @@ export const ChatScreen: React.FC = () => {
       .forEach(uid => {
         const statusRef = ref(database, `/status/${uid}`);
         console.log(`[ChatScreen] Setting up RTDB listener for group participant: ${uid}`);
-        const unsubscribe = onValue(statusRef, (snapshot) => {
-          const status = snapshot.val();
-          console.log(`[ChatScreen] RTDB group presence update for ${uid}:`, status);
-          // Handle both online and offline states
-          if (status) {
-            const isOnline = status.state === 'online';
-            console.log(`[ChatScreen] Setting participant ${uid} to ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
-            setParticipantUsers(prev =>
-              prev.map(u =>
-                u.uid === uid
-                  ? { ...u, isOnline, lastSeen: status.last_changed ? new Date(status.last_changed) : u.lastSeen }
-                  : u
-              )
-            );
-          } else {
-            // If status is null/undefined, user is offline
-            console.log(`[ChatScreen] Status is null for participant ${uid}, setting to OFFLINE`);
-            setParticipantUsers(prev =>
-              prev.map(u =>
-                u.uid === uid
-                  ? { ...u, isOnline: false, lastSeen: new Date() }
-                  : u
-              )
-            );
+        const unsubscribe = onValue(
+          statusRef,
+          (snapshot) => {
+            const status = snapshot.val();
+            console.log(`[ChatScreen] RTDB group presence update for ${uid}:`, status);
+            // Handle both online and offline states
+            if (status) {
+              const isOnline = status.state === 'online';
+              console.log(`[ChatScreen] Setting participant ${uid} to ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
+              setParticipantUsers(prev =>
+                prev.map(u =>
+                  u.uid === uid
+                    ? { ...u, isOnline, lastSeen: status.last_changed ? new Date(status.last_changed) : u.lastSeen }
+                    : u
+                )
+              );
+            } else {
+              // If status is null/undefined, user is offline
+              console.log(`[ChatScreen] Status is null for participant ${uid}, setting to OFFLINE`);
+              setParticipantUsers(prev =>
+                prev.map(u =>
+                  u.uid === uid
+                    ? { ...u, isOnline: false, lastSeen: new Date() }
+                    : u
+                )
+              );
+            }
+          },
+          (error) => {
+            console.error(`[ChatScreen] ❌ ERROR subscribing to RTDB for group participant ${uid}:`, error);
           }
-        });
+        );
         unsubscribers.push(unsubscribe);
       });
     
@@ -241,28 +247,35 @@ export const ChatScreen: React.FC = () => {
     
     // Subscribe to Realtime Database for instant presence updates (works with onDisconnect)
     const userStatusRef = ref(database, `/status/${otherUserId}`);
-    const rtdbUnsubscribe = onValue(userStatusRef, (snapshot) => {
-      const status = snapshot.val();
-      console.log(`[ChatScreen] RTDB presence update for ${otherUserId}:`, status);
-      // Handle both online and offline states
-      if (status) {
-        const isOnline = status.state === 'online';
-        console.log(`[ChatScreen] Setting user ${otherUserId} to ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
-        setOtherUser(prev => prev ? {
-          ...prev,
-          isOnline,
-          lastSeen: status.last_changed ? new Date(status.last_changed) : prev.lastSeen,
-        } : null);
-      } else {
-        // If status is null/undefined, user is offline
-        console.log(`[ChatScreen] Status is null for ${otherUserId}, setting to OFFLINE`);
-        setOtherUser(prev => prev ? {
-          ...prev,
-          isOnline: false,
-          lastSeen: new Date(),
-        } : null);
+    console.log(`[ChatScreen] Setting up RTDB listener for direct chat user: ${otherUserId}`);
+    const rtdbUnsubscribe = onValue(
+      userStatusRef,
+      (snapshot) => {
+        const status = snapshot.val();
+        console.log(`[ChatScreen] RTDB presence update for ${otherUserId}:`, status);
+        // Handle both online and offline states
+        if (status) {
+          const isOnline = status.state === 'online';
+          console.log(`[ChatScreen] Setting user ${otherUserId} to ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
+          setOtherUser(prev => prev ? {
+            ...prev,
+            isOnline,
+            lastSeen: status.last_changed ? new Date(status.last_changed) : prev.lastSeen,
+          } : null);
+        } else {
+          // If status is null/undefined, user is offline
+          console.log(`[ChatScreen] Status is null for ${otherUserId}, setting to OFFLINE`);
+          setOtherUser(prev => prev ? {
+            ...prev,
+            isOnline: false,
+            lastSeen: new Date(),
+          } : null);
+        }
+      },
+      (error) => {
+        console.error(`[ChatScreen] ❌ ERROR subscribing to RTDB for ${otherUserId}:`, error);
       }
-    });
+    );
     
     return () => {
       firestoreUnsubscribe();
