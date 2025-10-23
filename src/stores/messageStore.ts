@@ -312,7 +312,7 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       senderId,
       timestamp: new Date(),
       readBy: [senderId],
-      pending: !isConnected, // Only mark as pending if offline
+      pending: true, // Always start as pending
     };
     
     // Add optimistic message immediately
