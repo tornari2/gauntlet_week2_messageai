@@ -466,8 +466,8 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       
       console.log(`🔄 Processing ${queue.length} messages from offline queue`);
       
-      // Process each message in the queue
-      for (let i = queue.length - 1; i >= 0; i--) {
+      // Process each message in the queue in chronological order (oldest first)
+      for (let i = 0; i < queue.length; i++) {
         const item = queue[i];
         const { chatId, message } = item;
         
@@ -492,8 +492,8 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
             });
           }
           
-          // Remove from queue
-          await storageService.removeFromOfflineQueue(i);
+          // Remove from queue (always remove index 0 since we're processing in order)
+          await storageService.removeFromOfflineQueue(0);
         } catch (error) {
           console.error(`❌ Failed to send queued message for chat ${chatId}:`, error);
           // Keep in queue for next retry, but mark as failed in UI
