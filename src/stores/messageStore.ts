@@ -85,11 +85,19 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       );
       
       // Remove duplicates from Firestore messages FIRST
+      // Also filter out messages that still have tempId (they're from local cache, not confirmed by server)
+      const isConnected = useNetworkStore.getState().isConnected;
       const seenIds = new Set<string>();
       const uniqueFirestoreMessages: Message[] = [];
       
       for (const msg of messages) {
         const messageId = msg.id;
+        
+        // Skip messages with tempId if we're offline (they're from cache, not confirmed)
+        if (!isConnected && msg.tempId && msg.tempId.startsWith('temp_')) {
+          continue;
+        }
+        
         if (!seenIds.has(messageId)) {
           seenIds.add(messageId);
           uniqueFirestoreMessages.push(msg);
@@ -99,7 +107,7 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       // Combine deduplicated Firestore messages with pending local messages
       const allMessages = [...uniqueFirestoreMessages];
       
-      // Add pending messages that aren't already represented in Firestore
+      // Add pending messages that aren't already represented in Firestore      
       pendingMessages.forEach(pendingMsg => {
         const existsInFirestore = uniqueFirestoreMessages.some(m => {
           // Check if Firestore has a message with the same ID
