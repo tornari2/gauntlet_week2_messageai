@@ -54,14 +54,17 @@ export const setupPresence = (userId: string): (() => void) => {
   
   const unsubscribe = onValue(connectedRef, async (snapshot) => {
     const isConnected = snapshot.val();
+    console.log(`[Presence] Connection state for ${userId}:`, isConnected);
     
     if (isConnected === false) {
       // Not connected to Firebase, do nothing
       // The onDisconnect handler will automatically run when we lose connection
+      console.log(`[Presence] ${userId} disconnected, onDisconnect handler will fire`);
       return;
     }
 
     // We're connected (or reconnected)!
+    console.log(`[Presence] ${userId} connected, setting up onDisconnect handler`);
     
     // Set up the onDisconnect handler
     // This will automatically set the user to offline when they disconnect
@@ -76,11 +79,14 @@ export const setupPresence = (userId: string): (() => void) => {
     await onDisconnect(userStatusDatabaseRef)
       .set(isOfflineData);
 
+    console.log(`[Presence] onDisconnect handler set for ${userId}`);
+
     // Now that we've set up the onDisconnect handler,
     // we can safely set our presence to online
     try {
       // Set online in Realtime Database
       await set(userStatusDatabaseRef, isOnlineData);
+      console.log(`[Presence] ${userId} set to ONLINE in RTDB`);
       
       // Mirror to Firestore
       await setDoc(
@@ -91,6 +97,7 @@ export const setupPresence = (userId: string): (() => void) => {
         },
         { merge: true }
       );
+      console.log(`[Presence] ${userId} mirrored to Firestore`);
     } catch (error) {
       console.error('❌ ERROR setting user online:', error);
     }
@@ -100,6 +107,7 @@ export const setupPresence = (userId: string): (() => void) => {
   // and mirror them to Firestore
   const statusUnsubscribe = onValue(userStatusDatabaseRef, async (snapshot) => {
     const status = snapshot.val();
+    console.log(`[Presence] Status change for ${userId}:`, status);
     if (status) {
       try {
         await setDoc(
@@ -110,9 +118,12 @@ export const setupPresence = (userId: string): (() => void) => {
           },
           { merge: true }
         );
+        console.log(`[Presence] Mirrored ${userId} status to Firestore: ${status.state}`);
       } catch (error) {
         console.error('Error mirroring status to Firestore:', error);
       }
+    } else {
+      console.log(`[Presence] Status is null for ${userId}, user may have disconnected`);
     }
   });
 
