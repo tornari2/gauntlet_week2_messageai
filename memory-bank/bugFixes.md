@@ -2,6 +2,153 @@
 
 ## October 23, 2025
 
+### ChatScreen Presence Updates Not Working
+**Status:** ✅ Fixed
+**Date:** October 23, 2025
+**Commits:** a8ae8bb, 466b6b3, d475aa2, 5984b21, 372a832, c8be171, 86bba2a, fe3c892
+**Severity:** Critical - Presence indicators not updating in chat windows
+
+#### The Problem
+Online/offline status indicators were updating correctly in ChatsListScreen but NOT in ChatScreen (both direct and group chats). When a user force-quit their app, the indicator in the chat window stayed green indefinitely, even though the chat list showed them as offline immediately.
+
+#### Root Causes (Multiple Issues)
+
+**Issue 1: Missing Error Callbacks**
+- `onValue()` RTDB listeners were missing error callback parameters
+- Errors were failing silently without any indication
+- Without error callbacks, subscription failures went unnoticed
+
+**Issue 2: Infinite Re-subscription Loop**
+- useEffect dependencies included `currentChat` and `user` (full objects)
+- These objects were recreated on every render (via `.find()`)
+- Caused listeners to be set up repeatedly, creating memory leaks
+- Old listeners were being cleaned up while new ones were created
+- The "active" listener kept changing, breaking presence updates
+
+**Issue 3: Duplicate Subscriptions for Direct Chats**
+- ChatScreen was creating its own RTDB subscription for direct chat presence
+- `chatService.subscribeToUserChats()` already subscribed to the same data
+- Duplicate subscriptions caused conflicts and race conditions
+- The data was already available in `currentChat.otherUserOnline`
+
+**Issue 4: Race Condition in Group Chats**
+- RTDB presence listeners fired BEFORE Firestore loaded user profiles
+- When presence update arrived, `participantUsers` was an empty array
+- `.map()` on empty array returned empty array, so updates were lost
+- Profiles and presence were loading in parallel instead of sequentially
+
+#### The Fixes
+
+**Fix 1: Added Error Callbacks**
+```typescript
+// BEFORE (fails silently)
+const unsubscribe = onValue(statusRef, (snapshot) => {
+  // handle data
+});
+
+// AFTER (logs errors)
+const unsubscribe = onValue(
+  statusRef,
+  (snapshot) => {
+    // handle data
+  },
+  (error) => {
+    console.error('ERROR subscribing to RTDB:', error);
+  }
+);
+```
+
+**Fix 2: Fixed useEffect Dependencies**
+```typescript
+// BEFORE (re-subscribes on every render)
+}, [currentChat, user]);
+
+// AFTER (only re-subscribes when IDs change)
+}, [currentChat?.id, user?.uid]);
+```
+
+**Fix 3: Removed Duplicate Direct Chat Subscription**
+```typescript
+// BEFORE: Created separate RTDB subscription in ChatScreen
+// AFTER: Use presence data from currentChat object
+const directChatOnlineStatus = currentChat?.type === 'direct' 
+  ? currentChat.otherUserOnline 
+  : undefined;
+
+// Load user profile from Firestore (for display name)
+// But use presence from currentChat (already tracked by chatService)
+setOtherUser({
+  ...profileData,
+  isOnline: directChatOnlineStatus ?? false,
+  lastSeen: directChatLastSeen || profileData.lastSeen,
+});
+```
+
+**Fix 4: Delayed RTDB Setup for Group Chats**
+```typescript
+// Load Firestore profiles first
+participantIds.forEach(uid => {
+  const firestoreUnsub = onSnapshot(userDocRef, (docSnap) => {
+    // Load user profile into participantUsers
+  });
+  unsubscribers.push(firestoreUnsub);
+});
+
+// Set up RTDB listeners AFTER 500ms delay
+const rtdbTimeout = setTimeout(() => {
+  participantIds.forEach(uid => {
+    const rtdbUnsub = onValue(statusRef, (snapshot) => {
+      // Now participantUsers is populated, updates will work
+      setParticipantUsers(prev => {
+        if (prev.length === 0) {
+          console.log('participantUsers empty, skipping');
+          return prev;
+        }
+        return prev.map(u => u.uid === uid ? { ...u, isOnline } : u);
+      });
+    });
+  });
+}, 500);
+```
+
+#### Files Modified
+- `src/screens/ChatScreen.tsx` - Complete rewrite of presence subscription logic
+- `src/services/presenceService.ts` - Added debug logging
+
+#### Debugging Process
+1. Added extensive console logging to track subscription lifecycle
+2. Discovered listeners being set up multiple times
+3. Found `participantUsers` was empty when updates arrived
+4. Traced issue to object dependencies causing re-renders
+5. Identified duplicate subscriptions for direct chats
+6. Implemented sequential loading (Firestore then RTDB) for groups
+
+#### Testing Results
+- ✅ Direct chat presence updates within 30-60 seconds after force quit
+- ✅ Group chat presence updates within 30-60 seconds after force quit
+- ✅ Chat list and chat window now update at the same time
+- ✅ No more infinite re-subscriptions
+- ✅ No memory leaks from duplicate listeners
+
+#### Key Learnings
+1. **Always add error callbacks to Firebase listeners** - Silent failures are impossible to debug
+2. **useEffect dependencies matter** - Objects cause re-runs, use primitive values (IDs)
+3. **Don't duplicate subscriptions** - Reuse data that's already being tracked
+4. **Race conditions with async data** - Load dependencies first, then set up listeners
+5. **Empty array edge case** - Always check if state is populated before updating
+6. **Timing matters** - Sometimes you need delays to ensure data is ready
+
+#### Why It Was So Difficult
+The issue involved multiple compounding problems:
+1. Silent failures (no error callbacks)
+2. Re-subscription loops (object dependencies)
+3. Architectural duplication (two subscriptions for same data)
+4. Race conditions (parallel vs sequential loading)
+
+Each fix revealed the next issue. The final solution required understanding the entire data flow from `chatService` → `currentChat` → `ChatScreen`.
+
+---
+
 ### FlatList Performance Optimizations
 **Status:** ✅ Completed
 **Date:** October 23, 2025

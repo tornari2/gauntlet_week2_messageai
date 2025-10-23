@@ -537,19 +537,29 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 
 ## Recent Accomplishments
 
-### October 23, 2025
+### October 23, 2025 (Evening)
+- ✅ **CRITICAL: Fixed ChatScreen Presence Updates**
+- ✅ Diagnosed and fixed 4 compounding issues preventing presence updates
+- ✅ Added error callbacks to all RTDB listeners (was failing silently)
+- ✅ Fixed infinite re-subscription loop (object dependencies → ID dependencies)
+- ✅ Removed duplicate RTDB subscription for direct chats (now uses chatService data)
+- ✅ Fixed race condition in group chats (sequential loading: Firestore → RTDB)
+- ✅ Direct chat presence now updates within 30-60 seconds
+- ✅ Group chat presence now updates within 30-60 seconds
+- ✅ **Commits:** a8ae8bb, 466b6b3, d475aa2, 5984b21, 372a832, c8be171, 86bba2a, fe3c892
+
+### October 23, 2025 (Afternoon)
 - ✅ **UI Enhancements & Performance Optimizations**
 - ✅ Implemented user-specific avatar colors across all screens
 - ✅ Enhanced group chat UI with participant names and online status
-- ✅ Updated chat bubble colors (sent: dark brown, group received: sender color, direct received: white)
+- ✅ Updated chat bubble colors (sent: dark brown, group received: white with colored names, direct received: white)
 - ✅ Applied comprehensive FlatList optimizations (getItemLayout, removeClippedSubviews, batch rendering)
-- ✅ Implemented dual subscription (Firestore + RTDB) for instant presence updates
 - ✅ Updated color scheme (white background, tan chat items)
 - ✅ Replaced deprecated SafeAreaView with react-native-safe-area-context
 - ✅ Refactored navigator to single RootStack with fade animations
 - ✅ Removed extensive debug logging across all services
 - ✅ Created userColors utility for consistent avatar color generation
-- ✅ **Commit:** 93ea64a
+- ✅ **Commit:** 93ea64a, acdcf0b
 
 ### October 22, 2025
 - ✅ **Fixed Critical UI Bugs**
@@ -745,6 +755,12 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 35. **SafeAreaView deprecation** - Use react-native-safe-area-context for modern safe area handling
 36. **Single navigator pattern** - Conditional screen rendering prevents unmount/remount flicker
 37. **Debug logging overhead** - Excessive console.log statements impact performance on physical devices
+38. **Firebase error callbacks** - Always add error callbacks to listeners, silent failures are impossible to debug
+39. **useEffect object dependencies** - Full objects cause re-runs on every render, use primitive IDs instead
+40. **Don't duplicate subscriptions** - Reuse data that's already being tracked elsewhere in the app
+41. **Race conditions with async** - Load dependencies sequentially (Firestore first, then RTDB)
+42. **Empty array edge cases** - Always validate state is populated before attempting updates
+43. **Timing with setTimeout** - Sometimes need delays to ensure async data is ready before subscribing
 
 ---
 
