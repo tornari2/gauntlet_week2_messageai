@@ -118,7 +118,7 @@ export const ChatScreen: React.FC = () => {
     
     // For each participant, subscribe to both Firestore (profile) and RTDB (presence)
     participantIds.forEach(uid => {
-      // Subscribe to Firestore for profile data
+      // Subscribe to Firestore for profile data FIRST
       const userDocRef = doc(firestore, 'users', uid);
       const firestoreUnsub = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -140,38 +140,47 @@ export const ChatScreen: React.FC = () => {
         }
       });
       unsubscribers.push(firestoreUnsub);
-      
-      // Subscribe to RTDB for real-time presence
-      const statusRef = ref(database, `/status/${uid}`);
-      console.log(`[ChatScreen] 📡 Setting up RTDB for group participant: ${uid}`);
-      const rtdbUnsub = onValue(
-        statusRef,
-        (snapshot) => {
-          const status = snapshot.val();
-          const isOnline = status ? status.state === 'online' : false;
-          console.log(`[ChatScreen] 🔔 Group presence update for ${uid}:`, { status, isOnline });
-          setParticipantUsers(prev => {
-            const updated = prev.map(u =>
-              u.uid === uid
-                ? { 
-                    ...u, 
-                    isOnline, 
-                    lastSeen: status?.last_changed ? new Date(status.last_changed) : u.lastSeen 
-                  }
-                : u
-            );
-            console.log(`[ChatScreen] 📝 Updated participantUsers:`, updated.map(u => ({ uid: u.uid, name: u.displayName, isOnline: u.isOnline })));
-            return updated;
-          });
-        },
-        (error) => {
-          console.error(`[ChatScreen] ❌ ERROR subscribing to RTDB for group participant ${uid}:`, error);
-        }
-      );
-      unsubscribers.push(rtdbUnsub);
     });
     
+    // Set up RTDB listeners AFTER a short delay to ensure Firestore data is loaded
+    const rtdbTimeout = setTimeout(() => {
+      participantIds.forEach(uid => {
+        const statusRef = ref(database, `/status/${uid}`);
+        console.log(`[ChatScreen] 📡 Setting up RTDB for group participant: ${uid}`);
+        const rtdbUnsub = onValue(
+          statusRef,
+          (snapshot) => {
+            const status = snapshot.val();
+            const isOnline = status ? status.state === 'online' : false;
+            console.log(`[ChatScreen] 🔔 Group presence update for ${uid}:`, { status, isOnline });
+            setParticipantUsers(prev => {
+              if (prev.length === 0) {
+                console.log(`[ChatScreen] ⚠️ participantUsers is empty, skipping update`);
+                return prev;
+              }
+              const updated = prev.map(u =>
+                u.uid === uid
+                  ? { 
+                      ...u, 
+                      isOnline, 
+                      lastSeen: status?.last_changed ? new Date(status.last_changed) : u.lastSeen 
+                    }
+                  : u
+              );
+              console.log(`[ChatScreen] 📝 Updated participantUsers:`, updated.map(u => ({ uid: u.uid, name: u.displayName, isOnline: u.isOnline })));
+              return updated;
+            });
+          },
+          (error) => {
+            console.error(`[ChatScreen] ❌ ERROR subscribing to RTDB for group participant ${uid}:`, error);
+          }
+        );
+        unsubscribers.push(rtdbUnsub);
+      });
+    }, 500); // 500ms delay to let Firestore load
+    
     return () => {
+      clearTimeout(rtdbTimeout);
       unsubscribers.forEach(unsub => unsub());
     };
   }, [currentChat?.id, user?.uid]);
