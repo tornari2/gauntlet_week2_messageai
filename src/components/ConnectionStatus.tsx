@@ -67,8 +67,34 @@ export const ConnectionStatus: React.FC = () => {
       }
     });
 
+    // Poll network state every 3 seconds when offline to catch reconnections
+    // NetInfo sometimes doesn't fire events immediately on iOS
+    const pollInterval = setInterval(() => {
+      const currentState = useNetworkStore.getState().isConnected;
+      if (!currentState) {
+        console.log('[ConnectionStatus] 🔍 Polling network state while offline...');
+        NetInfo.fetch().then((state) => {
+          const connected = (state.isConnected && state.isInternetReachable !== false) ?? false;
+          console.log('[ConnectionStatus] Poll result:', {
+            isConnected: state.isConnected,
+            isInternetReachable: state.isInternetReachable,
+            computed: connected
+          });
+          if (connected !== currentState) {
+            console.log('[ConnectionStatus] 📡 Poll detected state change!');
+            setConnected(connected);
+            if (connected) {
+              console.log('[ConnectionStatus] 🎉 Reconnected via polling! Processing offline queue...');
+              processOfflineQueueRef.current();
+            }
+          }
+        });
+      }
+    }, 3000);
+
     return () => {
       unsubscribe();
+      clearInterval(pollInterval);
     };
     // Empty dependency array - only set up once on mount
   }, [setConnected]); // Add setConnected as dependency
