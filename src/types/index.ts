@@ -3,6 +3,7 @@
  */
 
 import { Timestamp } from 'firebase/firestore';
+import { MessageAIMetadata } from './ai';
 
 /**
  * User interface matching Firestore users collection
@@ -50,6 +51,7 @@ export interface Message {
   pending?: boolean; // For optimistic updates
   failed?: boolean; // For failed message send
   tempId?: string; // Temporary ID for optimistic updates
+  aiMetadata?: MessageAIMetadata; // AI-generated metadata (priority, etc.)
 }
 
 /**
