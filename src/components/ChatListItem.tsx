@@ -34,6 +34,16 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) =
     return chat.groupName || 'Group Chat';
   };
 
+  const getAvatarColor = () => {
+    if (chat.type === 'direct' && chat.otherUserAvatarColor) {
+      return chat.otherUserAvatarColor;
+    }
+    if (chat.type === 'group') {
+      return Colors.primaryDark;
+    }
+    return Colors.primary; // Default for direct chats
+  };
+
   const formatTimestamp = (timestamp: any) => {
     if (!timestamp) return '';
     
@@ -84,7 +94,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) =
       <View style={styles.avatarContainer}>
         <View style={[
           styles.avatar,
-          chat.type === 'group' && styles.groupAvatar
+          { backgroundColor: getAvatarColor() }
         ]}>
           <Text style={styles.avatarText}>
             {chat.type === 'group' ? '👥' : getChatName().charAt(0).toUpperCase()}
@@ -142,8 +152,15 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) =
   const nextOnline = Boolean(nextProps.chat.otherUserOnline);
   
   // Compare timestamps by converting to milliseconds to avoid object reference changes
-  const prevTime = prevProps.chat.lastMessageTime?.toMillis?.() || 0;
-  const nextTime = nextProps.chat.lastMessageTime?.toMillis?.() || 0;
+  const getTimestamp = (time: any) => {
+    if (!time) return 0;
+    if (typeof time.toMillis === 'function') return time.toMillis();
+    if (time instanceof Date) return time.getTime();
+    return 0;
+  };
+  
+  const prevTime = getTimestamp(prevProps.chat.lastMessageTime);
+  const nextTime = getTimestamp(nextProps.chat.lastMessageTime);
   
   return (
     prevProps.chat.id === nextProps.chat.id &&
@@ -151,6 +168,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) =
     prevTime === nextTime &&
     prevOnline === nextOnline &&
     prevProps.chat.otherUserLastSeen === nextProps.chat.otherUserLastSeen &&
+    prevProps.chat.otherUserAvatarColor === nextProps.chat.otherUserAvatarColor &&
     prevProps.chat.unreadCount === nextProps.chat.unreadCount &&
     prevProps.chat.otherUserName === nextProps.chat.otherUserName &&
     prevProps.chat.groupName === nextProps.chat.groupName &&
@@ -162,9 +180,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5EBE0', // Light tan to match ChatsListScreen
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#E8D7C7', // Slightly darker tan for border
   },
   avatarContainer: {
     position: 'relative',
@@ -174,12 +192,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  groupAvatar: {
-    backgroundColor: Colors.primaryDark,
   },
   avatarText: {
     color: '#fff',

@@ -15,8 +15,8 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { UserSelector } from '../components/UserSelector';
 import { chatService } from '../services/chatService';

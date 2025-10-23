@@ -78,7 +78,18 @@ export function subscribeToUserChats(
           const otherUserId = chatData.participants.find((id: string) => id !== userId);
           if (otherUserId) {
             newUserIds.add(otherUserId);
-            const otherUserName = await getUserDisplayName(otherUserId);
+            
+            // Get the other user's profile from Firestore
+            const userRef = doc(firestore, 'users', otherUserId);
+            const userSnap = await getDoc(userRef);
+            let otherUserName = 'Unknown User';
+            let avatarColor = '#25D366'; // Default color
+            
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              otherUserName = userData.displayName || 'Unknown User';
+              avatarColor = userData.avatarColor || '#25D366';
+            }
             
             // Get the other user's online status from RTDB (initial load)
             const { get } = await import('firebase/database');
@@ -107,6 +118,7 @@ export function subscribeToUserChats(
               otherUserName,
               otherUserOnline: isOnline,
               otherUserLastSeen: lastSeen,
+              otherUserAvatarColor: avatarColor,
               unreadCount,
             };
             
@@ -114,7 +126,6 @@ export function subscribeToUserChats(
             
             // Subscribe to this user's status changes if not already subscribed
             if (!userStatusUnsubscribers.has(otherUserId)) {
-              console.log(`👂 Setting up RTDB status subscription for user:`, otherUserId);
               // Watch Realtime Database for presence (works with onDisconnect)
               const userStatusRef = ref(database, `/status/${otherUserId}`);
               const userStatusUnsubscribe = onValue(
@@ -123,10 +134,6 @@ export function subscribeToUserChats(
                   const rtdbStatus = snapshot.val();
                   if (rtdbStatus) {
                     const isOnline = rtdbStatus.state === 'online';
-                    console.log(`📡 RTDB status update for user ${otherUserId}:`, {
-                      isOnline,
-                      last_changed: rtdbStatus.last_changed
-                    });
                     
                     // Update this user's status in all chats
                     latestChats = latestChats.map(chat => {
@@ -139,7 +146,6 @@ export function subscribeToUserChats(
                       }
                       return chat;
                     });
-                    console.log(`🔄 Updating chat list with RTDB status for ${otherUserId}`);
                     onChatsUpdate([...latestChats]);
                   }
                 },
@@ -147,7 +153,44 @@ export function subscribeToUserChats(
                   console.error(`Error subscribing to user ${otherUserId} RTDB status:`, error);
                 }
               );
-              userStatusUnsubscribers.set(otherUserId, userStatusUnsubscribe);
+              
+              // Also subscribe to user profile changes in Firestore (for name and color updates)
+              const userDocRef = doc(firestore, 'users', otherUserId);
+              const userProfileUnsubscribe = onSnapshot(
+                userDocRef,
+                (docSnapshot) => {
+                  if (docSnapshot.exists()) {
+                    const userData = docSnapshot.data();
+                    const newName = userData.displayName || 'Unknown User';
+                    const newColor = userData.avatarColor || '#25D366';
+                    
+                    console.log(`👤 Profile update for user ${otherUserId}:`, { newName, newColor });
+                    
+                    // Update this user's profile in all chats
+                    latestChats = latestChats.map(chat => {
+                      if (chat.type === 'direct' && chat.participants.includes(otherUserId)) {
+                        return {
+                          ...chat,
+                          otherUserName: newName,
+                          otherUserAvatarColor: newColor,
+                        };
+                      }
+                      return chat;
+                    });
+                    console.log(`🔄 Updating chat list with profile changes for ${otherUserId}`);
+                    onChatsUpdate([...latestChats]);
+                  }
+                },
+                (error) => {
+                  console.error(`Error subscribing to user ${otherUserId} profile:`, error);
+                }
+              );
+              
+              // Store both unsubscribe functions
+              userStatusUnsubscribers.set(otherUserId, () => {
+                userStatusUnsubscribe();
+                userProfileUnsubscribe();
+              });
             }
           }
         } else {
@@ -452,18 +495,11 @@ export async function createGroupChat(
   groupName: string
 ): Promise<string> {
   try {
-    console.log('🏗️ Creating group chat...');
-    console.log('   Creator ID:', creatorId);
-    console.log('   Participant IDs:', participantIds);
-    console.log('   Group Name:', groupName);
-    
     // Add creator to participants list
     const allParticipants = [creatorId, ...participantIds];
-    console.log('   All Participants:', allParticipants);
     
     // Create new group chat
     const newChatRef = doc(collection(firestore, 'chats'));
-    console.log('   New Chat ID:', newChatRef.id);
     
     const newChat: Omit<Chat, 'id'> = {
       type: 'group',
@@ -475,16 +511,11 @@ export async function createGroupChat(
       // Don't include groupPhoto if it's not provided - Firestore doesn't accept undefined
     };
     
-    console.log('   Chat object:', JSON.stringify(newChat, null, 2));
-    console.log('   About to call setDoc...');
-    
     await setDoc(newChatRef, newChat);
     
-    console.log('✅ Group chat created successfully:', newChatRef.id);
     return newChatRef.id;
   } catch (error) {
     console.error('❌ Error creating group chat:', error);
-    console.error('   Error details:', JSON.stringify(error, null, 2));
     throw new Error('Failed to create group chat');
   }
 }

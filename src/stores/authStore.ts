@@ -78,9 +78,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
       // The LoginScreen uses its own localLoading state
       set({ error: null });
       
-      const user = await authService.signIn(email, password);
+      await authService.signIn(email, password);
       
-      set({ user });
+      // Don't set user here - let onAuthStateChange handle it to avoid double render/flicker
+      // The listener will fire immediately after successful sign in
     } catch (error) {
       // Don't log error here - it's handled in the UI
       set({ 
@@ -99,9 +100,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
       // The SignupScreen uses its own localLoading state
       set({ error: null });
       
-      const user = await authService.signUp(email, password, displayName);
+      await authService.signUp(email, password, displayName);
       
-      set({ user });
+      // Don't set user here - let onAuthStateChange handle it to avoid double render/flicker
+      // The listener will fire immediately after successful sign up
     } catch (error) {
       // Don't log error here - it's handled in the UI
       set({ 

@@ -17,10 +17,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
@@ -116,6 +117,15 @@ export const ChatsListScreen: React.FC = () => {
         initialNumToRender={10}
       />
 
+      {/* Floating action button for profile (bottom left) */}
+      <TouchableOpacity
+        style={[styles.fab, styles.fabProfile]}
+        onPress={() => navigation.navigate('UserProfile')}
+        testID="profile-button"
+      >
+        <Ionicons name="person" size={24} color="#fff" />
+      </TouchableOpacity>
+
       {/* Floating action button for creating new group */}
       <TouchableOpacity
         style={[styles.fab, styles.fabSecondary]}
@@ -145,7 +155,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff', // White background
   },
   header: {
     flexDirection: 'row',
@@ -226,6 +236,12 @@ const styles = StyleSheet.create({
   fabSecondary: {
     bottom: 90, // Position above the main FAB
     backgroundColor: Colors.primaryDark,
+  },
+  fabProfile: {
+    left: 20,
+    right: 'auto', // Override right position
+    bottom: 20,
+    backgroundColor: Colors.primaryDark, // Same as group button
   },
   fabIcon: {
     fontSize: 32,

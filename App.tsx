@@ -70,10 +70,7 @@ export default function App(): React.ReactElement {
   // Helper functions defined before useEffects that use them
   const registerLocalNotifications = async () => {
     try {
-      const granted = await registerForLocalNotifications();
-      if (granted) {
-        console.log('✅ Local notifications registered');
-      }
+      await registerForLocalNotifications();
       // Silently fail if not granted - in-app banners will still work
     } catch (error) {
       // Silently fail - notifications are optional, in-app banners will work
@@ -86,7 +83,6 @@ export default function App(): React.ReactElement {
       
       // Handle navigation based on notification data
       if (data.chatId) {
-        console.log('📱 Navigate to chat:', data.chatId);
         // Navigation will be handled through the navigation ref
         // TODO: Implement navigation when notification is tapped
       }
@@ -96,7 +92,6 @@ export default function App(): React.ReactElement {
   };
 
   const handleBannerPress = (notification: any) => {
-    console.log('📱 Banner pressed:', notification);
     // Navigate to chat
     if (notification.chatId) {
       // TODO: Implement navigation when banner is pressed
@@ -104,21 +99,16 @@ export default function App(): React.ReactElement {
   };
 
   const handleAppStateChange = useCallback(async (nextAppState: AppStateStatus) => {
-    console.log('📱 AppState change detected:', appState.current, '→', nextAppState);
-    
     // Only update if user is logged in
     if (!user) {
-      console.log('⚠️ No user logged in, skipping presence update');
       appState.current = nextAppState;
       return;
     }
 
     // App is going from background to foreground
     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('📱 App has come to the foreground - ensuring user is online');
       try {
         await updatePresence(user.uid, true);
-        console.log('✅ Successfully set user online via AppState change');
       } catch (error) {
         console.error('❌ Error updating online status:', error);
       }
@@ -138,12 +128,11 @@ export default function App(): React.ReactElement {
   useEffect(() => {
     // Listener for notifications received while app is in foreground
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notification received in foreground:', notification);
+      // Notification handling is done via NotificationBanner
     });
 
     // Listener for when user taps on a notification
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification tapped:', response);
       handleNotificationResponse(response);
     });
 
@@ -159,11 +148,8 @@ export default function App(): React.ReactElement {
 
   // Subscribe to AppState changes for presence tracking
   useEffect(() => {
-    console.log('📱 Setting up AppState listener for presence tracking');
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-
     return () => {
-      console.log('📱 Removing AppState listener');
       subscription.remove();
     };
   }, [handleAppStateChange]);

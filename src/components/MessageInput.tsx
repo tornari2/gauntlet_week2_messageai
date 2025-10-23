@@ -2,9 +2,10 @@
  * MessageInput Component
  * 
  * Text input with send button for composing and sending messages
+ * Includes typing indicator support
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -17,16 +18,105 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface MessageInputProps {
   onSend: (text: string) => void;
+  onTypingChange?: (isTyping: boolean) => void;
   disabled?: boolean;
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false }) => {
+export const MessageInput: React.FC<MessageInputProps> = ({ 
+  onSend, 
+  onTypingChange,
+  disabled = false 
+}) => {
   const [text, setText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup on unmount only
+  useEffect(() => {
+    return () => {
+      // Clear all timers
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      // Stop typing when component unmounts
+      if (onTypingChange) {
+        onTypingChange(false);
+      }
+    };
+    // Empty dependency array - only run on mount/unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const stopTyping = () => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+    setIsTyping(false);
+    if (onTypingChange) {
+      onTypingChange(false);
+    }
+  };
+
+  const startTyping = () => {
+    setIsTyping(true);
+    if (onTypingChange) {
+      onTypingChange(true);
+    }
+    
+    // Send heartbeat every 3 seconds to keep typing indicator alive
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (onTypingChange) {
+        onTypingChange(true);
+      }
+    }, 3000); // Every 3 seconds
+  };
+
+  const handleTextChange = (newText: string) => {
+    setText(newText);
+
+    // Typing indicator logic
+    if (onTypingChange) {
+      // Start typing if there's text and we're not already typing
+      if (newText.trim() && !isTyping) {
+        startTyping();
+      }
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Set new timeout to stop typing after 5 seconds of inactivity
+      if (newText.trim()) {
+        typingTimeoutRef.current = setTimeout(() => {
+          stopTyping();
+        }, 5000); // 5 seconds - more forgiving
+      } else {
+        // No text, stop typing immediately
+        stopTyping();
+      }
+    }
+  };
 
   const handleSend = () => {
     const trimmedText = text.trim();
     
     if (trimmedText && !disabled) {
+      // Stop typing indicator
+      stopTyping();
+      
       onSend(trimmedText);
       setText('');
     }
@@ -42,7 +132,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = f
           <TextInput
             style={styles.input}
             value={text}
-            onChangeText={setText}
+            onChangeText={handleTextChange}
             placeholder="Type a message..."
             placeholderTextColor="#8E8E93"
             multiline

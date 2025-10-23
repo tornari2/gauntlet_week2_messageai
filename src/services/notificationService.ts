@@ -43,7 +43,6 @@ export async function registerForLocalNotifications(): Promise<boolean> {
       });
     }
 
-    console.log('✅ Local notifications registered successfully');
     return true;
   } catch (error) {
     // Silently fail on emulators or when notifications aren't available
@@ -126,7 +125,6 @@ export async function triggerMessageNotification(
 
     // Don't notify if user is viewing this chat
     if (activeChatId === chatId) {
-      console.log('🔕 User is viewing this chat, no notification');
       return;
     }
 
@@ -141,11 +139,9 @@ export async function triggerMessageNotification(
 
     // If app is in foreground, show in-app banner
     if (appState === 'active') {
-      console.log('🔔 Showing in-app notification banner');
       showInAppNotification(notification);
     } else {
       // If app is in background, show local notification
-      console.log('🔔 Showing local notification (app in background)');
       await scheduleLocalNotification(
         chatName,
         messageText,

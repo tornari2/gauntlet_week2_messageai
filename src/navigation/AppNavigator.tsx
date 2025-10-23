@@ -15,6 +15,7 @@ import { ChatsListScreen } from '../screens/ChatsListScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { NewChatScreen } from '../screens/NewChatScreen';
 import { CreateGroupScreen } from '../screens/CreateGroupScreen';
+import { UserProfileScreen } from '../screens/UserProfileScreen';
 
 // Type definitions for navigation
 export type AuthStackParamList = {
@@ -26,6 +27,7 @@ export type MainStackParamList = {
   ChatsList: undefined;
   NewChat: undefined;
   CreateGroup: undefined;
+  UserProfile: undefined;
   Chat: {
     chatId: string;
     chatName: string;
@@ -35,51 +37,53 @@ export type MainStackParamList = {
 const Stack = createNativeStackNavigator();
 
 /**
- * Auth Stack - Screens for unauthenticated users
+ * Root Stack - All screens in one navigator for smooth transitions
  */
-const AuthStack = () => {
+const RootStack = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        animation: 'fade', // Smooth fade transition
+        animationDuration: 200,
       }}
     >
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Signup" component={SignupScreen} />
-    </Stack.Navigator>
-  );
-};
-
-/**
- * Main Stack - Screens for authenticated users
- */
-const MainStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen
-        name="ChatsList"
-        component={ChatsListScreen}
-        options={{ title: 'Chats' }}
-      />
-      <Stack.Screen
-        name="NewChat"
-        component={NewChatScreen}
-        options={{ title: 'New Chat' }}
-      />
-      <Stack.Screen
-        name="CreateGroup"
-        component={CreateGroupScreen}
-        options={{ title: 'Create Group' }}
-      />
-      <Stack.Screen
-        name="Chat"
-        component={ChatScreen}
-        options={{ title: 'Chat' }}
-      />
+      {!isAuthenticated ? (
+        // Auth screens
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Signup" component={SignupScreen} />
+        </>
+      ) : (
+        // Main app screens
+        <>
+          <Stack.Screen
+            name="ChatsList"
+            component={ChatsListScreen}
+            options={{ title: 'Chats' }}
+          />
+          <Stack.Screen
+            name="NewChat"
+            component={NewChatScreen}
+            options={{ title: 'New Chat' }}
+          />
+          <Stack.Screen
+            name="CreateGroup"
+            component={CreateGroupScreen}
+            options={{ title: 'Create Group' }}
+          />
+          <Stack.Screen
+            name="UserProfile"
+            component={UserProfileScreen}
+            options={{ title: 'Profile' }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{ title: 'Chat' }}
+          />
+        </>
+      )}
     </Stack.Navigator>
   );
 };
@@ -137,7 +141,7 @@ export const AppNavigator = () => {
 
   return (
     <NavigationContainer ref={navigationRef}>
-      {user ? <MainStack /> : <AuthStack />}
+      <RootStack isAuthenticated={!!user} />
     </NavigationContainer>
   );
 };

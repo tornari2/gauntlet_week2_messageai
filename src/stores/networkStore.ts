@@ -31,19 +31,15 @@ export const useNetworkStore = create<NetworkState & NetworkActions>((set, get) 
       return;
     }
     
-    console.log('🌐 Initializing network store');
-    
     // Fetch initial state
     NetInfo.fetch().then((state) => {
       const connected = state.isConnected ?? true;
-      console.log('🌐 Initial network state:', connected);
       set({ isConnected: connected, isInitialized: true });
     });
     
     // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener((state) => {
       const connected = state.isConnected ?? true;
-      console.log('🌐 Network state changed:', connected ? 'ONLINE' : 'OFFLINE');
       set({ isConnected: connected });
     });
     

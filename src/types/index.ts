@@ -15,6 +15,7 @@ export interface User {
   isOnline: boolean;
   lastSeen: Timestamp | Date;
   pushToken?: string | null;
+  avatarColor?: string; // Hex color for avatar background
   createdAt: Timestamp | Date;
 }
 
@@ -68,6 +69,7 @@ export interface ChatWithDetails extends Chat {
   otherUserName?: string; // For direct chats
   otherUserOnline?: boolean; // For direct chats
   otherUserLastSeen?: Date; // For direct chats (converted from Timestamp)
+  otherUserAvatarColor?: string; // For direct chats - avatar color
   unreadCount?: number;
 }
 

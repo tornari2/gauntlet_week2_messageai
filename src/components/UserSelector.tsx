@@ -18,6 +18,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '../services/firebase';
 import { User } from '../types';
 import { Colors } from '../constants/Colors';
+import { getUserAvatarColor } from '../utils/userColors';
 
 interface UserSelectorProps {
   currentUserId: string;
@@ -129,7 +130,10 @@ export function UserSelector({
         testID={`user-item-${item.uid}`}
       >
         <View style={styles.userInfo}>
-          <View style={styles.avatarPlaceholder}>
+          <View style={[
+            styles.avatarPlaceholder,
+            { backgroundColor: getUserAvatarColor(item) }
+          ]}>
             <Text style={styles.avatarText}>
               {item.displayName.charAt(0).toUpperCase()}
             </Text>
@@ -147,6 +151,13 @@ export function UserSelector({
       </TouchableOpacity>
     );
   };
+
+  // Optimize FlatList performance with getItemLayout
+  const getUserItemLayout = (_: any, index: number) => ({
+    length: 76, // User item height (48 avatar + 12*2 padding + 4 margin)
+    offset: 76 * index,
+    index,
+  });
 
   if (loading) {
     return (
@@ -206,6 +217,13 @@ export function UserSelector({
             </Text>
           </View>
         }
+        // Performance optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
+        updateCellsBatchingPeriod={50}
+        getItemLayout={getUserItemLayout}
       />
     </View>
   );
@@ -294,7 +312,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

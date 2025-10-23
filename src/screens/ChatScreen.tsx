@@ -14,10 +14,11 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { ref, onValue } from 'firebase/database';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useMessageStore } from '../stores/messageStore';
 import { useAuthStore } from '../stores/authStore';
@@ -27,10 +28,14 @@ import { useNotificationStore } from '../stores/notificationStore';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageInput } from '../components/MessageInput';
 import { OnlineIndicator } from '../components/OnlineIndicator';
+import { TypingIndicator } from '../components/TypingIndicator';
+import { ReadReceiptModal } from '../components/ReadReceiptModal';
 import { Message, User } from '../types';
-import { firestore } from '../services/firebase';
+import { firestore, database } from '../services/firebase';
 import { chatService } from '../services/chatService';
+import { typingService } from '../services/typingService';
 import { Colors } from '../constants/Colors';
+import { getUserAvatarColor } from '../utils/userColors';
 
 type ChatScreenRouteProp = RouteProp<MainStackParamList, 'Chat'>;
 
@@ -42,7 +47,16 @@ export const ChatScreen: React.FC = () => {
   const flatListRef = useRef<FlatList<Message>>(null);
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [participants, setParticipants] = useState<string[]>([]);
+  const [participantUsers, setParticipantUsers] = useState<User[]>([]); // For group chats
   const [senderNames, setSenderNames] = useState<Record<string, string>>({});
+  
+  // Typing indicator state
+  const [typingUserIds, setTypingUserIds] = useState<string[]>([]);
+  const [typingUserNames, setTypingUserNames] = useState<string[]>([]);
+  
+  // Read receipt modal state
+  const [showReadReceiptModal, setShowReadReceiptModal] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   
   const { user } = useAuthStore();
   const { chats } = useChatStore();
@@ -88,6 +102,69 @@ export const ChatScreen: React.FC = () => {
     }
   }, [currentChat]);
   
+  // Subscribe to group chat participant presence
+  useEffect(() => {
+    if (!currentChat || currentChat.type !== 'group' || !user) {
+      return;
+    }
+    
+    const unsubscribers: (() => void)[] = [];
+    
+    // Load initial participant data from Firestore
+    Promise.all(
+      currentChat.participants
+        .filter(uid => uid !== user.uid) // Exclude current user
+        .map(uid => {
+          const userDocRef = doc(firestore, 'users', uid);
+          return onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              setParticipantUsers(prev => {
+                const others = prev.filter(u => u.uid !== uid);
+                return [...others, {
+                  uid: docSnap.id,
+                  email: data.email || '',
+                  displayName: data.displayName || '',
+                  photoURL: data.photoURL || null,
+                  isOnline: data.isOnline || false,
+                  lastSeen: data.lastSeen?.toDate() || new Date(),
+                  avatarColor: data.avatarColor,
+                  createdAt: data.createdAt?.toDate() || new Date(),
+                }];
+              });
+            }
+          });
+        })
+    ).then(unsubs => {
+      unsubscribers.push(...unsubs);
+    });
+    
+    // Subscribe to RTDB for real-time presence updates
+    currentChat.participants
+      .filter(uid => uid !== user.uid)
+      .forEach(uid => {
+        const statusRef = ref(database, `/status/${uid}`);
+        const unsubscribe = onValue(statusRef, (snapshot) => {
+          const status = snapshot.val();
+          if (status) {
+            const isOnline = status.state === 'online';
+            setParticipantUsers(prev =>
+              prev.map(u =>
+                u.uid === uid
+                  ? { ...u, isOnline, lastSeen: status.last_changed ? new Date(status.last_changed) : u.lastSeen }
+                  : u
+              )
+            );
+          }
+        });
+        unsubscribers.push(unsubscribe);
+      });
+    
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [currentChat, user]);
+  
   // Auto-read messages when screen is focused
   useFocusEffect(
     React.useCallback(() => {
@@ -131,24 +208,41 @@ export const ChatScreen: React.FC = () => {
       return;
     }
     
-    // Subscribe to other user's document for real-time presence updates
+    // First, get initial user data from Firestore
     const userDocRef = doc(firestore, 'users', otherUserId);
-    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+    const firestoreUnsubscribe = onSnapshot(userDocRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
-        setOtherUser({
+        setOtherUser(prev => ({
           uid: doc.id,
           email: data.email || '',
           displayName: data.displayName || '',
           photoURL: data.photoURL || null,
-          isOnline: data.isOnline || false,
+          isOnline: prev?.isOnline ?? data.isOnline ?? false, // Keep RTDB value if we have it
           lastSeen: data.lastSeen?.toDate() || new Date(),
           createdAt: data.createdAt?.toDate() || new Date(),
-        });
+        }));
       }
     });
     
-    return () => unsubscribe();
+    // Subscribe to Realtime Database for instant presence updates (works with onDisconnect)
+    const userStatusRef = ref(database, `/status/${otherUserId}`);
+    const rtdbUnsubscribe = onValue(userStatusRef, (snapshot) => {
+      const status = snapshot.val();
+      if (status) {
+        const isOnline = status.state === 'online';
+        setOtherUser(prev => prev ? {
+          ...prev,
+          isOnline,
+          lastSeen: status.last_changed ? new Date(status.last_changed) : prev.lastSeen,
+        } : null);
+      }
+    });
+    
+    return () => {
+      firestoreUnsubscribe();
+      rtdbUnsubscribe();
+    };
   }, [currentChat, user]);
 
   // Subscribe to messages on mount
@@ -160,14 +254,64 @@ export const ChatScreen: React.FC = () => {
     };
   }, [chatId, subscribeToMessages, unsubscribeFromMessages]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Subscribe to typing indicators
   useEffect(() => {
-    if (chatMessages.length > 0 && flatListRef.current) {
+    if (!user) return;
+    
+    console.log(`🟢 [ChatScreen] Setting up typing subscription for chat ${chatId}, currentUser=${user.uid}`);
+    
+    // Track the latest request to avoid race conditions
+    let latestRequestId = 0;
+    
+    const unsubscribe = typingService.subscribeToTypingIndicators(
+      chatId,
+      user.uid,
+      (userIds) => {
+        console.log(`🟢 [ChatScreen] Received typing user IDs:`, userIds);
+        
+        // Increment request ID for this update
+        const currentRequestId = ++latestRequestId;
+        
+        setTypingUserIds(userIds);
+        
+        // Fetch display names for typing users
+        if (userIds.length > 0) {
+          chatService.getUserDisplayNames(userIds)
+            .then(names => {
+              // Only update if this is still the latest request
+              if (currentRequestId === latestRequestId) {
+                const namesList = userIds.map(id => names[id] || 'Unknown');
+                console.log(`🟢 [ChatScreen] Typing users resolved (request ${currentRequestId}):`, { userIds, names, namesList });
+                setTypingUserNames(namesList);
+              } else {
+                console.log(`🟢 [ChatScreen] Ignoring stale name resolution (request ${currentRequestId}, latest is ${latestRequestId})`);
+              }
+            })
+            .catch(err => console.error('Error loading typing user names:', err));
+        } else {
+          setTypingUserNames([]);
+        }
+      }
+    );
+    
+    return () => {
+      console.log(`🟢 [ChatScreen] Cleaning up typing subscription for chat ${chatId}`);
+      unsubscribe();
+      // Stop our own typing indicator when leaving
+      typingService.setUserStoppedTyping(chatId, user.uid).catch(err => 
+        console.error('Error stopping typing:', err)
+      );
+    };
+  }, [chatId, user]);
+
+  // Auto-scroll to bottom when new messages arrive or typing indicator appears
+  useEffect(() => {
+    if ((chatMessages.length > 0 || typingUserIds.length > 0) && flatListRef.current) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [chatMessages.length]);
+  }, [chatMessages.length, typingUserIds.length]);
 
   const handleSend = async (text: string) => {
     if (!user) return;
@@ -181,6 +325,22 @@ export const ChatScreen: React.FC = () => {
     }
   };
 
+  const handleTypingChange = (isTyping: boolean) => {
+    if (!user) return;
+    
+    console.log(`🟡 [ChatScreen] User ${user.uid} typing status changed to: ${isTyping}`);
+    
+    if (isTyping) {
+      typingService.setUserTyping(chatId, user.uid).catch(err =>
+        console.error('Error setting typing status:', err)
+      );
+    } else {
+      typingService.setUserStoppedTyping(chatId, user.uid).catch(err =>
+        console.error('Error clearing typing status:', err)
+      );
+    }
+  };
+
   const handleRetry = async (tempId: string) => {
     try {
       await retryMessage(chatId, tempId);
@@ -189,9 +349,23 @@ export const ChatScreen: React.FC = () => {
     }
   };
 
+  const handleReadReceiptPress = (message: Message) => {
+    if (isGroupChat) {
+      setSelectedMessage(message);
+      setShowReadReceiptModal(true);
+    }
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isSent = item.senderId === user?.uid;
     const senderName = isGroupChat && !isSent ? senderNames[item.senderId] : undefined;
+    
+    // Get sender's avatar color for group chats
+    let senderColor: string | undefined;
+    if (isGroupChat && !isSent) {
+      const sender = participantUsers.find(u => u.uid === item.senderId);
+      senderColor = sender ? getUserAvatarColor(sender) : undefined;
+    }
     
     return (
       <MessageBubble 
@@ -199,10 +373,20 @@ export const ChatScreen: React.FC = () => {
         isSent={isSent}
         participants={participants}
         senderName={senderName}
+        senderColor={senderColor}
+        isGroupChat={isGroupChat}
+        onReadReceiptPress={isSent ? () => handleReadReceiptPress(item) : undefined}
         onRetry={item.failed && item.tempId ? () => handleRetry(item.tempId!) : undefined}
       />
     );
   };
+
+  // Optimize FlatList performance with getItemLayout
+  const getMessageItemLayout = (_: any, index: number) => ({
+    length: 80, // Approximate average height of a message bubble
+    offset: 80 * index,
+    index,
+  });
 
   const renderEmpty = () => {
     if (isLoading) {
@@ -240,9 +424,28 @@ export const ChatScreen: React.FC = () => {
               {isGroupChat ? currentChat?.groupName : chatName}
             </Text>
             {isGroupChat ? (
-              <Text style={styles.participantCount}>
-                {participants.length} participant{participants.length !== 1 ? 's' : ''}
-              </Text>
+              <View style={styles.participantsContainer}>
+                {participantUsers.length > 0 ? (
+                  participantUsers.map((participant, index) => (
+                    <View key={participant.uid} style={styles.participantItem}>
+                      <OnlineIndicator 
+                        isOnline={participant.isOnline}
+                        lastSeen={participant.lastSeen}
+                        showText={false}
+                        size="small"
+                      />
+                      <Text style={styles.participantName}>
+                        {participant.displayName}
+                        {index < participantUsers.length - 1 ? ', ' : ''}
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.participantCount}>
+                    {participants.length} participant{participants.length !== 1 ? 's' : ''}
+                  </Text>
+                )}
+              </View>
             ) : otherUser ? (
               <View style={styles.presenceContainer}>
                 <OnlineIndicator 
@@ -275,12 +478,40 @@ export const ChatScreen: React.FC = () => {
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
           ListEmptyComponent={renderEmpty}
+          ListFooterComponent={() => (
+            <TypingIndicator 
+              typingUsers={typingUserNames}
+            />
+          )}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          // Performance optimizations
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={21}
+          initialNumToRender={15}
+          updateCellsBatchingPeriod={50}
+          getItemLayout={getMessageItemLayout}
         />
       )}
 
       {/* Message Input */}
-      <MessageInput onSend={handleSend} disabled={!user} />
+      <MessageInput 
+        onSend={handleSend}
+        onTypingChange={handleTypingChange}
+        disabled={!user} 
+      />
+      
+      {/* Read Receipt Modal */}
+      <ReadReceiptModal
+        visible={showReadReceiptModal}
+        message={selectedMessage}
+        participants={participants}
+        userNames={senderNames}
+        onClose={() => {
+          setShowReadReceiptModal(false);
+          setSelectedMessage(null);
+        }}
+      />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -293,7 +524,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: '#F5EBE0', // Light tan to match chat items
   },
   header: {
     flexDirection: 'row',
@@ -337,6 +568,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.9)',
     marginTop: 2,
+  },
+  participantsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: 4,
+    maxWidth: 250,
+  },
+  participantItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  participantName: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginLeft: 4,
   },
   headerRight: {
     width: 60, // Balance the back button

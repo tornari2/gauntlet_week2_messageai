@@ -17,8 +17,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   TextInput,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
@@ -27,6 +27,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { User } from '../types';
 import { Colors } from '../constants/Colors';
+import { getUserAvatarColor } from '../utils/userColors';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -99,7 +100,10 @@ export const NewChatScreen: React.FC = () => {
       onPress={() => handleUserPress(item)}
       disabled={creatingChat}
     >
-      <View style={styles.avatar}>
+      <View style={[
+        styles.avatar,
+        { backgroundColor: getUserAvatarColor(item) }
+      ]}>
         <Text style={styles.avatarText}>
           {item.displayName.charAt(0).toUpperCase()}
         </Text>
@@ -132,6 +136,13 @@ export const NewChatScreen: React.FC = () => {
       </View>
     );
   };
+
+  // Optimize FlatList performance with getItemLayout
+  const getUserItemLayout = (_: any, index: number) => ({
+    length: 82, // User item height (50 avatar + 16*2 padding)
+    offset: 82 * index,
+    index,
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -172,6 +183,13 @@ export const NewChatScreen: React.FC = () => {
         ListEmptyComponent={renderEmptyState}
         refreshing={loading}
         onRefresh={loadUsers}
+        // Performance optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
+        updateCellsBatchingPeriod={50}
+        getItemLayout={getUserItemLayout}
       />
 
       {/* Loading overlay */}
@@ -242,7 +260,6 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,

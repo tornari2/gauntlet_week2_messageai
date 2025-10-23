@@ -28,39 +28,30 @@ export const ConnectionStatus: React.FC = () => {
   }, [processOfflineQueue, setConnected]);
 
   useEffect(() => {
-    console.log('🔌 ConnectionStatus: Setting up NetInfo listener');
-    
     // Fetch initial state
     NetInfo.fetch().then((state) => {
       const connected = state.isConnected ?? false;
-      console.log('📶 Initial network status:', connected ? 'CONNECTED' : 'DISCONNECTED', 'Details:', state);
       setConnectedRef.current(connected);
     });
 
     // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener((state) => {
       const connected = state.isConnected ?? false;
-      console.log('📶 Network status changed:', connected ? 'CONNECTED ✅' : 'DISCONNECTED ❌');
       
       // Check previous state from store
       const prevConnected = useNetworkStore.getState().isConnected;
-      console.log('📶 Previous:', prevConnected, '→ New:', connected);
       
       // Update global network store
       setConnectedRef.current(connected);
       
       // If reconnected, process offline queue
       if (connected && !prevConnected) {
-        console.log('✅ Connection restored, processing offline queue');
         processOfflineQueueRef.current();
-        
         // Firestore subscriptions will automatically reconnect and update
-        console.log('🔄 Firestore will automatically refresh on reconnect');
       }
     });
 
     return () => {
-      console.log('🔌 ConnectionStatus: Cleaning up NetInfo listener');
       unsubscribe();
     };
     // Empty dependency array - only set up once on mount

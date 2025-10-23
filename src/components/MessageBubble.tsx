@@ -10,6 +10,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Message } from '../types';
 import { formatBubbleTime } from '../utils/dateHelpers';
 import { Colors } from '../constants/Colors';
+import { getUserAvatarColor } from '../utils/userColors';
 
 interface MessageBubbleProps {
   message: Message;
@@ -17,6 +18,9 @@ interface MessageBubbleProps {
   onRetry?: () => void;
   participants?: string[]; // Chat participants for read receipt logic
   senderName?: string; // Display name for group chats
+  onReadReceiptPress?: () => void; // Callback when read receipt is tapped (for group chats)
+  isGroupChat?: boolean; // Whether this is a group chat message
+  senderColor?: string; // Avatar color of the sender (for group chats)
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ 
@@ -24,8 +28,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isSent, 
   onRetry,
   participants = [],
-  senderName
+  senderName,
+  onReadReceiptPress,
+  isGroupChat = false,
+  senderColor,
 }) => {
+  // Get bubble background color
+  const getBubbleColor = () => {
+    if (isSent) {
+      return Colors.primaryDark; // Dark brown for sent messages
+    }
+    return Colors.receivedBubble; // White for all received messages (direct or group)
+  };
   // Determine read receipt status
   const getReadReceiptIcon = () => {
     if (message.pending) {
@@ -84,20 +98,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       <View
         style={[
           styles.bubble,
-          isSent ? styles.sentBubble : styles.receivedBubble,
+          { backgroundColor: getBubbleColor() },
+          isSent && styles.sentBubbleShape,
+          !isSent && styles.receivedBubbleShape,
+          !isSent && styles.receivedBubbleBorder, // Add border for all received messages
           message.pending && styles.pendingBubble,
           message.failed && styles.failedBubble,
         ]}
       >
         {/* Show sender name for group chats on received messages */}
         {!isSent && senderName && (
-          <Text style={styles.senderName}>{senderName}</Text>
+          <Text style={[
+            styles.senderName,
+            senderColor && { color: senderColor } // Use sender's avatar color for name
+          ]}>
+            {senderName}
+          </Text>
         )}
         
         <Text
           style={[
             styles.text,
-            isSent ? styles.sentText : styles.receivedText,
+            isSent ? styles.lightText : styles.darkText,
           ]}
         >
           {message.text}
@@ -107,22 +129,29 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           <Text
             style={[
               styles.time,
-              isSent ? styles.sentTime : styles.receivedTime,
+              isSent ? styles.lightTime : styles.darkTime,
             ]}
           >
             {formatBubbleTime(message.timestamp)}
           </Text>
           
           {isSent && (
-            <Text 
-              style={[
-                styles.statusIcon, 
-                { color: getReadReceiptColor() }
-              ]}
-              testID="read-receipt"
+            <TouchableOpacity
+              onPress={isGroupChat && onReadReceiptPress ? onReadReceiptPress : undefined}
+              disabled={!isGroupChat || !onReadReceiptPress}
+              activeOpacity={isGroupChat && onReadReceiptPress ? 0.6 : 1}
+              testID={isGroupChat ? "read-receipt-touchable" : undefined}
             >
-              {getReadReceiptIcon()}
-            </Text>
+              <Text 
+                style={[
+                  styles.statusIcon, 
+                  { color: getReadReceiptColor() }
+                ]}
+                testID="read-receipt"
+              >
+                {getReadReceiptIcon()}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
         
@@ -158,13 +187,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
   },
-  sentBubble: {
-    backgroundColor: Colors.sentBubble,
+  sentBubbleShape: {
     borderBottomRightRadius: 4,
   },
-  receivedBubble: {
-    backgroundColor: Colors.receivedBubble,
+  receivedBubbleShape: {
     borderBottomLeftRadius: 4,
+  },
+  receivedBubbleBorder: {
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -179,16 +208,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
   },
-  sentText: {
+  lightText: {
     color: '#FFFFFF',
   },
-  receivedText: {
+  darkText: {
     color: '#000000',
   },
   senderName: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.primaryDark,
+    color: Colors.primaryDark, // Default color, overridden by inline style with user's color
     marginBottom: 4,
   },
   metaContainer: {
@@ -201,10 +230,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginRight: 4,
   },
-  sentTime: {
+  lightTime: {
     color: '#F0F0F0',
   },
-  receivedTime: {
+  darkTime: {
     color: '#8E8E93',
   },
   statusIcon: {

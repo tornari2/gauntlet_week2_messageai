@@ -26,8 +26,6 @@ let notificationListener: (() => void) | null = null;
  * @param userId - Current user's ID
  */
 export function initializeRealtimeNotifications(userId: string): () => void {
-  console.log('🔌 Initializing real-time notifications for user:', userId);
-  
   // Clean up existing listener if any
   if (notificationListener) {
     notificationListener();
@@ -105,7 +103,6 @@ export async function sendRealtimeNotification(
     };
 
     await set(notificationRef, payload);
-    console.log('📤 Sent real-time notification to user:', recipientId);
   } catch (error) {
     console.error('Error sending real-time notification:', error);
   }
@@ -116,7 +113,6 @@ export async function sendRealtimeNotification(
  */
 export function cleanupRealtimeNotifications(): void {
   if (notificationListener) {
-    console.log('🔌 Cleaning up real-time notification listener');
     notificationListener();
     notificationListener = null;
   }
@@ -130,7 +126,6 @@ export async function clearPendingNotifications(userId: string): Promise<void> {
   try {
     const notificationsRef = ref(database, `notifications/${userId}`);
     await remove(notificationsRef);
-    console.log('🗑️ Cleared pending notifications');
   } catch (error) {
     console.error('Error clearing pending notifications:', error);
   }

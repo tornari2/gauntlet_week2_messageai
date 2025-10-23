@@ -6,7 +6,8 @@
  */
 
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
+import type { Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getDatabase, Database } from 'firebase/database';
 
@@ -58,7 +59,11 @@ try {
   // Initialize Firebase app
   firebaseApp = initializeApp(firebaseConfig);
 
-  // Initialize Auth - Firebase handles persistence automatically in React Native/Expo
+  // Initialize Auth
+  // NOTE: Firebase v12 with Expo/React Native has limited persistence support
+  // AsyncStorage persistence configuration is not easily accessible due to module resolution issues
+  // Users may need to log in again after force-closing the app
+  // This is a known limitation with Firebase JS SDK in React Native environments
   auth = getAuth(firebaseApp);
 
   // Initialize Firestore
