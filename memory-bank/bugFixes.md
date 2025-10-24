@@ -2,6 +2,140 @@
 
 ## October 24, 2025
 
+### Unread Message Count Real-Time Updates
+**Status:** ✅ Fixed
+**Date:** October 24, 2025
+**Severity:** Medium - UX issue with delayed badge removal
+
+#### The Problem
+The unread message count indicator (badge) on chat list items was persisting for too long after users had already viewed the messages. When users opened a chat and read messages, the badge would not disappear immediately - it would only update when something else triggered a chat document change (like receiving a new message).
+
+#### Root Cause
+The unread count calculation in `chatService.subscribeToUserChats()` was using `getDocs()` to fetch all messages and count unread ones. This approach had a critical flaw:
+
+1. `getDocs()` is a **one-time fetch** operation that runs when the chat list subscription first loads
+2. When users open a chat and messages are marked as read in Firestore, the **chat document itself doesn't change** (only the individual message documents change)
+3. Since only changes to the chat document trigger the subscription callback, the unread count never recalculated
+4. The badge would only update if something else triggered a chat document change (like a new message or presence update)
+
+```typescript
+// ❌ OLD CODE - Only calculates once per chat load
+const messagesSnapshot = await getDocs(messagesRef);
+let unreadCount = 0;
+messagesSnapshot.forEach((msgDoc) => {
+  const msgData = msgDoc.data();
+  if (msgData.senderId !== userId && !msgData.readBy?.includes(userId)) {
+    unreadCount++;
+  }
+});
+```
+
+#### The Fix
+Implemented **real-time listeners** for the messages subcollection of each chat:
+
+**1. Added Message Subscriptions**
+- Created a `Map<string, () => void>` to store message subscription unsubscribe functions
+- Set up `onSnapshot` listeners for each chat's messages subcollection
+- These listeners recalculate the unread count in real-time whenever any message changes
+
+**2. Real-Time Unread Count Updates**
+- When messages are marked as read in `ChatScreen`, the change is immediately detected by the listener
+- The listener recalculates the unread count and updates the chat list
+- The badge disappears or updates instantly
+
+**3. Proper Cleanup**
+- Added cleanup logic to unsubscribe from message listeners when chats are removed from the list
+- Prevents memory leaks and unnecessary Firestore reads
+- Tracks both active chat IDs and user IDs for proper subscription management
+
+#### Code Changes in `chatService.ts`
+
+```typescript
+// ✅ NEW CODE - Real-time subscription
+const messageUnsubscribers = new Map<string, () => void>();
+
+// Set up real-time listener for unread count if not already subscribed
+if (!messageUnsubscribers.has(docSnap.id)) {
+  const messagesRef = collection(firestore, 'chats', docSnap.id, 'messages');
+  const messagesUnsubscribe = onSnapshot(
+    messagesRef,
+    (messagesSnapshot) => {
+      // Calculate unread count
+      let newUnreadCount = 0;
+      messagesSnapshot.forEach((msgDoc) => {
+        const msgData = msgDoc.data();
+        // Count messages not sent by current user and not read by them
+        if (msgData.senderId !== userId && !msgData.readBy?.includes(userId)) {
+          newUnreadCount++;
+        }
+      });
+      
+      // Update the unread count for this specific chat
+      latestChats = latestChats.map(chat => {
+        if (chat.id === docSnap.id) {
+          return {
+            ...chat,
+            unreadCount: newUnreadCount,
+          };
+        }
+        return chat;
+      });
+      
+      onChatsUpdate([...latestChats]);
+    },
+    (error) => {
+      console.error(`Error subscribing to messages for chat ${docSnap.id}:`, error);
+    }
+  );
+  
+  messageUnsubscribers.set(docSnap.id, messagesUnsubscribe);
+}
+
+// Cleanup logic for removed chats
+for (const [chatId, unsubFunc] of messageUnsubscribers.entries()) {
+  if (!newChatIds.has(chatId)) {
+    unsubFunc();
+    messageUnsubscribers.delete(chatId);
+  }
+}
+
+// Return function unsubscribes from everything
+return () => {
+  unsubscribe();
+  for (const unsubFunc of userStatusUnsubscribers.values()) {
+    unsubFunc();
+  }
+  userStatusUnsubscribers.clear();
+  for (const unsubFunc of messageUnsubscribers.values()) {
+    unsubFunc();
+  }
+  messageUnsubscribers.clear();
+};
+```
+
+#### Files Modified
+- `src/services/chatService.ts` - Added real-time message subscriptions for unread count updates
+
+#### Testing Results
+✅ **Instant badge removal** - Unread badges disappear immediately when opening a chat
+✅ **Real-time accuracy** - Badge counts are always accurate and reflect current state  
+✅ **Better UX** - Users get immediate visual feedback when they read messages
+✅ **Efficient** - Only subscribes to chats currently in the user's chat list
+✅ **Clean** - Properly unsubscribes when chats are removed to prevent memory leaks
+✅ **Works for both direct and group chats** - Real-time updates work in all chat types
+
+#### Key Learnings
+1. **One-time fetches don't track changes** - `getDocs()` is a snapshot, not a subscription
+2. **Subcollection changes don't trigger parent updates** - Message changes don't trigger chat document updates
+3. **Use onSnapshot for real-time data** - Real-time listeners provide instant updates
+4. **Proper cleanup is critical** - Unsubscribe from listeners to prevent memory leaks
+5. **Track active subscriptions** - Use Maps to manage and clean up multiple subscriptions
+
+#### Documentation Created
+- `UNREAD_COUNT_FIX.md` - Complete technical documentation with testing instructions
+
+---
+
 ### Offline User Profile Caching System
 **Status:** ✅ Fully Implemented
 **Date:** October 24, 2025

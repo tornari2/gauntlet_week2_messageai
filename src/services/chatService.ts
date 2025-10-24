@@ -49,6 +49,8 @@ export function subscribeToUserChats(
 
   // Store user status subscriptions
   const userStatusUnsubscribers = new Map<string, () => void>();
+  // Store message subscriptions for unread count updates
+  const messageUnsubscribers = new Map<string, () => void>();
   let latestChats: ChatWithDetails[] = [];
 
   const unsubscribe = onSnapshot(
@@ -56,22 +58,14 @@ export function subscribeToUserChats(
     async (snapshot) => {
       const chats: ChatWithDetails[] = [];
       const newUserIds = new Set<string>();
+      const newChatIds = new Set<string>();
       
       for (const docSnap of snapshot.docs) {
         const chatData = docSnap.data();
+        newChatIds.add(docSnap.id);
         
-        // Calculate unread count for this chat
-        const messagesRef = collection(firestore, 'chats', docSnap.id, 'messages');
-        const messagesSnapshot = await getDocs(messagesRef);
+        // Initial unread count (will be updated by real-time listener)
         let unreadCount = 0;
-        
-        messagesSnapshot.forEach((msgDoc) => {
-          const msgData = msgDoc.data();
-          // Count messages not sent by current user and not read by them
-          if (msgData.senderId !== userId && !msgData.readBy?.includes(userId)) {
-            unreadCount++;
-          }
-        });
         
         // Get the other participant's details for direct chats
         if (chatData.type === 'direct') {
@@ -224,6 +218,43 @@ export function subscribeToUserChats(
             unreadCount,
           });
         }
+        
+        // Set up real-time listener for unread count if not already subscribed
+        if (!messageUnsubscribers.has(docSnap.id)) {
+          const messagesRef = collection(firestore, 'chats', docSnap.id, 'messages');
+          const messagesUnsubscribe = onSnapshot(
+            messagesRef,
+            (messagesSnapshot) => {
+              // Calculate unread count
+              let newUnreadCount = 0;
+              messagesSnapshot.forEach((msgDoc) => {
+                const msgData = msgDoc.data();
+                // Count messages not sent by current user and not read by them
+                if (msgData.senderId !== userId && !msgData.readBy?.includes(userId)) {
+                  newUnreadCount++;
+                }
+              });
+              
+              // Update the unread count for this specific chat
+              latestChats = latestChats.map(chat => {
+                if (chat.id === docSnap.id) {
+                  return {
+                    ...chat,
+                    unreadCount: newUnreadCount,
+                  };
+                }
+                return chat;
+              });
+              
+              onChatsUpdate([...latestChats]);
+            },
+            (error) => {
+              console.error(`Error subscribing to messages for chat ${docSnap.id}:`, error);
+            }
+          );
+          
+          messageUnsubscribers.set(docSnap.id, messagesUnsubscribe);
+        }
       }
       
       // Clean up subscriptions for users no longer in the chat list
@@ -231,6 +262,14 @@ export function subscribeToUserChats(
         if (!newUserIds.has(subscribedUserId)) {
           unsubFunc();
           userStatusUnsubscribers.delete(subscribedUserId);
+        }
+      }
+      
+      // Clean up message subscriptions for chats no longer in the list
+      for (const [chatId, unsubFunc] of messageUnsubscribers.entries()) {
+        if (!newChatIds.has(chatId)) {
+          unsubFunc();
+          messageUnsubscribers.delete(chatId);
         }
       }
       
@@ -243,7 +282,7 @@ export function subscribeToUserChats(
     }
   );
 
-  // Return a function that unsubscribes from both chats and user statuses
+  // Return a function that unsubscribes from everything
   return () => {
     unsubscribe();
     // Clean up all user status subscriptions
@@ -251,6 +290,11 @@ export function subscribeToUserChats(
       unsubFunc();
     }
     userStatusUnsubscribers.clear();
+    // Clean up all message subscriptions
+    for (const unsubFunc of messageUnsubscribers.values()) {
+      unsubFunc();
+    }
+    messageUnsubscribers.clear();
   };
 }
 
