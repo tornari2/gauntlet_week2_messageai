@@ -48,19 +48,19 @@ export const pickImage = async (): Promise<ImagePicker.ImagePickerAsset | null> 
 
 /**
  * Compress and resize image before upload
- * More aggressive compression for faster uploads
+ * Smaller size for chat messages (more modest display)
  */
 export const compressImage = async (
   uri: string,
-  maxWidth: number = 800,
-  maxHeight: number = 800
+  maxWidth: number = 400,
+  maxHeight: number = 400
 ): Promise<{ uri: string; width: number; height: number }> => {
   try {
     const manipResult = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: maxWidth, height: maxHeight } }],
       {
-        compress: 0.5, // More aggressive compression (50%)
+        compress: 0.6, // Good balance of quality and size
         format: ImageManipulator.SaveFormat.JPEG,
       }
     );

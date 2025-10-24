@@ -130,8 +130,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             style={[
               styles.imageContainer,
               {
-                width: message.imageWidth || 250,
-                height: message.imageHeight || 250,
+                width: Math.min(message.imageWidth || 200, 200),
+                height: Math.min(message.imageHeight || 200, 200),
               }
             ]}
           >
@@ -143,6 +143,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             
             {!imageError && (
               <Image
+                key={message.imageUrl} // Force re-render when URL changes
                 source={{ uri: message.imageUrl }}
                 style={styles.image}
                 resizeMode="cover"
