@@ -161,13 +161,22 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
           if (m.tempId && pendingMsg.tempId && m.tempId === pendingMsg.tempId) return true;
           
           // IMPORTANT: Check for duplicate content (same sender, text, and similar timestamp)
+          // Also check imageUrl for image messages
           // This prevents the flicker when Firestore update arrives before we remove the temp message
-          if (m.senderId === pendingMsg.senderId && m.text === pendingMsg.text) {
+          if (m.senderId === pendingMsg.senderId) {
             const mTime = m.timestamp instanceof Date ? m.timestamp.getTime() : m.timestamp.toMillis();
             const pendingTime = pendingMsg.timestamp instanceof Date ? pendingMsg.timestamp.getTime() : pendingMsg.timestamp.toMillis();
-            // If timestamps are within 5 seconds, consider them the same message
+            // If timestamps are within 5 seconds, check if content matches
             if (Math.abs(mTime - pendingTime) < 5000) {
-              return true;
+              // For image messages, check imageUrl
+              if (m.imageUrl && pendingMsg.imageUrl) {
+                // If both have images, consider them the same (one is local URI, one is Firebase URL)
+                return true;
+              }
+              // For text messages, check text content
+              if (m.text === pendingMsg.text && m.text !== '') {
+                return true;
+              }
             }
           }
           
@@ -471,15 +480,16 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       
       console.log(`✅ [sendImageOptimistic] Image uploaded and message sent, realId: ${realMessageId}`);
       
-      // Remove the optimistic message - Firestore will provide the real one
-      set((state) => {
-        const existingMessages = state.messages[chatId] || [];
-        return {
-          messages: {
-            ...state.messages,
-            [chatId]: existingMessages.filter(m => m.tempId !== tempId),
-          },
-        };
+      // Don't remove the optimistic message immediately - let Firestore update handle it
+      // The duplicate detection logic will prevent showing both versions
+      // This prevents the flicker/gap between removing optimistic and receiving real message
+      console.log(`🔄 [sendImageOptimistic] Keeping optimistic message until Firestore update arrives`);
+      
+      // Optional: Update the optimistic message to have the real ID and remove pending flag
+      // This makes the transition smoother
+      get().updateMessage(chatId, tempId, {
+        pending: false,
+        imageUrl: uploadedUrl, // Update to Firebase URL
       });
     } catch (error) {
       console.error('❌ Error sending image:', error);
