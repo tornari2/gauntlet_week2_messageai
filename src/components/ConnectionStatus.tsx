@@ -160,14 +160,15 @@ export const ConnectionStatus: React.FC = () => {
           connected = actuallyConnected;
         }
         
-        console.log('[ConnectionStatus] Poll result:', {
-          isConnected: state.isConnected,
-          isInternetReachable: state.isInternetReachable,
-          type: state.type,
-          computed: connected,
-          previous: currentState,
-          tested: state.isConnected === true // Always test when NetInfo says connected
-        });
+        // Polling logs disabled to reduce console noise
+        // console.log('[ConnectionStatus] Poll result:', {
+        //   isConnected: state.isConnected,
+        //   isInternetReachable: state.isInternetReachable,
+        //   type: state.type,
+        //   computed: connected,
+        //   previous: currentState,
+        //   tested: state.isConnected === true
+        // });
         
         // If state changed, update it
         if (connected !== currentState) {
