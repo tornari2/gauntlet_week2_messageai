@@ -102,6 +102,15 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       
       console.log(`[setMessages] Processing ${messages.length} Firestore messages, isConnected: ${isConnected}`);
       
+      // Log image messages
+      const imageMessages = messages.filter(m => m.imageUrl);
+      if (imageMessages.length > 0) {
+        console.log(`📸 [setMessages] Found ${imageMessages.length} messages with images`);
+        imageMessages.forEach(m => {
+          console.log(`📸 [setMessages] Image message ${m.id}: hasUrl=${!!m.imageUrl}, width=${m.imageWidth}, height=${m.imageHeight}, url=${m.imageUrl?.substring(0, 50)}...`);
+        });
+      }
+      
       for (const msg of messages) {
         const messageId = msg.id;
         
@@ -479,11 +488,20 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       );
       
       console.log(`✅ [sendImageOptimistic] Image uploaded and message sent, realId: ${realMessageId}`);
+      console.log(`📸 [sendImageOptimistic] Image details - URL: ${uploadedUrl.substring(0, 50)}..., width: ${width}, height: ${height}`);
       
       // Update the optimistic message to use the Firebase URL and remove tempId
       // This way it will match the Firestore message when it arrives
       set((state) => {
         const existingMessages = state.messages[chatId] || [];
+        
+        // Log what we have before update
+        console.log(`📊 [sendImageOptimistic] Messages before update: ${existingMessages.length}`);
+        const tempMsg = existingMessages.find(m => m.tempId === tempId);
+        if (tempMsg) {
+          console.log(`🔍 [sendImageOptimistic] Found temp message: id=${tempMsg.id}, tempId=${tempMsg.tempId}, hasImage=${!!tempMsg.imageUrl}`);
+        }
+        
         const updatedMessages = existingMessages.map(m => 
           m.tempId === tempId
             ? {
@@ -492,20 +510,33 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
                 tempId: undefined, // Remove tempId so it's no longer "pending"
                 pending: false,
                 imageUrl: uploadedUrl, // Use Firebase Storage URL
+                imageWidth: width,
+                imageHeight: height,
               }
             : m
         );
         
-        // Deduplicate by ID - if we have multiple messages with same ID, keep only one
-        const seen = new Set<string>();
-        const dedupedMessages = updatedMessages.filter(m => {
+        console.log(`📊 [sendImageOptimistic] Messages after map: ${updatedMessages.length}`);
+        
+        // Deduplicate by ID - keep the message with the Firebase Storage URL (not local file)
+        const seen = new Map<string, Message>();
+        updatedMessages.forEach(m => {
           if (seen.has(m.id)) {
-            console.log(`🗑️ [sendImageOptimistic] Removing duplicate message with ID: ${m.id}`);
-            return false; // Skip duplicate
+            const existing = seen.get(m.id)!;
+            // Prefer the message with Firebase Storage URL over local file URI
+            if (m.imageUrl && m.imageUrl.startsWith('https://')) {
+              console.log(`🔄 [sendImageOptimistic] Replacing message ${m.id} - new has Firebase URL`);
+              seen.set(m.id, m);
+            } else if (!existing.imageUrl || !existing.imageUrl.startsWith('https://')) {
+              console.log(`🗑️ [sendImageOptimistic] Keeping existing message ${m.id}`);
+            }
+          } else {
+            seen.set(m.id, m);
           }
-          seen.add(m.id);
-          return true;
         });
+        
+        const dedupedMessages = Array.from(seen.values());
+        console.log(`📊 [sendImageOptimistic] Messages after dedup: ${dedupedMessages.length}`);
         
         return {
           messages: {
