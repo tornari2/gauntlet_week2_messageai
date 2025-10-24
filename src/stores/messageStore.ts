@@ -484,20 +484,33 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       // This way it will match the Firestore message when it arrives
       set((state) => {
         const existingMessages = state.messages[chatId] || [];
+        const updatedMessages = existingMessages.map(m => 
+          m.tempId === tempId
+            ? {
+                ...m,
+                id: realMessageId, // Use real Firestore ID
+                tempId: undefined, // Remove tempId so it's no longer "pending"
+                pending: false,
+                imageUrl: uploadedUrl, // Use Firebase Storage URL
+              }
+            : m
+        );
+        
+        // Deduplicate by ID - if we have multiple messages with same ID, keep only one
+        const seen = new Set<string>();
+        const dedupedMessages = updatedMessages.filter(m => {
+          if (seen.has(m.id)) {
+            console.log(`🗑️ [sendImageOptimistic] Removing duplicate message with ID: ${m.id}`);
+            return false; // Skip duplicate
+          }
+          seen.add(m.id);
+          return true;
+        });
+        
         return {
           messages: {
             ...state.messages,
-            [chatId]: existingMessages.map(m => 
-              m.tempId === tempId
-                ? {
-                    ...m,
-                    id: realMessageId, // Use real Firestore ID
-                    tempId: undefined, // Remove tempId so it's no longer "pending"
-                    pending: false,
-                    imageUrl: uploadedUrl, // Use Firebase Storage URL
-                  }
-                : m
-            ),
+            [chatId]: dedupedMessages,
           },
         };
       });
