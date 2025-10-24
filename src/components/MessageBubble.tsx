@@ -5,7 +5,7 @@
  * for sent vs received messages and read receipts
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Message } from '../types';
 import { formatBubbleTime } from '../utils/dateHelpers';
@@ -34,6 +34,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 }) => {
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
+
+  // Reset image states when message changes (e.g., when optimistic message is replaced with real one)
+  useEffect(() => {
+    setImageLoading(false);
+    setImageError(false);
+  }, [message.id, message.imageUrl]);
 
   // Get bubble background color
   const getBubbleColor = () => {
@@ -138,13 +144,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {!imageError && (
               <Image
                 source={{ uri: message.imageUrl }}
-                style={[
-                  styles.image,
-                  {
-                    width: message.imageWidth || 250,
-                    height: message.imageHeight || 250,
-                  },
-                ]}
+                style={styles.image}
                 resizeMode="cover"
                 onLoadStart={() => setImageLoading(true)}
                 onLoadEnd={() => setImageLoading(false)}
