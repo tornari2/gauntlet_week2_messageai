@@ -50,6 +50,9 @@ export interface Message {
   pending?: boolean; // For optimistic updates
   failed?: boolean; // For failed message send
   tempId?: string; // Temporary ID for optimistic updates
+  imageUrl?: string; // URL of uploaded image
+  imageWidth?: number; // Image dimensions for proper display
+  imageHeight?: number;
 }
 
 /**

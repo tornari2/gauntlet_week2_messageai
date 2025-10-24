@@ -435,29 +435,43 @@ export async function createOrGetDirectChat(
  * @param chatId - The chat ID
  * @param text - The message text
  * @param senderId - The sender's user ID
+ * @param imageUrl - Optional image URL
+ * @param imageWidth - Optional image width
+ * @param imageHeight - Optional image height
  * @returns The message ID
  */
 export async function sendMessage(
   chatId: string,
   text: string,
-  senderId: string
+  senderId: string,
+  imageUrl?: string,
+  imageWidth?: number,
+  imageHeight?: number
 ): Promise<string> {
   try {
     // Create message in messages subcollection
     const messagesRef = collection(firestore, 'chats', chatId, 'messages');
-    const newMessage = {
+    const newMessage: any = {
       text,
       senderId,
       timestamp: serverTimestamp(),
       readBy: [senderId], // Sender has read their own message
     };
     
+    // Add image fields if present
+    if (imageUrl) {
+      newMessage.imageUrl = imageUrl;
+      newMessage.imageWidth = imageWidth;
+      newMessage.imageHeight = imageHeight;
+    }
+    
     const messageDoc = await addDoc(messagesRef, newMessage);
     
     // Update chat's lastMessage and lastMessageTime
     const chatRef = doc(firestore, 'chats', chatId);
+    const lastMessageText = imageUrl ? (text || '📷 Photo') : text;
     await updateDoc(chatRef, {
-      lastMessage: text,
+      lastMessage: lastMessageText,
       lastMessageTime: serverTimestamp(),
     });
     
@@ -477,12 +491,13 @@ export async function sendMessage(
       }
       
       // Send real-time notifications to all other participants
+      const notificationText = imageUrl ? (text || '📷 Photo') : text;
       const notificationPromises = otherParticipants.map(participantId =>
         sendRealtimeNotification(
           participantId,
           chatId,
           chatName,
-          text,
+          notificationText,
           senderId
         ).catch(error => {
           console.error(`Failed to send notification to ${participantId}:`, error);

@@ -66,6 +66,7 @@ export const ChatScreen: React.FC = () => {
     messages,
     loading,
     sendMessageOptimistic,
+    sendImageOptimistic,
     retryMessage,
     subscribeToMessages,
     unsubscribeFromMessages,
@@ -451,6 +452,31 @@ export const ChatScreen: React.FC = () => {
       // Message will show as failed, user can retry
     }
   };
+  
+  const handleImagePick = async () => {
+    if (!user) return;
+    
+    try {
+      const { pickImage } = await import('../services/imageService');
+      const imageAsset = await pickImage();
+      
+      if (!imageAsset) {
+        return; // User canceled
+      }
+      
+      // Send image with optimistic upload
+      await sendImageOptimistic(
+        chatId,
+        imageAsset.uri,
+        '', // Optional caption (could add UI for this later)
+        user.uid,
+        imageAsset.width,
+        imageAsset.height
+      );
+    } catch (error) {
+      console.error('Error picking/sending image:', error);
+    }
+  };
 
   const handleTypingChange = (isTyping: boolean) => {
     if (!user) return;
@@ -623,6 +649,7 @@ export const ChatScreen: React.FC = () => {
       {/* Message Input */}
       <MessageInput 
         onSend={handleSend}
+        onImagePick={handleImagePick}
         onTypingChange={handleTypingChange}
         disabled={!user} 
       />

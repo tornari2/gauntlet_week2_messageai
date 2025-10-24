@@ -18,12 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface MessageInputProps {
   onSend: (text: string) => void;
+  onImagePick?: () => void;
   onTypingChange?: (isTyping: boolean) => void;
   disabled?: boolean;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({ 
   onSend, 
+  onImagePick,
   onTypingChange,
   disabled = false 
 }) => {
@@ -128,6 +130,20 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <View style={styles.container}>
+        {/* Image picker button */}
+        <TouchableOpacity
+          style={styles.imageButton}
+          onPress={onImagePick}
+          disabled={disabled}
+          testID="image-picker-button"
+        >
+          <Ionicons
+            name="image-outline"
+            size={24}
+            color={disabled ? '#C7C7CC' : '#007AFF'}
+          />
+        </TouchableOpacity>
+
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -171,6 +187,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6F6F6',
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
+  },
+  imageButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
   inputContainer: {
     flex: 1,

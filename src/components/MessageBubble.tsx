@@ -5,12 +5,11 @@
  * for sent vs received messages and read receipts
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Message } from '../types';
 import { formatBubbleTime } from '../utils/dateHelpers';
 import { Colors } from '../constants/Colors';
-import { getUserAvatarColor } from '../utils/userColors';
 
 interface MessageBubbleProps {
   message: Message;
@@ -33,6 +32,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isGroupChat = false,
   senderColor,
 }) => {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
   // Get bubble background color
   const getBubbleColor = () => {
     if (isSent) {
@@ -116,14 +118,60 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </Text>
         )}
         
-        <Text
-          style={[
-            styles.text,
-            isSent ? styles.lightText : styles.darkText,
-          ]}
-        >
-          {message.text}
-        </Text>
+        {/* Show image if present */}
+        {message.imageUrl && (
+          <View style={styles.imageContainer}>
+            {imageLoading && !imageError && (
+              <View style={[
+                styles.imagePlaceholder,
+                {
+                  width: message.imageWidth || 250,
+                  height: message.imageHeight || 250,
+                }
+              ]}>
+                <ActivityIndicator size="large" color={isSent ? '#FFFFFF' : Colors.primary} />
+              </View>
+            )}
+            
+            <Image
+              source={{ uri: message.imageUrl }}
+              style={[
+                styles.image,
+                {
+                  width: message.imageWidth || 250,
+                  height: message.imageHeight || 250,
+                },
+                imageError && styles.imageError,
+              ]}
+              resizeMode="cover"
+              onLoadStart={() => setImageLoading(true)}
+              onLoadEnd={() => setImageLoading(false)}
+              onError={() => {
+                setImageLoading(false);
+                setImageError(true);
+              }}
+            />
+            
+            {imageError && (
+              <View style={styles.imageErrorContainer}>
+                <Text style={styles.imageErrorText}>Failed to load image</Text>
+              </View>
+            )}
+          </View>
+        )}
+        
+        {/* Show text if present */}
+        {message.text && (
+          <Text
+            style={[
+              styles.text,
+              isSent ? styles.lightText : styles.darkText,
+              message.imageUrl && styles.textWithImage, // Add spacing if there's an image
+            ]}
+          >
+            {message.text}
+          </Text>
+        )}
         
         <View style={styles.metaContainer}>
           <Text
@@ -214,11 +262,46 @@ const styles = StyleSheet.create({
   darkText: {
     color: '#000000',
   },
+  textWithImage: {
+    marginTop: 8,
+  },
   senderName: {
     fontSize: 12,
     fontWeight: '600',
     color: Colors.primaryDark, // Default color, overridden by inline style with user's color
     marginBottom: 4,
+  },
+  imageContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginVertical: 4,
+  },
+  imagePlaceholder: {
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  image: {
+    borderRadius: 12,
+  },
+  imageError: {
+    opacity: 0.3,
+  },
+  imageErrorContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 12,
+  },
+  imageErrorText: {
+    color: '#FFFFFF',
+    fontSize: 12,
   },
   metaContainer: {
     flexDirection: 'row',

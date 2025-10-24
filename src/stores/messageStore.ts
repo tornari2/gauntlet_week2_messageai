@@ -39,6 +39,16 @@ interface MessageActions {
   // Send message with optimistic update
   sendMessageOptimistic: (chatId: string, text: string, senderId: string) => Promise<void>;
   
+  // Send image with optimistic update
+  sendImageOptimistic: (
+    chatId: string,
+    imageUri: string,
+    text: string,
+    senderId: string,
+    imageWidth: number,
+    imageHeight: number
+  ) => Promise<void>;
+  
   // Retry failed message
   retryMessage: (chatId: string, tempId: string) => Promise<void>;
   
@@ -396,6 +406,83 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
           console.error('Failed to add message to backup queue:', queueError);
         }
       }
+      
+      // Mark message as failed
+      get().updateMessage(chatId, tempId, {
+        pending: false,
+        failed: true,
+      });
+    }
+  },
+  
+  sendImageOptimistic: async (
+    chatId: string,
+    imageUri: string,
+    text: string,
+    senderId: string,
+    imageWidth: number,
+    imageHeight: number
+  ) => {
+    // Generate temporary ID for optimistic message
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Check network status
+    const isConnected = useNetworkStore.getState().isConnected;
+    
+    console.log(`📤 [sendImageOptimistic] Sending image, isConnected: ${isConnected}, tempId: ${tempId}`);
+    
+    // Create optimistic message with placeholder
+    const optimisticMessage: Message = {
+      id: tempId,
+      tempId,
+      text,
+      senderId,
+      timestamp: new Date(),
+      readBy: [senderId],
+      pending: true,
+      imageUrl: imageUri, // Use local URI as placeholder
+      imageWidth,
+      imageHeight,
+    };
+    
+    // Add optimistic message immediately
+    get().addMessage(chatId, optimisticMessage);
+    
+    try {
+      // Upload image to Firebase Storage
+      const { uploadImage } = await import('../services/imageService');
+      const { url: uploadedUrl, width, height } = await uploadImage(
+        imageUri,
+        chatId,
+        (progress) => {
+          console.log(`Upload progress: ${Math.round(progress * 100)}%`);
+        }
+      );
+      
+      // Send message with uploaded image URL
+      const realMessageId = await chatService.sendMessage(
+        chatId,
+        text,
+        senderId,
+        uploadedUrl,
+        width,
+        height
+      );
+      
+      console.log(`✅ [sendImageOptimistic] Image uploaded and message sent, realId: ${realMessageId}`);
+      
+      // Remove the optimistic message - Firestore will provide the real one
+      set((state) => {
+        const existingMessages = state.messages[chatId] || [];
+        return {
+          messages: {
+            ...state.messages,
+            [chatId]: existingMessages.filter(m => m.tempId !== tempId),
+          },
+        };
+      });
+    } catch (error) {
+      console.error('❌ Error sending image:', error);
       
       // Mark message as failed
       get().updateMessage(chatId, tempId, {
