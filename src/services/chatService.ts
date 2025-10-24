@@ -64,9 +64,6 @@ export function subscribeToUserChats(
         const chatData = docSnap.data();
         newChatIds.add(docSnap.id);
         
-        // Initial unread count (will be updated by real-time listener)
-        let unreadCount = 0;
-        
         // Get the other participant's details for direct chats
         if (chatData.type === 'direct') {
           const otherUserId = chatData.participants.find((id: string) => id !== userId);
@@ -130,7 +127,7 @@ export function subscribeToUserChats(
               otherUserOnline: isOnline,
               otherUserLastSeen: lastSeen,
               otherUserAvatarColor: avatarColor,
-              unreadCount,
+              unreadCount: 0, // Will be calculated by real-time listener
             };
             
             chats.push(chatWithDetails);
@@ -215,45 +212,8 @@ export function subscribeToUserChats(
             createdAt: chatData.createdAt,
             groupName: chatData.groupName,
             groupPhoto: chatData.groupPhoto,
-            unreadCount,
+            unreadCount: 0, // Will be calculated by real-time listener
           });
-        }
-        
-        // Set up real-time listener for unread count if not already subscribed
-        if (!messageUnsubscribers.has(docSnap.id)) {
-          const messagesRef = collection(firestore, 'chats', docSnap.id, 'messages');
-          const messagesUnsubscribe = onSnapshot(
-            messagesRef,
-            (messagesSnapshot) => {
-              // Calculate unread count
-              let newUnreadCount = 0;
-              messagesSnapshot.forEach((msgDoc) => {
-                const msgData = msgDoc.data();
-                // Count messages not sent by current user and not read by them
-                if (msgData.senderId !== userId && !msgData.readBy?.includes(userId)) {
-                  newUnreadCount++;
-                }
-              });
-              
-              // Update the unread count for this specific chat
-              latestChats = latestChats.map(chat => {
-                if (chat.id === docSnap.id) {
-                  return {
-                    ...chat,
-                    unreadCount: newUnreadCount,
-                  };
-                }
-                return chat;
-              });
-              
-              onChatsUpdate([...latestChats]);
-            },
-            (error) => {
-              console.error(`Error subscribing to messages for chat ${docSnap.id}:`, error);
-            }
-          );
-          
-          messageUnsubscribers.set(docSnap.id, messagesUnsubscribe);
         }
       }
       
@@ -273,8 +233,50 @@ export function subscribeToUserChats(
         }
       }
       
+      // Update latestChats FIRST before setting up message subscriptions
       latestChats = chats;
       onChatsUpdate(chats);
+      
+      // NOW set up real-time listeners for unread counts (after latestChats is populated)
+      for (const chat of chats) {
+        if (!messageUnsubscribers.has(chat.id)) {
+          const messagesRef = collection(firestore, 'chats', chat.id, 'messages');
+          const messagesUnsubscribe = onSnapshot(
+            messagesRef,
+            (messagesSnapshot) => {
+              // Calculate unread count
+              let newUnreadCount = 0;
+              messagesSnapshot.forEach((msgDoc) => {
+                const msgData = msgDoc.data();
+                // Count messages not sent by current user and not read by them
+                if (msgData.senderId !== userId && !msgData.readBy?.includes(userId)) {
+                  newUnreadCount++;
+                }
+              });
+              
+              console.log(`📊 Chat ${chat.id}: ${newUnreadCount} unread messages`);
+              
+              // Update the unread count for this specific chat
+              latestChats = latestChats.map(c => {
+                if (c.id === chat.id) {
+                  return {
+                    ...c,
+                    unreadCount: newUnreadCount,
+                  };
+                }
+                return c;
+              });
+              
+              onChatsUpdate([...latestChats]);
+            },
+            (error) => {
+              console.error(`Error subscribing to messages for chat ${chat.id}:`, error);
+            }
+          );
+          
+          messageUnsubscribers.set(chat.id, messagesUnsubscribe);
+        }
+      }
     },
     (error) => {
       console.error('Error in chat subscription:', error);
