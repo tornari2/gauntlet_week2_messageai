@@ -127,7 +127,7 @@ export function subscribeToUserChats(
               otherUserOnline: isOnline,
               otherUserLastSeen: lastSeen,
               otherUserAvatarColor: avatarColor,
-              unreadCount: 0, // Will be calculated by real-time listener
+              unreadCount: latestChats.find(c => c.id === docSnap.id)?.unreadCount ?? 0, // Preserve existing count
             };
             
             chats.push(chatWithDetails);
@@ -212,7 +212,7 @@ export function subscribeToUserChats(
             createdAt: chatData.createdAt,
             groupName: chatData.groupName,
             groupPhoto: chatData.groupPhoto,
-            unreadCount: 0, // Will be calculated by real-time listener
+            unreadCount: latestChats.find(c => c.id === docSnap.id)?.unreadCount ?? 0, // Preserve existing count
           });
         }
       }
@@ -253,8 +253,6 @@ export function subscribeToUserChats(
                   newUnreadCount++;
                 }
               });
-              
-              console.log(`📊 Chat ${chat.id}: ${newUnreadCount} unread messages`);
               
               // Update the unread count for this specific chat
               latestChats = latestChats.map(c => {

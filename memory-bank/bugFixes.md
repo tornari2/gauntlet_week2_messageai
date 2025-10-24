@@ -2,137 +2,133 @@
 
 ## October 24, 2025
 
-### Unread Message Count Real-Time Updates
-**Status:** ✅ Fixed
+### Unread Message Count Badge Flickering
+**Status:** ✅ Fixed  
 **Date:** October 24, 2025
-**Severity:** Medium - UX issue with badge display
+**Severity:** Medium - UX issue causing badge flickering
 
 #### The Problem
-The unread message count indicator (badge) on chat list items was **not appearing at all**, even when there were unread messages. Users couldn't tell which chats had new messages.
+The unread message count badges on chat list items were **flickering** - they would appear briefly and then immediately disappear. The feature used to work correctly but was now only showing as quick flashes. This made it impossible for users to reliably see which chats had unread messages.
 
-#### Root Cause
-The issue was a **timing/ordering problem** in how real-time message subscriptions were being set up in `chatService.subscribeToUserChats()`:
+#### Root Cause - State Reset on Every Update
+The main chat list subscription fires **on every chat update**, not just new messages:
+- Presence changes (users going online/offline every 30-60 seconds)
+- Profile updates (name/color changes)
+- New messages
+- Any Firestore document change in the chats collection
 
-1. The message subscriptions were created **inside** the main chat list subscription callback
-2. They were set up **before** the `latestChats` array was populated with chat data
-3. When the message listener fired immediately (Firebase subscriptions can fire instantly with existing data), it tried to update `latestChats.map()`
-4. But `latestChats` was still empty, so the update couldn't find any chats to update
-5. The unread count updates were lost, badges never appeared
+Each time the subscription fired, the code would:
 
-```typescript
-// ❌ OLD CODE - Set up subscriptions before latestChats is populated
-for (const docSnap of snapshot.docs) {
-  // ... build chat object ...
-  chats.push(chatWithDetails);
-  
-  // Set up message subscription immediately (PROBLEM!)
-  if (!messageUnsubscribers.has(docSnap.id)) {
-    // Firebase can fire this callback IMMEDIATELY with existing data
-    const messagesUnsubscribe = onSnapshot(messagesRef, (messagesSnapshot) => {
-      // Try to update latestChats, but it's still empty!
-      latestChats = latestChats.map(chat => { 
-        if (chat.id === docSnap.id) {
-          return { ...chat, unreadCount: newUnreadCount };
-        }
-        return chat;
-      });
-      // Returns empty array because latestChats is []
-    });
-  }
-}
+1. Build a fresh `chats` array with `unreadCount: 0` for **all** chats (losing existing counts)
+2. Call `onChatsUpdate(chats)` - **this reset all badges to 0** (flicker!)
+3. Then message subscriptions would fire and update the count back to the correct value
 
-// latestChats gets populated AFTER subscriptions fire
-latestChats = chats;  // ← Too late!
-onChatsUpdate(chats);
-```
+This created constant flickering: **badges appeared → reset to 0 → updated back to correct count**.
 
-#### The Fix
-Restructured the code to set up subscriptions **after** `latestChats` is populated:
-
-**1. Build All Chats First**
-- Loop through chat documents and build the `chats` array
-- Initialize `unreadCount: 0` for all chats
-- Don't set up message subscriptions yet
-
-**2. Update latestChats**
-- Set `latestChats = chats` to populate the array
-- Call `onChatsUpdate(chats)` to update the UI
-
-**3. Then Set Up Message Subscriptions**
-- Loop through the `chats` array (not the Firestore snapshot)
-- Set up message subscriptions for each chat
-- Now when they fire, `latestChats` is populated and updates work correctly
+The problem was particularly bad because presence updates happen frequently (every 30-60 seconds), causing **persistent flickering** throughout the user's session.
 
 ```typescript
-// ✅ NEW CODE - Proper ordering
-
-// Step 1: Build all chats
+// ❌ OLD CODE - Always resets unread count to 0
 for (const docSnap of snapshot.docs) {
-  // ... build chat object ...
   chats.push({
     ...chatData,
-    unreadCount: 0, // Will be calculated by real-time listener
+    unreadCount: 0, // ← Always 0, loses existing count!
   });
 }
 
-// Step 2: Update latestChats FIRST
+// This call shows 0 for all badges (flicker!)
 latestChats = chats;
 onChatsUpdate(chats);
 
-// Step 3: NOW set up real-time listeners (after latestChats is populated)
-for (const chat of chats) {
-  if (!messageUnsubscribers.has(chat.id)) {
-    const messagesRef = collection(firestore, 'chats', chat.id, 'messages');
-    const messagesUnsubscribe = onSnapshot(
-      messagesRef,
-      (messagesSnapshot) => {
-        // Calculate unread count
-        let newUnreadCount = 0;
-        messagesSnapshot.forEach((msgDoc) => {
-          const msgData = msgDoc.data();
-          if (msgData.senderId !== userId && !msgData.readBy?.includes(userId)) {
-            newUnreadCount++;
-          }
-        });
-        
-        console.log(`📊 Chat ${chat.id}: ${newUnreadCount} unread messages`);
-        
-        // Now latestChats is populated, so this update works!
-        latestChats = latestChats.map(c => {
-          if (c.id === chat.id) {
-            return { ...c, unreadCount: newUnreadCount };
-          }
-          return c;
-        });
-        
-        onChatsUpdate([...latestChats]);
-      }
-    );
-    
-    messageUnsubscribers.set(chat.id, messagesUnsubscribe);
-  }
-}
+// Then subscriptions fire and update the count back
+// But user already saw the flicker - poor UX
 ```
 
+#### The Fix
+**Preserve existing unread counts** when rebuilding the chats array:
+
+Instead of always initializing to 0, look up the chat in the existing `latestChats` array and preserve its current unread count:
+
+```typescript
+// ✅ NEW CODE - Preserve existing unread count
+for (const docSnap of snapshot.docs) {
+  chats.push({
+    ...chatData,
+    // Find existing chat and preserve its unread count
+    // Default to 0 only for brand new chats
+    unreadCount: latestChats.find(c => c.id === docSnap.id)?.unreadCount ?? 0,
+  });
+}
+
+// This call now preserves existing badge counts (no flicker!)
+latestChats = chats;
+onChatsUpdate(chats);
+
+// Message subscriptions still update the count when messages are actually read/received
+```
+
+**For both direct and group chats:**
+```typescript
+// Direct chats
+const chatWithDetails: ChatWithDetails = {
+  id: docSnap.id,
+  // ... other fields ...
+  unreadCount: latestChats.find(c => c.id === docSnap.id)?.unreadCount ?? 0,
+};
+
+// Group chats
+chats.push({
+  id: docSnap.id,
+  // ... other fields ...
+  unreadCount: latestChats.find(c => c.id === docSnap.id)?.unreadCount ?? 0,
+});
+```
+
+#### How It Works
+1. **First Load**: Chat doesn't exist in `latestChats` yet, so `find()` returns `undefined`, fallback to `0` ✅
+2. **Presence Update**: Chat exists in `latestChats` with `unreadCount: 3`, so we preserve `3` ✅
+3. **Profile Update**: Chat exists with `unreadCount: 3`, preserve it ✅
+4. **Message Read**: Message subscription fires, updates count from 3 → 2 ✅
+5. **Next Presence Update**: Preserves the `2` ✅
+
 #### Files Modified
-- `src/services/chatService.ts` - Restructured subscription setup order
+- `src/services/chatService.ts` - Preserve unread counts when rebuilding chats array
 
 #### Testing Results
-✅ **Badges appear correctly** - Unread counts now show up when there are unread messages
-✅ **Real-time updates work** - Badges update immediately when messages are marked as read  
-✅ **Proper data flow** - Subscriptions fire after the data structure is ready
-✅ **No race conditions** - Clear ordering prevents timing issues
-✅ **Works for both direct and group chats** - Real-time updates work in all chat types
+✅ **No flickering** - Badges stay visible and don't reset to 0
+✅ **Smooth updates** - Only changes when messages are actually read/received
+✅ **Better UX** - Users can reliably see which chats have unread messages
+✅ **Performance** - No visual jank during frequent presence updates (every 30-60s)
+✅ **Works with all update types** - Presence, profile, and message updates all work correctly
 
 #### Key Learnings
-1. **Firebase subscription timing** - `onSnapshot` callbacks can fire **immediately** with existing data, not just on changes
-2. **Data structure readiness** - Set up subscriptions **after** the data structure they update is fully initialized
-3. **Ordering matters** - Initialize data → Update state → Subscribe to changes
-4. **Common Firebase pattern** - This is a standard pattern: **initialize data first, then subscribe to changes**
-5. **Array operations on empty arrays** - `[].map()` returns `[]`, losing all updates
+1. **Firebase subscription scope** - Real-time listeners fire on **every document change**, not just specific fields
+2. **Preserve state pattern** - When rebuilding arrays from subscriptions, preserve fields that shouldn't reset
+3. **Common pattern for Firebase** - `existingArray.find(e => e.id === item.id)?.field ?? default`
+4. **Flicker causes** - Resetting state unnecessarily causes visual jank
+5. **Real-time listener behavior** - Can't control when they fire, must handle all update types gracefully
+
+#### Pattern: Preserve State on Rebuild
+This is a common pattern when working with Firebase real-time subscriptions that rebuild entire arrays:
+
+```typescript
+// When rebuilding an array from a subscription:
+newArray = subscription.map(item => ({
+  ...newData,
+  preservedField: existingArray.find(e => e.id === item.id)?.preservedField ?? default,
+}));
+```
+
+#### History of This Bug
+This feature used to work correctly, then broke after implementing real-time unread count tracking:
+
+1. **Original**: Used `getDocs()` - no real-time updates, badges persisted but never updated
+2. **First Fix**: Added `onSnapshot` for real-time - badges appeared but immediately disappeared (timing issue)
+3. **Second Fix**: Reordered subscription setup - badges appeared but flickered on every update
+4. **Final Fix** (this): Preserve counts across rebuilds - **badges now work perfectly!** ✅
 
 #### Documentation Created
-- `UNREAD_COUNT_FIX.md` - Complete technical documentation with testing instructions
+- `UNREAD_COUNT_FIX.md` - Complete technical documentation with history
 
 ---
 
