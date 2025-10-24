@@ -480,17 +480,29 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       
       console.log(`✅ [sendImageOptimistic] Image uploaded and message sent, realId: ${realMessageId}`);
       
-      // Don't remove the optimistic message immediately - let Firestore update handle it
-      // The duplicate detection logic will prevent showing both versions
-      // This prevents the flicker/gap between removing optimistic and receiving real message
-      console.log(`🔄 [sendImageOptimistic] Keeping optimistic message until Firestore update arrives`);
-      
-      // Optional: Update the optimistic message to have the real ID and remove pending flag
-      // This makes the transition smoother
-      get().updateMessage(chatId, tempId, {
-        pending: false,
-        imageUrl: uploadedUrl, // Update to Firebase URL
+      // Update the optimistic message to use the Firebase URL and remove tempId
+      // This way it will match the Firestore message when it arrives
+      set((state) => {
+        const existingMessages = state.messages[chatId] || [];
+        return {
+          messages: {
+            ...state.messages,
+            [chatId]: existingMessages.map(m => 
+              m.tempId === tempId
+                ? {
+                    ...m,
+                    id: realMessageId, // Use real Firestore ID
+                    tempId: undefined, // Remove tempId so it's no longer "pending"
+                    pending: false,
+                    imageUrl: uploadedUrl, // Use Firebase Storage URL
+                  }
+                : m
+            ),
+          },
+        };
       });
+      
+      console.log(`🔄 [sendImageOptimistic] Updated optimistic message with real ID: ${realMessageId}`);
     } catch (error) {
       console.error('❌ Error sending image:', error);
       
