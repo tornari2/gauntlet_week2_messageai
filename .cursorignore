@@ -1,0 +1,32 @@
+# Environment variables (contains sensitive API keys)
+.env
+.env.local
+.env*.local
+
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+
+# Build outputs
+dist/
+web-build/
+
+# iOS
+ios/Pods/
+ios/build/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# OS
+.DS_Store
