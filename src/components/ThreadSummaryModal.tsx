@@ -23,6 +23,7 @@ interface ThreadSummaryModalProps {
   error: Error | null;
   onClose: () => void;
   onRetry?: () => void;
+  onShareToChat?: (text: string) => void;
 }
 
 export function ThreadSummaryModal({
@@ -32,7 +33,29 @@ export function ThreadSummaryModal({
   error,
   onClose,
   onRetry,
+  onShareToChat,
 }: ThreadSummaryModalProps) {
+  
+  const formatSummaryForSharing = () => {
+    if (!summary) return '';
+    
+    let text = `📝 **Thread Summary**\n\n`;
+    text += `${summary.summary}\n\n`;
+    
+    if (summary.participantContributions.length > 0) {
+      text += `**Participant Contributions:**\n`;
+      summary.participantContributions.forEach(contrib => {
+        text += `\n👤 ${contrib.userName}:\n`;
+        contrib.mainPoints.forEach(point => {
+          text += `  • ${point}\n`;
+        });
+      });
+    }
+    
+    text += `\n_Based on ${summary.messageCount} messages_`;
+    return text;
+  };
+  
   return (
     <Modal
       visible={visible}
@@ -96,38 +119,6 @@ export function ThreadSummaryModal({
               </Text>
             </View>
             
-            {/* Main Topics */}
-            {summary.mainTopics.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="list" size={20} color="#FF9500" />
-                  <Text style={styles.sectionTitle}>Main Topics</Text>
-                </View>
-                {summary.mainTopics.map((topic, index) => (
-                  <View key={index} style={styles.bulletItem}>
-                    <Text style={styles.bullet}>•</Text>
-                    <Text style={styles.bulletText}>{topic}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            
-            {/* Key Points */}
-            {summary.keyPoints.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="star" size={20} color="#FFD700" />
-                  <Text style={styles.sectionTitle}>Key Points</Text>
-                </View>
-                {summary.keyPoints.map((point, index) => (
-                  <View key={index} style={styles.bulletItem}>
-                    <Text style={styles.bullet}>•</Text>
-                    <Text style={styles.bulletText}>{point}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            
             {/* Participant Contributions */}
             {summary.participantContributions.length > 0 && (
               <View style={styles.section}>
@@ -149,6 +140,21 @@ export function ThreadSummaryModal({
                   </View>
                 ))}
               </View>
+            )}
+            
+            {/* Share Button */}
+            {onShareToChat && (
+              <TouchableOpacity 
+                style={styles.shareButton}
+                onPress={() => {
+                  const text = formatSummaryForSharing();
+                  onShareToChat(text);
+                  onClose();
+                }}
+              >
+                <Ionicons name="send" size={20} color="#FFF" />
+                <Text style={styles.shareButtonText}>Share to Chat</Text>
+              </TouchableOpacity>
             )}
             
             {/* Timestamp */}
@@ -301,6 +307,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#555',
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginVertical: 16,
+    gap: 8,
+  },
+  shareButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    marginLeft: 8,
   },
   footer: {
     paddingTop: 16,

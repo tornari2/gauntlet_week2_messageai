@@ -22,8 +22,8 @@ interface ActionItemsListProps {
   loading: boolean;
   error: Error | null;
   onClose: () => void;
-  onToggleStatus?: (itemId: string) => void;
   onRetry?: () => void;
+  onShareToChat?: (text: string) => void;
 }
 
 export function ActionItemsList({
@@ -32,11 +32,33 @@ export function ActionItemsList({
   loading,
   error,
   onClose,
-  onToggleStatus,
   onRetry,
+  onShareToChat,
 }: ActionItemsListProps) {
-  const pendingItems = actionItems.filter(item => item.status === 'pending');
-  const completedItems = actionItems.filter(item => item.status === 'completed');
+  
+  const formatItemsForSharing = () => {
+    if (actionItems.length === 0) return '';
+    
+    let text = `✅ **Action Items**\n\n`;
+    actionItems.forEach((item, index) => {
+      text += `${index + 1}. ${item.task}\n`;
+      if (item.assignedToName) {
+        text += `   👤 Assigned to: ${item.assignedToName}\n`;
+      }
+      if (item.dueDate) {
+        const date = item.dueDate instanceof Date ? item.dueDate : new Date(item.dueDate);
+        text += `   📅 Due: ${date.toLocaleDateString()}\n`;
+      }
+      text += `   🎯 Priority: ${item.priority}\n`;
+      if (item.context) {
+        text += `   📝 Context: ${item.context}\n`;
+      }
+      text += `\n`;
+    });
+    
+    text += `_${actionItems.length} action item${actionItems.length !== 1 ? 's' : ''} extracted_`;
+    return text;
+  };
   
   return (
     <Modal
@@ -56,23 +78,6 @@ export function ActionItemsList({
             <Ionicons name="close" size={28} color="#007AFF" />
           </TouchableOpacity>
         </View>
-        
-        {/* Stats */}
-        {!loading && !error && actionItems.length > 0 && (
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{pendingItems.length}</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, styles.completedNumber]}>
-                {completedItems.length}
-              </Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </View>
-          </View>
-        )}
         
         {/* Loading */}
         {loading && (
@@ -106,36 +111,31 @@ export function ActionItemsList({
         {/* Action Items */}
         {!loading && !error && actionItems.length > 0 && (
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Pending Items */}
-            {pendingItems.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  📋 Pending ({pendingItems.length})
-                </Text>
-                {pendingItems.map((item) => (
-                  <ActionItemCard
-                    key={item.id}
-                    item={item}
-                    onToggleStatus={onToggleStatus}
-                  />
-                ))}
-              </View>
-            )}
+            <View style={styles.section}>
+              <Text style={styles.countText}>
+                {actionItems.length} action item{actionItems.length !== 1 ? 's' : ''} found
+              </Text>
+              {actionItems.map((item) => (
+                <ActionItemCard
+                  key={item.id}
+                  item={item}
+                />
+              ))}
+            </View>
             
-            {/* Completed Items */}
-            {completedItems.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  ✅ Completed ({completedItems.length})
-                </Text>
-                {completedItems.map((item) => (
-                  <ActionItemCard
-                    key={item.id}
-                    item={item}
-                    onToggleStatus={onToggleStatus}
-                  />
-                ))}
-              </View>
+            {/* Share Button */}
+            {onShareToChat && (
+              <TouchableOpacity 
+                style={styles.shareButton}
+                onPress={() => {
+                  const text = formatItemsForSharing();
+                  onShareToChat(text);
+                  onClose();
+                }}
+              >
+                <Ionicons name="send" size={20} color="#FFF" />
+                <Text style={styles.shareButtonText}>Share to Chat</Text>
+              </TouchableOpacity>
             )}
           </ScrollView>
         )}
@@ -160,12 +160,9 @@ export function ActionItemsList({
  */
 interface ActionItemCardProps {
   item: ActionItem;
-  onToggleStatus?: (itemId: string) => void;
 }
 
-function ActionItemCard({ item, onToggleStatus }: ActionItemCardProps) {
-  const isCompleted = item.status === 'completed';
-  
+function ActionItemCard({ item }: ActionItemCardProps) {
   const priorityColors = {
     high: '#FF3B30',
     medium: '#FF9500',
@@ -179,75 +176,41 @@ function ActionItemCard({ item, onToggleStatus }: ActionItemCardProps) {
   };
   
   return (
-    <View style={[styles.card, isCompleted && styles.cardCompleted]}>
-      {/* Checkbox */}
-      <TouchableOpacity
-        onPress={() => onToggleStatus?.(item.id)}
-        style={styles.checkbox}
-      >
-        <Ionicons
-          name={isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-          size={24}
-          color={isCompleted ? '#34C759' : '#CCC'}
-        />
-      </TouchableOpacity>
-      
-      {/* Content */}
-      <View style={styles.cardContent}>
-        <Text
-          style={[styles.taskText, isCompleted && styles.taskTextCompleted]}
-          numberOfLines={3}
-        >
-          {item.task}
-        </Text>
-        
-        {/* Meta */}
-        <View style={styles.meta}>
-          {/* Priority */}
-          <View
-            style={[
-              styles.priorityBadge,
-              { backgroundColor: `${priorityColors[item.priority]}15` },
-            ]}
-          >
-            <Ionicons
-              name={priorityIcons[item.priority] as any}
-              size={14}
-              color={priorityColors[item.priority]}
-            />
-            <Text
-              style={[styles.priorityText, { color: priorityColors[item.priority] }]}
-            >
-              {item.priority.toUpperCase()}
-            </Text>
-          </View>
-          
-          {/* Assignee */}
-          {item.assignedToName && (
-            <View style={styles.assigneeBadge}>
-              <Ionicons name="person" size={12} color="#007AFF" />
-              <Text style={styles.assigneeText}>{item.assignedToName}</Text>
-            </View>
-          )}
-          
-          {/* Due Date */}
-          {item.dueDate && (
-            <View style={styles.dueDateBadge}>
-              <Ionicons name="calendar" size={12} color="#FF9500" />
-              <Text style={styles.dueDateText}>
-                {new Date(item.dueDate).toLocaleDateString()}
-              </Text>
-            </View>
-          )}
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.taskText}>{item.task}</Text>
+        <View style={[styles.priorityBadge, { backgroundColor: priorityColors[item.priority] }]}>
+          <Ionicons 
+            name={priorityIcons[item.priority] as any} 
+            size={12} 
+            color="#FFF" 
+          />
+          <Text style={styles.priorityText}>{item.priority}</Text>
         </View>
-        
-        {/* Context */}
-        {item.context && (
-          <Text style={styles.contextText} numberOfLines={2}>
-            Context: {item.context}
-          </Text>
-        )}
       </View>
+      
+      {item.assignedToName && (
+        <View style={styles.metaRow}>
+          <Ionicons name="person" size={16} color="#666" />
+          <Text style={styles.metaText}>{item.assignedToName}</Text>
+        </View>
+      )}
+      
+      {item.dueDate && (
+        <View style={styles.metaRow}>
+          <Ionicons name="calendar" size={16} color="#666" />
+          <Text style={styles.metaText}>
+            {new Date(item.dueDate).toLocaleDateString()}
+          </Text>
+        </View>
+      )}
+      
+      {item.context && (
+        <View style={styles.contextContainer}>
+          <Text style={styles.contextLabel}>Context:</Text>
+          <Text style={styles.contextText}>{item.context}</Text>
+        </View>
+      )}
     </View>
   );
 }

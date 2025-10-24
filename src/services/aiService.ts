@@ -13,7 +13,6 @@ import {
   PriorityAnalysis,
   Decision,
   AIServiceError,
-  MessagePriority,
   SmartSearchResponse,
 } from '../types/ai';
 import { AI_CONFIG } from '../config/aiConfig';
@@ -71,8 +70,13 @@ async function retryWithBackoff<T>(
 export async function summarizeThread(
   chatId: string,
   messages: Message[],
-  users: Record<string, User>
+  users: Record<string, User>,
+  previousSummary?: ThreadSummary
 ): Promise<ThreadSummary> {
+  console.log('🎯 [aiService] summarizeThread starting...');
+  console.log('🎯 Messages count:', messages.length);
+  console.log('🎯 Has previous summary:', !!previousSummary);
+  
   if (messages.length < 5) {
     throw new AIServiceError(
       'Need at least 5 messages to summarize',
@@ -83,21 +87,29 @@ export async function summarizeThread(
   const formattedMessages = formatMessagesForAPI(messages, users);
   const useRAG = AI_CONFIG.summarization.useRAG && messages.length > 50;
 
+  console.log('🎯 Creating httpsCallable for summarizeThread...');
   const summarizeFunction = httpsCallable(functions, 'summarizeThread');
   
+  console.log('🎯 Calling function with data...');
+  
   return retryWithBackoff(async () => {
+    console.log('🎯 [Attempt] Calling summarizeThread function...');
     const result = await summarizeFunction({
       messages: formattedMessages,
       useRAG,
+      previousSummary: previousSummary ? {
+        summary: previousSummary.summary,
+        participantContributions: previousSummary.participantContributions,
+        messageCount: previousSummary.messageCount,
+      } : undefined,
     });
+    console.log('🎯 [Success] Got result from function');
 
     const data = result.data as any;
     
     return {
       id: `summary_${Date.now()}`,
       chatId,
-      mainTopics: data.mainTopics || [],
-      keyPoints: data.keyPoints || [],
       participantContributions: data.participantContributions || [],
       summary: data.summary || '',
       messageCount: data.messageCount || messages.length,
@@ -114,8 +126,13 @@ export async function summarizeThread(
 export async function extractActionItems(
   chatId: string,
   messages: Message[],
-  users: Record<string, User>
+  users: Record<string, User>,
+  previousItems?: ActionItem[]
 ): Promise<ActionItem[]> {
+  console.log('🎯 [aiService] extractActionItems starting...');
+  console.log('🎯 Messages count:', messages.length);
+  console.log('🎯 Previous items count:', previousItems?.length || 0);
+  
   if (messages.length === 0) {
     throw new AIServiceError(
       'No messages to extract action items from',
@@ -130,6 +147,13 @@ export async function extractActionItems(
   return retryWithBackoff(async () => {
     const result = await extractFunction({
       messages: formattedMessages,
+      previousItems: previousItems ? previousItems.map(item => ({
+        task: item.task,
+        assignedToName: item.assignedToName,
+        priority: item.priority,
+        dueDate: item.dueDate,
+        context: item.context,
+      })) : undefined,
     });
 
     const data = result.data as any;
@@ -144,7 +168,6 @@ export async function extractActionItems(
       priority: item.priority || 'medium',
       context: item.context || '',
       sourceMessageId: item.sourceMessageId || '',
-      status: item.status || 'pending',
       extractedAt: new Date(item.extractedAt?.seconds * 1000 || Date.now()),
     }));
   });
@@ -195,8 +218,13 @@ export async function analyzePriority(
 export async function trackDecisions(
   chatId: string,
   messages: Message[],
-  users: Record<string, User>
+  users: Record<string, User>,
+  previousDecisions?: Decision[]
 ): Promise<Decision[]> {
+  console.log('🎯 [aiService] trackDecisions starting...');
+  console.log('🎯 Messages count:', messages.length);
+  console.log('🎯 Previous decisions count:', previousDecisions?.length || 0);
+  
   if (messages.length === 0) {
     throw new AIServiceError(
       'No messages to track decisions from',
@@ -211,6 +239,11 @@ export async function trackDecisions(
   return retryWithBackoff(async () => {
     const result = await trackFunction({
       messages: formattedMessages,
+      previousDecisions: previousDecisions ? previousDecisions.map(dec => ({
+        decision: dec.decision,
+        agreedByNames: dec.agreedByNames,
+        context: dec.context,
+      })) : undefined,
     });
 
     const data = result.data as any;
@@ -225,7 +258,6 @@ export async function trackDecisions(
       context: item.context || '',
       sourceMessageIds: item.sourceMessageIds || [],
       timestamp: new Date(),
-      category: item.category || 'other',
       extractedAt: new Date(item.extractedAt?.seconds * 1000 || Date.now()),
     }));
   });

@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Timestamp } from 'firebase/firestore';
 import { 
   ThreadSummary, 
   ActionItem, 
@@ -17,18 +18,34 @@ import { Message, User } from '../types';
 import { aiService } from '../services/aiService';
 import { ragService } from '../services/ragService';
 
+// Helper: Convert Timestamp or Date to Date
+const toDate = (value: Timestamp | Date): Date => {
+  if (value instanceof Date) {
+    return value;
+  }
+  // It's a Firestore Timestamp - convert it
+  if (typeof (value as any).toDate === 'function') {
+    return (value as any).toDate();
+  }
+  // Fallback - treat as timestamp object with seconds
+  if ((value as any).seconds) {
+    return new Date((value as any).seconds * 1000);
+  }
+  // Last resort
+  return new Date();
+};
+
 interface AIActions {
   // Thread Summarization
-  getSummary: (chatId: string, messages: Message[], users: Record<string, User>) => Promise<ThreadSummary>;
+  getSummary: (chatId: string, messages: Message[], users: Record<string, User>, force?: boolean) => Promise<ThreadSummary>;
   clearSummary: (chatId: string) => void;
   
   // Action Items
-  getActionItems: (chatId: string, messages: Message[], users: Record<string, User>) => Promise<ActionItem[]>;
-  toggleActionItemStatus: (chatId: string, itemId: string) => void;
+  getActionItems: (chatId: string, messages: Message[], users: Record<string, User>, force?: boolean) => Promise<ActionItem[]>;
   clearActionItems: (chatId: string) => void;
   
   // Decisions
-  getDecisions: (chatId: string, messages: Message[], users: Record<string, User>) => Promise<Decision[]>;
+  getDecisions: (chatId: string, messages: Message[], users: Record<string, User>, force?: boolean) => Promise<Decision[]>;
   clearDecisions: (chatId: string) => void;
   
   // Smart Search
@@ -71,14 +88,17 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
   /**
    * Get thread summary (with caching)
    */
-  getSummary: async (chatId: string, messages: Message[], users: Record<string, User>) => {
-    // Check cache first
-    const cached = get().summaries[chatId];
-    if (cached) {
-      const age = Date.now() - new Date(cached.generatedAt).getTime();
-      if (age < 3600000) { // Cache for 1 hour
-        console.log('Returning cached summary');
-        return cached;
+  getSummary: async (chatId: string, messages: Message[], users: Record<string, User>, force: boolean = false) => {
+    // Check cache first (unless force is true)
+    if (!force) {
+      const cached = get().summaries[chatId];
+      if (cached) {
+        const generatedDate = toDate(cached.generatedAt);
+        const age = Date.now() - generatedDate.getTime();
+        if (age < 3600000) { // Cache for 1 hour
+          console.log('Returning cached summary');
+          return cached;
+        }
       }
     }
     
@@ -89,8 +109,11 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
     }));
     
     try {
+      // Get previous summary if exists (to build upon)
+      const previousSummary = get().summaries[chatId];
+      
       // Generate summary
-      const summary = await aiService.summarizeThread(chatId, messages, users);
+      const summary = await aiService.summarizeThread(chatId, messages, users, previousSummary);
       
       // Store in state
       set(state => ({
@@ -129,14 +152,17 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
   /**
    * Get action items (with caching)
    */
-  getActionItems: async (chatId: string, messages: Message[], users: Record<string, User>) => {
-    // Check cache
-    const cached = get().actionItems[chatId];
-    if (cached && cached.length > 0) {
-      const age = Date.now() - new Date(cached[0].extractedAt).getTime();
-      if (age < 1800000) { // Cache for 30 minutes
-        console.log('Returning cached action items');
-        return cached;
+  getActionItems: async (chatId: string, messages: Message[], users: Record<string, User>, force: boolean = false) => {
+    // Check cache (unless force is true)
+    if (!force) {
+      const cached = get().actionItems[chatId];
+      if (cached && cached.length > 0) {
+        const extractedDate = toDate(cached[0].extractedAt);
+        const age = Date.now() - extractedDate.getTime();
+        if (age < 1800000) { // Cache for 30 minutes
+          console.log('Returning cached action items');
+          return cached;
+        }
       }
     }
     
@@ -147,8 +173,11 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
     }));
     
     try {
+      // Get previous action items if exist (to build upon)
+      const previousItems = get().actionItems[chatId];
+      
       // Extract action items
-      const items = await aiService.extractActionItems(chatId, messages, users);
+      const items = await aiService.extractActionItems(chatId, messages, users, previousItems);
       
       // Store in state
       set(state => ({
@@ -176,26 +205,6 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
     }
   },
   
-  toggleActionItemStatus: (chatId: string, itemId: string) => {
-    set(state => {
-      const items = state.actionItems[chatId] || [];
-      const updated = items.map(item => 
-        item.id === itemId
-          ? { ...item, status: item.status === 'pending' ? 'completed' as const : 'pending' as const }
-          : item
-      );
-      return {
-        actionItems: { ...state.actionItems, [chatId]: updated },
-      };
-    });
-    
-    // Update cache
-    const items = get().actionItems[chatId];
-    if (items) {
-      AsyncStorage.setItem(`ai_action_items_${chatId}`, JSON.stringify(items));
-    }
-  },
-  
   clearActionItems: (chatId: string) => {
     set(state => {
       const { [chatId]: _, ...rest } = state.actionItems;
@@ -207,14 +216,17 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
   /**
    * Get decisions (with caching)
    */
-  getDecisions: async (chatId: string, messages: Message[], users: Record<string, User>) => {
-    // Check cache
-    const cached = get().decisions[chatId];
-    if (cached && cached.length > 0) {
-      const age = Date.now() - new Date(cached[0].extractedAt).getTime();
-      if (age < 1800000) { // Cache for 30 minutes
-        console.log('Returning cached decisions');
-        return cached;
+  getDecisions: async (chatId: string, messages: Message[], users: Record<string, User>, force: boolean = false) => {
+    // Check cache (unless force is true)
+    if (!force) {
+      const cached = get().decisions[chatId];
+      if (cached && cached.length > 0) {
+        const extractedDate = toDate(cached[0].extractedAt);
+        const age = Date.now() - extractedDate.getTime();
+        if (age < 1800000) { // Cache for 30 minutes
+          console.log('Returning cached decisions');
+          return cached;
+        }
       }
     }
     
@@ -225,8 +237,11 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
     }));
     
     try {
+      // Get previous decisions if exist (to build upon)
+      const previousDecisions = get().decisions[chatId];
+      
       // Track decisions
-      const decisions = await aiService.trackDecisions(chatId, messages, users);
+      const decisions = await aiService.trackDecisions(chatId, messages, users, previousDecisions);
       
       // Store in state
       set(state => ({
@@ -286,7 +301,7 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
     
     try {
       // Perform smart search with RAG
-      const results = await ragService.smartSearch(query, chatId);
+      const results = await ragService.semanticSearch(query, chatId);
       
       // Store in state
       set(state => ({

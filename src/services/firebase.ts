@@ -5,13 +5,14 @@
  * Configuration values are loaded from environment variables.
  */
 
+import { Platform } from 'react-native';
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import type { Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getDatabase, Database } from 'firebase/database';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { getFunctions, Functions } from 'firebase/functions';
+import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getDatabase, Database, connectDatabaseEmulator } from 'firebase/database';
+import { getStorage, FirebaseStorage, connectStorageEmulator } from 'firebase/storage';
+import { getFunctions, Functions, connectFunctionsEmulator } from 'firebase/functions';
 
 // Firebase configuration from environment variables
 // Use EXPO_PUBLIC_ prefix for Expo to expose them to the client
@@ -84,6 +85,39 @@ try {
 
   // Initialize Firebase Functions (used for AI operations)
   functions = getFunctions(firebaseApp);
+
+  // Connect to emulators in development
+  // Set USE_FIREBASE_EMULATOR=true in your .env to enable emulator mode
+  const useEmulator = process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+  
+  console.log('🔍 EMULATOR CHECK:', {
+    envVar: process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR,
+    useEmulator: useEmulator,
+  });
+  
+  if (useEmulator) {
+    console.log('🔧 Using Firebase Emulators (localhost)');
+    
+    // Using Mac's actual IP address so iOS simulator can reach it
+    const emulatorHost = '10.0.0.240';
+    
+    console.log(`📡 Connecting to Functions emulator at: ${emulatorHost}:5001`);
+    
+    // NOTE: We DON'T connect Auth to emulator - use production auth with local functions
+    // This lets you use your real user account while testing functions locally
+    
+    // Connect Functions to emulator ONLY
+    connectFunctionsEmulator(functions, emulatorHost, 5001);
+    console.log(`⚡ Functions emulator connected to ${emulatorHost}:5001`);
+    console.log(`🔐 Auth using PRODUCTION (not emulator)`);
+    
+    // Optionally connect other services to emulators
+    // connectFirestoreEmulator(firestore, 'localhost', 8080);
+    // connectDatabaseEmulator(database, 'localhost', 9000);
+    // connectStorageEmulator(storage, 'localhost', 9199);
+  } else {
+    console.log('☁️ Using PRODUCTION Firebase');
+  }
 
   console.log('Firebase initialized successfully with automatic offline persistence');
 } catch (error) {

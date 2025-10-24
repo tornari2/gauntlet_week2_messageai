@@ -11,14 +11,12 @@ import { Timestamp } from 'firebase/firestore';
 export interface ThreadSummary {
   id: string;
   chatId: string;
-  mainTopics: string[];
-  keyPoints: string[];
+  summary: string; // Brief overview
   participantContributions: {
     userId: string;
     userName: string;
     mainPoints: string[];
   }[];
-  summary: string; // 2-3 sentence overview
   messageCount: number;
   timestamp: Timestamp | Date;
   generatedAt: Timestamp | Date;
@@ -37,7 +35,6 @@ export interface ActionItem {
   priority: 'high' | 'medium' | 'low';
   context: string; // Surrounding message context
   sourceMessageId: string;
-  status: 'pending' | 'completed';
   extractedAt: Timestamp | Date;
 }
 
@@ -74,7 +71,6 @@ export interface Decision {
   context: string;
   sourceMessageIds: string[]; // Message IDs where decision was made
   timestamp: Timestamp | Date;
-  category?: 'technical' | 'business' | 'scheduling' | 'process' | 'other';
   extractedAt: Timestamp | Date;
 }
 

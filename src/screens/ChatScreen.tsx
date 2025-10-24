@@ -36,7 +36,6 @@ import { AIFeaturesMenu } from '../components/AIFeaturesMenu';
 import { ThreadSummaryModal } from '../components/ThreadSummaryModal';
 import { ActionItemsList } from '../components/ActionItemsList';
 import { DecisionsModal } from '../components/DecisionsModal';
-import { PriorityBadge } from '../components/PriorityBadge';
 import { Message, User } from '../types';
 import { firestore, database } from '../services/firebase';
 import { chatService } from '../services/chatService';
@@ -594,7 +593,8 @@ export const ChatScreen: React.FC = () => {
       }
       usersMap[user.uid] = user;
       
-      await aiStore.getSummary(chatId, chatMessages, usersMap);
+      // Force refresh to reanalyze with new messages
+      await aiStore.getSummary(chatId, chatMessages, usersMap, true);
     } catch (error) {
       console.error('Summarization error:', error);
     }
@@ -615,7 +615,8 @@ export const ChatScreen: React.FC = () => {
       }
       usersMap[user.uid] = user;
       
-      await aiStore.getActionItems(chatId, chatMessages, usersMap);
+      // Force refresh to reanalyze with new messages
+      await aiStore.getActionItems(chatId, chatMessages, usersMap, true);
     } catch (error) {
       console.error('Action items error:', error);
     }
@@ -636,7 +637,8 @@ export const ChatScreen: React.FC = () => {
       }
       usersMap[user.uid] = user;
       
-      await aiStore.getDecisions(chatId, chatMessages, usersMap);
+      // Force refresh to reanalyze with new messages
+      await aiStore.getDecisions(chatId, chatMessages, usersMap, true);
     } catch (error) {
       console.error('Decision tracking error:', error);
     }
@@ -809,6 +811,7 @@ export const ChatScreen: React.FC = () => {
         error={aiStore.errors.summarization}
         onClose={() => setShowSummaryModal(false)}
         onRetry={handleSummarize}
+        onShareToChat={(text) => handleSend(text)}
       />
 
       {/* Action Items Modal */}
@@ -818,8 +821,8 @@ export const ChatScreen: React.FC = () => {
         loading={aiStore.loading.actionItems}
         error={aiStore.errors.actionItems}
         onClose={() => setShowActionItemsModal(false)}
-        onToggleStatus={(itemId) => aiStore.toggleActionItemStatus(chatId, itemId)}
         onRetry={handleExtractActionItems}
+        onShareToChat={(text) => handleSend(text)}
       />
 
       {/* Decisions Modal */}
