@@ -32,7 +32,7 @@ export const pickImage = async (): Promise<ImagePicker.ImagePickerAsset | null> 
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.8,
+      quality: 0.6, // Lower quality for faster processing
     });
 
     if (result.canceled) {
@@ -48,18 +48,19 @@ export const pickImage = async (): Promise<ImagePicker.ImagePickerAsset | null> 
 
 /**
  * Compress and resize image before upload
+ * More aggressive compression for faster uploads
  */
 export const compressImage = async (
   uri: string,
-  maxWidth: number = 1024,
-  maxHeight: number = 1024
+  maxWidth: number = 800,
+  maxHeight: number = 800
 ): Promise<{ uri: string; width: number; height: number }> => {
   try {
     const manipResult = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: maxWidth, height: maxHeight } }],
       {
-        compress: 0.7,
+        compress: 0.5, // More aggressive compression (50%)
         format: ImageManipulator.SaveFormat.JPEG,
       }
     );
