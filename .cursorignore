@@ -1,32 +1,21 @@
-# Environment variables (contains sensitive API keys)
+# Environment files with sensitive API keys
 .env
-.env.local
-.env*.local
+.env.*
+*.env
 
-# Dependencies
+# Firebase configuration files
+firebase-config.json
+.firebase/
+
+# Any files containing secrets
+*secret*
+*credential*
+*key.json
+
+# Node modules (already in .gitignore but good to exclude from AI)
 node_modules/
-
-# Expo
-.expo/
 
 # Build outputs
 dist/
-web-build/
-
-# iOS
-ios/Pods/
-ios/build/
-
-# Android
-android/.gradle/
-android/build/
-android/app/build/
-
-# Logs
-*.log
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# OS
-.DS_Store
+build/
+.expo/

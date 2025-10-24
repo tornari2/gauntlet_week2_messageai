@@ -27,6 +27,19 @@ function getPinecone() {
   });
 }
 
+// Helper: Clean JSON response from OpenAI (removes markdown formatting)
+function cleanJSONResponse(content: string): string {
+  // Remove markdown code blocks if present
+  let cleaned = content.trim();
+  if (cleaned.startsWith('```')) {
+    // Remove opening ```json or ```
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
+    // Remove closing ```
+    cleaned = cleaned.replace(/\s*```\s*$/, '');
+  }
+  return cleaned.trim();
+}
+
 /**
  * 1. Thread Summarization
  * Generates AI summary of a conversation thread
@@ -70,7 +83,8 @@ Format your response as JSON with keys: summary, mainTopics (array), keyPoints (
     });
 
     const content = response.choices[0].message.content || '{}';
-    const result = JSON.parse(content);
+    const cleanedContent = cleanJSONResponse(content);
+    const result = JSON.parse(cleanedContent);
 
     return {
       ...result,
@@ -118,7 +132,8 @@ Return JSON array of action items with keys: task, assignedToName, dueDate, prio
     });
 
     const content = response.choices[0].message.content || '[]';
-    const actionItems = JSON.parse(content);
+    const cleanedContent = cleanJSONResponse(content);
+    const actionItems = JSON.parse(cleanedContent);
 
     return {
       actionItems: actionItems.map((item: any) => ({
@@ -165,7 +180,8 @@ Message: "${messageText}"`;
     });
 
     const content = response.choices[0].message.content || '{}';
-    const result = JSON.parse(content);
+    const cleanedContent = cleanJSONResponse(content);
+    const result = JSON.parse(cleanedContent);
 
     return {
       ...result,
@@ -212,7 +228,8 @@ Return JSON array with keys: decision, agreedByNames, context, category, sourceM
     });
 
     const content = response.choices[0].message.content || '[]';
-    const decisions = JSON.parse(content);
+    const cleanedContent = cleanJSONResponse(content);
+    const decisions = JSON.parse(cleanedContent);
 
     return {
       decisions: decisions.map((item: any) => ({
