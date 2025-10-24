@@ -537,6 +537,22 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 
 ## Recent Accomplishments
 
+### October 24, 2025 (Evening)
+- ✅ **COMPLETED: Image Sending Feature**
+- ✅ Implemented complete image sending with Firebase Storage
+- ✅ Added photo picker with expo-image-picker
+- ✅ Image compression (400x400, 60% quality) for fast uploads
+- ✅ Optimistic updates with local image preview
+- ✅ Firebase Storage integration with upload progress
+- ✅ Security rules for authenticated image access
+- ✅ **CRITICAL FIX**: Added image fields to Firestore message subscription
+- ✅ Fixed multiple image display issues (flickering, disappearing, size)
+- ✅ Fixed duplicate message key errors with deduplication
+- ✅ Images now work perfectly for sender and receiver
+- ✅ Images persist across sessions and offline mode
+- ✅ **Commits:** Multiple fixes culminating in critical `subscribeToMessages` fix (abb41e6)
+- ✅ **New files:** imageService.ts, storage.rules, deploy-storage-rules.sh, STORAGE_RULES_SETUP.md, IMAGE_SENDING_COMPLETE.md
+
 ### October 23, 2025 (Evening)
 - ✅ **CRITICAL: Fixed ChatScreen Presence Updates**
 - ✅ Diagnosed and fixed 4 compounding issues preventing presence updates
@@ -761,6 +777,12 @@ Deployment:      ░░░░░░░░░░░░░░░░░░░░   
 41. **Race conditions with async** - Load dependencies sequentially (Firestore first, then RTDB)
 42. **Empty array edge cases** - Always validate state is populated before attempting updates
 43. **Timing with setTimeout** - Sometimes need delays to ensure async data is ready before subscribing
+44. **Firestore listeners must include all fields** - Subscription transforms must map ALL document fields, not just basics
+45. **Diagnostic logging for debugging** - Comprehensive logs reveal missing data that silent failures hide
+46. **Image data bottlenecks** - A single missing field in data transformation can break entire features
+47. **Optimistic image updates** - Transform temp messages to real IDs to prevent cache/persistence issues
+48. **Deduplication priority** - Prefer Firebase Storage URLs over local file URIs when deduplicating
+49. **Image compression trade-offs** - Balance quality vs size (400x400 @ 60% = 50-150KB, fast uploads)
 
 ---
 
