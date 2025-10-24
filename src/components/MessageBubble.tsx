@@ -32,7 +32,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isGroupChat = false,
   senderColor,
 }) => {
-  const [imageLoading, setImageLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
 
   // Get bubble background color
@@ -120,37 +120,40 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         
         {/* Show image if present */}
         {message.imageUrl && (
-          <View style={styles.imageContainer}>
+          <View 
+            style={[
+              styles.imageContainer,
+              {
+                width: message.imageWidth || 250,
+                height: message.imageHeight || 250,
+              }
+            ]}
+          >
             {imageLoading && !imageError && (
-              <View style={[
-                styles.imagePlaceholder,
-                {
-                  width: message.imageWidth || 250,
-                  height: message.imageHeight || 250,
-                }
-              ]}>
+              <View style={styles.imagePlaceholder}>
                 <ActivityIndicator size="large" color={isSent ? '#FFFFFF' : Colors.primary} />
               </View>
             )}
             
-            <Image
-              source={{ uri: message.imageUrl }}
-              style={[
-                styles.image,
-                {
-                  width: message.imageWidth || 250,
-                  height: message.imageHeight || 250,
-                },
-                imageError && styles.imageError,
-              ]}
-              resizeMode="cover"
-              onLoadStart={() => setImageLoading(true)}
-              onLoadEnd={() => setImageLoading(false)}
-              onError={() => {
-                setImageLoading(false);
-                setImageError(true);
-              }}
-            />
+            {!imageError && (
+              <Image
+                source={{ uri: message.imageUrl }}
+                style={[
+                  styles.image,
+                  {
+                    width: message.imageWidth || 250,
+                    height: message.imageHeight || 250,
+                  },
+                ]}
+                resizeMode="cover"
+                onLoadStart={() => setImageLoading(true)}
+                onLoadEnd={() => setImageLoading(false)}
+                onError={() => {
+                  setImageLoading(false);
+                  setImageError(true);
+                }}
+              />
+            )}
             
             {imageError && (
               <View style={styles.imageErrorContainer}>
@@ -275,15 +278,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginVertical: 4,
+    position: 'relative',
   },
   imagePlaceholder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
+    zIndex: 1,
   },
   image: {
     borderRadius: 12,
+    width: '100%',
+    height: '100%',
   },
   imageError: {
     opacity: 0.3,
