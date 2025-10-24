@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { ref, onValue } from 'firebase/database';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useMessageStore } from '../stores/messageStore';
@@ -116,24 +116,127 @@ export const ChatScreen: React.FC = () => {
     const unsubscribers: (() => void)[] = [];
     const participantIds = currentChat.participants.filter(uid => uid !== user.uid);
     
-    // For each participant, subscribe to both Firestore (profile) and RTDB (presence)
+    // STEP 1: Load participant data from cache IMMEDIATELY (works offline)
+    const loadParticipantsFromCache = async () => {
+      const loadedParticipants: typeof participantUsers = [];
+      
+      // Load all participants in parallel
+      await Promise.all(
+        participantIds.map(async (uid) => {
+          try {
+            const userDocRef = doc(firestore, 'users', uid);
+            // getDoc will use cache when offline
+            const userSnap = await getDoc(userDocRef);
+            
+            if (userSnap.exists()) {
+              const data = userSnap.data();
+              console.log(`[ChatScreen] 📦 Loaded ${data.displayName} from cache/firestore`);
+              
+              const userProfile = {
+                uid: userSnap.id,
+                email: data.email || '',
+                displayName: data.displayName || 'Unknown User',
+                photoURL: data.photoURL || null,
+                isOnline: false, // Will be updated by RTDB if online
+                lastSeen: data.lastSeen?.toDate() ?? new Date(),
+                avatarColor: data.avatarColor,
+                createdAt: data.createdAt?.toDate() || new Date(),
+              };
+              
+              loadedParticipants.push(userProfile);
+              
+              // Cache this user profile for offline access
+              try {
+                const { cacheUserProfiles } = await import('../services/storageService');
+                await cacheUserProfiles([userProfile]);
+              } catch (cacheError) {
+                console.error('Error caching user profile:', cacheError);
+              }
+            } else {
+              // Not in cache - add placeholder
+              console.log(`[ChatScreen] ⚠️ User ${uid} not in cache, adding placeholder`);
+              loadedParticipants.push({
+                uid: uid,
+                email: '',
+                displayName: 'Unknown User',
+                photoURL: null,
+                isOnline: false,
+                lastSeen: new Date(),
+                avatarColor: undefined,
+                createdAt: new Date(),
+              });
+            }
+          } catch (error: any) {
+            console.log(`[ChatScreen] ⚠️ Error loading user ${uid}:`, error);
+            
+            // If offline, try to load from AsyncStorage cache
+            if (error?.code === 'unavailable' || 
+                error?.message?.includes('offline') ||
+                error?.message?.includes('network')) {
+              console.log(`[ChatScreen] 📦 Loading user ${uid} from AsyncStorage cache`);
+              
+              try {
+                const { getCachedUserProfile } = await import('../services/storageService');
+                const cachedUser = await getCachedUserProfile(uid);
+                
+                if (cachedUser) {
+                  console.log(`[ChatScreen] ✅ Loaded ${cachedUser.displayName} from AsyncStorage cache`);
+                  loadedParticipants.push({
+                    ...cachedUser,
+                    isOnline: false, // Will be updated by RTDB if online
+                  });
+                  return; // Successfully loaded from cache, return early
+                }
+              } catch (cacheError) {
+                console.error('Error loading user from AsyncStorage cache:', cacheError);
+              }
+            }
+            
+            // Add placeholder on error
+            loadedParticipants.push({
+              uid: uid,
+              email: '',
+              displayName: 'Unknown User',
+              photoURL: null,
+              isOnline: false,
+              lastSeen: new Date(),
+              avatarColor: undefined,
+              createdAt: new Date(),
+            });
+          }
+        })
+      );
+      
+      // Set all participants at once (prevents race conditions)
+      console.log(`[ChatScreen] 📦 Setting ${loadedParticipants.length} participants:`, loadedParticipants.map(p => p.displayName));
+      setParticipantUsers(loadedParticipants);
+    };
+    
+    // Load from cache immediately
+    loadParticipantsFromCache();
+    
+    // STEP 2: Set up real-time listeners for updates (only update existing entries, don't add new ones)
     participantIds.forEach(uid => {
-      // Subscribe to Firestore for profile data FIRST
       const userDocRef = doc(firestore, 'users', uid);
       const firestoreUnsub = onSnapshot(
         userDocRef, 
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
+            // Only update if user already exists in state (added by cache load)
             setParticipantUsers(prev => {
-              const others = prev.filter(u => u.uid !== uid);
               const existing = prev.find(u => u.uid === uid);
+              if (!existing) {
+                console.log(`[ChatScreen] ⚠️ onSnapshot for ${uid} but not in state yet, cache still loading`);
+                return prev; // Don't add yet, wait for cache load
+              }
+              
+              const others = prev.filter(u => u.uid !== uid);
               return [...others, {
                 uid: docSnap.id,
                 email: data.email || '',
-                displayName: data.displayName || '',
+                displayName: data.displayName || 'Unknown User',
                 photoURL: data.photoURL || null,
-                // If we're offline, show everyone as offline to prevent flicker
                 isOnline: isConnected ? (existing?.isOnline ?? data.isOnline ?? false) : false,
                 lastSeen: existing?.lastSeen ?? data.lastSeen?.toDate() ?? new Date(),
                 avatarColor: data.avatarColor,
@@ -142,9 +245,9 @@ export const ChatScreen: React.FC = () => {
             });
           }
         },
-        (error) => {
-          console.log(`[ChatScreen] ⚠️ Firestore error for participant ${uid} (likely offline):`, error.message);
-          // Don't clear the participant - keep cached data
+        () => {
+          // Errors are expected when offline - cache load already handled this
+          console.log(`[ChatScreen] ⚠️ Firestore listener error for ${uid} (likely offline)`);
         }
       );
       unsubscribers.push(firestoreUnsub);
@@ -457,6 +560,7 @@ export const ChatScreen: React.FC = () => {
                         lastSeen={participant.lastSeen}
                         showText={false}
                         size="small"
+                        isUnknown={!isConnected}
                       />
                       <Text style={styles.participantName}>
                         {participant.displayName}
@@ -477,10 +581,8 @@ export const ChatScreen: React.FC = () => {
                   lastSeen={otherUser.lastSeen}
                   showText={true}
                   size="small"
+                  isUnknown={!isConnected}
                 />
-                {!isConnected && (
-                  <Text style={styles.offlineNotice}>(You're offline)</Text>
-                )}
               </View>
             ) : null}
           </View>

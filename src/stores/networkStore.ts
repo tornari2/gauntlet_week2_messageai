@@ -6,7 +6,6 @@
  */
 
 import { create } from 'zustand';
-import NetInfo from '@react-native-community/netinfo';
 
 interface NetworkState {
   isConnected: boolean;
@@ -19,10 +18,12 @@ interface NetworkActions {
 }
 
 export const useNetworkStore = create<NetworkState & NetworkActions>((set, get) => ({
-  isConnected: true, // Assume online initially
+  isConnected: false, // Start pessimistic - ConnectionStatus will set correct value on mount
   isInitialized: false,
   
   setConnected: (connected: boolean) => {
+    const prevConnected = get().isConnected;
+    console.log('[NetworkStore] setConnected called:', prevConnected, '→', connected);
     set({ isConnected: connected });
   },
   

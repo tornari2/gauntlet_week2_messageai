@@ -20,7 +20,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../stores/authStore';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useNetworkStore } from '../stores/networkStore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../services/firebase';
 import { Colors } from '../constants/Colors';
 
@@ -42,17 +43,17 @@ const AVATAR_COLORS = [
 export const UserProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuthStore();
+  const { isConnected } = useNetworkStore();
   
   const [displayName, setDisplayName] = useState('');
-  const [selectedColor, setSelectedColor] = useState('#25D366');
-  const [loading, setLoading] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null); // Start with null to prevent flicker
   const [saving, setSaving] = useState(false);
 
   // Load user data
   useEffect(() => {
     if (user) {
       setDisplayName(user.displayName || '');
-      // Get stored color from Firestore or use default
+      // Load color immediately (sync from cache if available)
       loadUserColor();
     }
   }, [user]);
@@ -60,23 +61,58 @@ export const UserProfileScreen: React.FC = () => {
   const loadUserColor = async () => {
     if (!user) return;
     
-    setLoading(true);
+    // Try to load from cache first (fast, prevents flicker)
+    try {
+      const { getCachedUserProfile } = await import('../services/storageService');
+      const cachedUser = await getCachedUserProfile(user.uid);
+      
+      if (cachedUser?.avatarColor) {
+        setSelectedColor(cachedUser.avatarColor);
+      } else {
+        // Set default if no cache
+        setSelectedColor('#25D366');
+      }
+    } catch (error) {
+      console.error('Error loading cached color:', error);
+      setSelectedColor('#25D366');
+    }
+    
+    // Then load from Firestore (may update if changed)
     try {
       const userRef = doc(firestore, 'users', user.uid);
-      const userDoc = await import('firebase/firestore').then(({ getDoc }) => 
-        getDoc(userRef)
-      );
+      const userDoc = await getDoc(userRef);
       
       if (userDoc.exists()) {
         const data = userDoc.data();
         if (data.avatarColor) {
           setSelectedColor(data.avatarColor);
+          
+          // Update cache with latest color
+          try {
+            const { cacheUserProfiles } = await import('../services/storageService');
+            await cacheUserProfiles([{
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL || null,
+              avatarColor: data.avatarColor,
+              isOnline: data.isOnline || false,
+              lastSeen: data.lastSeen?.toDate ? data.lastSeen.toDate() : new Date(),
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+            }]);
+          } catch (cacheError) {
+            console.error('Error caching updated color:', cacheError);
+          }
         }
       }
-    } catch (error) {
-      console.error('Error loading user color:', error);
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      // Only log non-offline errors
+      if (error?.code !== 'unavailable' && 
+          !error?.message?.includes('offline') &&
+          !error?.message?.includes('load bundle')) {
+        console.error('Error loading user color from Firestore:', error);
+      }
+      // Keep the cached color or default
     }
   };
 
@@ -89,6 +125,56 @@ export const UserProfileScreen: React.FC = () => {
       return;
     }
 
+    // If offline, update UI immediately and show message
+    if (!isConnected) {
+      // Update local auth store immediately for instant UI update
+      useAuthStore.setState({
+        user: {
+          ...user,
+          displayName: displayName.trim(),
+        },
+      });
+      
+      // Update cache with new color
+      try {
+        const { cacheUserProfiles } = await import('../services/storageService');
+        await cacheUserProfiles([{
+          uid: user.uid,
+          email: user.email,
+          displayName: displayName.trim(),
+          photoURL: user.photoURL || null,
+          avatarColor: selectedColor || undefined,
+          isOnline: user.isOnline,
+          lastSeen: user.lastSeen || new Date(),
+          createdAt: user.createdAt || new Date(),
+        }]);
+        console.log('✅ Cached updated profile offline');
+      } catch (cacheError) {
+        console.error('Error caching updated profile:', cacheError);
+      }
+
+      Alert.alert(
+        'Offline Mode', 
+        'Your profile has been updated locally. Changes will sync when you reconnect to the internet.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+      
+      // Queue the update for when we're back online (Firestore handles this automatically)
+      try {
+        const userRef = doc(firestore, 'users', user.uid);
+        await updateDoc(userRef, {
+          displayName: displayName.trim(),
+          avatarColor: selectedColor,
+        });
+      } catch (error) {
+        // Firestore will queue this write and sync when online
+        console.log('Profile update queued for when online');
+      }
+      
+      return;
+    }
+
+    // Online - save normally
     setSaving(true);
     try {
       const userRef = doc(firestore, 'users', user.uid);
@@ -104,28 +190,35 @@ export const UserProfileScreen: React.FC = () => {
           displayName: displayName.trim(),
         },
       });
+      
+      // Update cache with new color for immediate offline access
+      try {
+        const { cacheUserProfiles } = await import('../services/storageService');
+        await cacheUserProfiles([{
+          uid: user.uid,
+          email: user.email,
+          displayName: displayName.trim(),
+          photoURL: user.photoURL || null,
+          avatarColor: selectedColor || undefined,
+          isOnline: user.isOnline,
+          lastSeen: user.lastSeen || new Date(),
+          createdAt: user.createdAt || new Date(),
+        }]);
+        console.log('✅ Cached updated profile online');
+      } catch (cacheError) {
+        console.error('Error caching updated profile:', cacheError);
+      }
 
       Alert.alert('Success', 'Profile updated successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
       Alert.alert('Error', 'Failed to update profile. Please try again.');
     } finally {
       setSaving(false);
     }
   };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading profile...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -152,7 +245,7 @@ export const UserProfileScreen: React.FC = () => {
             <View 
               style={[
                 styles.avatarPreview, 
-                { backgroundColor: selectedColor }
+                { backgroundColor: selectedColor || '#25D366' }
               ]}
             >
               <Text style={styles.avatarText}>
@@ -256,16 +349,6 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 60,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#8E8E93',
   },
   content: {
     flex: 1,

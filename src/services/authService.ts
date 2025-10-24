@@ -283,16 +283,45 @@ export const getAllUsers = async (currentUserId: string): Promise<User[]> => {
         displayName: data.displayName || '',
         photoURL: data.photoURL || null,
         isOnline: data.isOnline || false,
-        lastSeen: data.lastSeen || new Date(),
+        lastSeen: data.lastSeen?.toDate ? data.lastSeen.toDate() : (data.lastSeen || new Date()),
         pushToken: data.pushToken || null,
         avatarColor: data.avatarColor, // Include avatar color
-        createdAt: data.createdAt || new Date(),
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt || new Date()),
       });
     });
     
+    // Cache the loaded user profiles for offline access
+    if (users.length > 0) {
+      const { cacheUserProfiles } = await import('./storageService');
+      await cacheUserProfiles(users);
+      console.log(`✅ Cached ${users.length} user profiles for offline access`);
+    }
+    
     return users;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting all users:', error);
+    
+    // If offline or network error, try to load from cache
+    if (error?.code === 'unavailable' || 
+        error?.message?.includes('offline') ||
+        error?.message?.includes('network')) {
+      console.log('📦 Network unavailable, loading users from cache');
+      
+      try {
+        const { getCachedUserProfiles } = await import('./storageService');
+        const cachedUsers = await getCachedUserProfiles();
+        
+        // Filter out current user from cached data
+        const filteredUsers = cachedUsers.filter(user => user.uid !== currentUserId);
+        
+        console.log(`✅ Loaded ${filteredUsers.length} users from cache`);
+        return filteredUsers;
+      } catch (cacheError) {
+        console.error('Error loading users from cache:', cacheError);
+        return [];
+      }
+    }
+    
     throw new AppError(
       'Failed to get users',
       ErrorCode.UNKNOWN,

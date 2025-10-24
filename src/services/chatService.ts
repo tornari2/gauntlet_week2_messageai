@@ -89,6 +89,23 @@ export function subscribeToUserChats(
               const userData = userSnap.data();
               otherUserName = userData.displayName || 'Unknown User';
               avatarColor = userData.avatarColor || '#25D366';
+              
+              // Cache this user profile for offline access
+              try {
+                const { cacheUserProfiles } = await import('./storageService');
+                await cacheUserProfiles([{
+                  uid: userSnap.id,
+                  email: userData.email || '',
+                  displayName: userData.displayName || 'Unknown User',
+                  photoURL: userData.photoURL || null,
+                  avatarColor: userData.avatarColor,
+                  isOnline: userData.isOnline || false,
+                  lastSeen: userData.lastSeen || new Date(),
+                  createdAt: userData.createdAt || new Date(),
+                }]);
+              } catch (cacheError) {
+                console.error('Error caching user profile:', cacheError);
+              }
             }
             
             // Get the other user's online status from RTDB (initial load)
@@ -249,12 +266,52 @@ async function getUserDisplayName(userId: string): Promise<string> {
     
     if (userSnap.exists()) {
       const userData = userSnap.data() as User;
+      
+      // Cache this user profile for offline access
+      try {
+        const { cacheUserProfiles } = await import('./storageService');
+        await cacheUserProfiles([{
+          uid: userSnap.id,
+          email: userData.email || '',
+          displayName: userData.displayName || 'Unknown User',
+          photoURL: userData.photoURL || null,
+          avatarColor: userData.avatarColor,
+          isOnline: userData.isOnline || false,
+          lastSeen: userData.lastSeen || new Date(),
+          createdAt: userData.createdAt || new Date(),
+        }]);
+      } catch (cacheError) {
+        // Don't fail if caching fails
+        console.error('Error caching user profile:', cacheError);
+      }
+      
       return userData.displayName || 'Unknown User';
     }
     
     return 'Unknown User';
-  } catch (error) {
-    console.error('Error fetching user display name:', error);
+  } catch (error: any) {
+    // If offline, try to load from cache
+    if (error?.code === 'unavailable' || 
+        error?.message?.includes('offline') ||
+        error?.message?.includes('network')) {
+      console.log(`📦 Network unavailable for user ${userId}, loading from cache`);
+      
+      try {
+        const { getCachedUserProfile } = await import('./storageService');
+        const cachedUser = await getCachedUserProfile(userId);
+        
+        if (cachedUser) {
+          console.log(`✅ Loaded user ${cachedUser.displayName} from cache`);
+          return cachedUser.displayName;
+        }
+      } catch (cacheError) {
+        console.error('Error loading user from cache:', cacheError);
+      }
+    } else {
+      // Only log non-network errors
+      console.error('Error fetching user display name:', error);
+    }
+    
     return 'Unknown User';
   }
 }

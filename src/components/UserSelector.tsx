@@ -60,6 +60,8 @@ export function UserSelector({
   const loadUsers = async () => {
     try {
       setLoading(true);
+      
+      // Try to load from Firestore first
       const usersRef = collection(firestore, 'users');
       const usersSnapshot = await getDocs(usersRef);
       
@@ -91,13 +93,47 @@ export function UserSelector({
       
       console.log('📋 Final user list:', users.length, 'users');
       
+      // Cache the loaded users
+      if (users.length > 0) {
+        const { cacheUserProfiles } = await import('../services/storageService');
+        await cacheUserProfiles(users);
+        console.log('✅ Cached user profiles for offline access');
+      }
+      
       // Sort by display name
       users.sort((a, b) => a.displayName.localeCompare(b.displayName));
       
       setAllUsers(users);
       setFilteredUsers(users);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading users:', error);
+      
+      // If offline or network error, try to load from cache
+      if (error?.code === 'unavailable' || 
+          error?.message?.includes('offline') ||
+          error?.message?.includes('network')) {
+        console.log('📦 Network unavailable in UserSelector, loading from cache');
+        
+        try {
+          const { getCachedUserProfiles } = await import('../services/storageService');
+          const cachedUsers = await getCachedUserProfiles();
+          
+          // Filter out current user and excluded users
+          const filteredCachedUsers = cachedUsers.filter(
+            user => user.uid !== currentUserId && !excludeUserIds.includes(user.uid)
+          );
+          
+          // Sort by display name
+          filteredCachedUsers.sort((a, b) => a.displayName.localeCompare(b.displayName));
+          
+          console.log(`✅ Loaded ${filteredCachedUsers.length} users from cache`);
+          
+          setAllUsers(filteredCachedUsers);
+          setFilteredUsers(filteredCachedUsers);
+        } catch (cacheError) {
+          console.error('Error loading users from cache:', cacheError);
+        }
+      }
     } finally {
       setLoading(false);
     }

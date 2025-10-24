@@ -108,7 +108,29 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         
         if (!seenIds.has(messageId)) {
           seenIds.add(messageId);
-          uniqueFirestoreMessages.push(msg);
+          
+          // IMPORTANT: If we're offline and this is a message from the current user,
+          // mark it as pending because it's only in Firestore's local cache
+          // Check if message timestamp is very recent (within last 30 seconds)
+          const msgTime = msg.timestamp instanceof Date ? msg.timestamp.getTime() : msg.timestamp.toMillis();
+          const now = Date.now();
+          const isRecent = (now - msgTime) < 30000; // 30 seconds
+          
+          // Check if this message is from an existing pending message
+          const hasPendingVersion = existingMessages.some(existing => 
+            existing.pending && 
+            existing.text === msg.text && 
+            existing.senderId === msg.senderId &&
+            Math.abs((existing.timestamp instanceof Date ? existing.timestamp.getTime() : existing.timestamp.toMillis()) - msgTime) < 5000
+          );
+          
+          // If offline and recent and from pending, keep it as pending
+          if (!isConnected && isRecent && hasPendingVersion) {
+            console.log(`[setMessages] 📝 Marking message ${messageId} as pending (offline, recent, was pending)`);
+            uniqueFirestoreMessages.push({ ...msg, pending: true });
+          } else {
+            uniqueFirestoreMessages.push(msg);
+          }
         }
       }
       
@@ -322,6 +344,8 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     // Check network status
     const isConnected = useNetworkStore.getState().isConnected;
     
+    console.log(`📤 [sendMessageOptimistic] Sending message, isConnected: ${isConnected}, tempId: ${tempId}`);
+    
     // Create optimistic message
     const optimisticMessage: Message = {
       id: tempId,
@@ -340,9 +364,11 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
       // ALWAYS try to send to Firestore, even if offline
       // Firestore's built-in offline persistence will handle queueing
       const realMessageId = await chatService.sendMessage(chatId, text, senderId);
+      console.log(`✅ [sendMessageOptimistic] Message sent to Firestore, realId: ${realMessageId}, tempId: ${tempId}`);
       
       // If we're online, remove the temp message - Firestore will provide the real one
       if (isConnected) {
+        console.log(`🗑️ [sendMessageOptimistic] Removing temp message ${tempId} (online)`);
         set((state) => {
           const existingMessages = state.messages[chatId] || [];
           return {
@@ -354,13 +380,22 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
         });
       } else {
         // If offline, Firestore cached the write
-        // Keep the temp message as pending
-        // When we reconnect, Firestore will sync and add the real message
-        // The subscribeToMessages will receive it and we'll remove the temp
-        console.log('📴 Message sent to Firestore cache, will sync when online');
+        // Keep the temp message as pending until Firestore syncs
+        console.log(`📴 [sendMessageOptimistic] Message sent to Firestore cache, tempId: ${tempId}`);
       }
     } catch (error) {
       console.error('❌ Error sending message:', error);
+      
+      // Only add to AsyncStorage queue if Firestore completely failed
+      // This is a fallback for when Firestore offline persistence isn't working
+      if (!isConnected) {
+        try {
+          await storageService.addToOfflineQueue(chatId, optimisticMessage);
+          console.log(`📴 [sendMessageOptimistic] Firestore failed, added to backup queue: ${tempId}`);
+        } catch (queueError) {
+          console.error('Failed to add message to backup queue:', queueError);
+        }
+      }
       
       // Mark message as failed
       get().updateMessage(chatId, tempId, {
@@ -388,7 +423,7 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     
     try {
       // Retry sending
-      const realMessageId = await chatService.sendMessage(chatId, failedMessage.text, failedMessage.senderId);
+      await chatService.sendMessage(chatId, failedMessage.text, failedMessage.senderId);
       
       // Remove the temp message - Firestore will provide the real one
       set((state) => {
@@ -457,26 +492,76 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
   // Process offline queue when connection is restored
   processOfflineQueue: async () => {
     try {
+      console.log('🔄 [processOfflineQueue] Starting...');
+      
+      // Step 1: Process AsyncStorage offline queue
       const queue = await storageService.getOfflineQueue();
+      console.log(`📦 [processOfflineQueue] Found ${queue.length} messages in AsyncStorage queue`);
       
       if (queue.length === 0) {
+        console.log('✅ [processOfflineQueue] Queue is empty, nothing to process');
         return;
       }
       
-      console.log(`🔄 Processing ${queue.length} messages from offline queue`);
-      
       // Process each message in the queue in chronological order (oldest first)
-      for (let i = 0; i < queue.length; i++) {
+      for (let i = queue.length - 1; i >= 0; i--) {
         const item = queue[i];
         const { chatId, message } = item;
         
+        console.log(`🔄 [processOfflineQueue] Processing queued message ${i}: tempId=${message.tempId}, chatId=${chatId}`);
+        
+        // Check if this message was already sent (by checking if a real message with similar content exists)
+        const state = get();
+        const chatMessages = state.messages[chatId] || [];
+        
+        // Look for a real message (without temp ID) with the same content
+        const alreadySent = chatMessages.some(m => {
+          // Check if it's a real message (has real ID, not temp)
+          if (!m.id || m.id.startsWith('temp_')) return false;
+          
+          // Check if content matches
+          if (m.senderId === message.senderId && m.text === message.text) {
+            const mTime = m.timestamp instanceof Date ? m.timestamp.getTime() : m.timestamp.toMillis();
+            const queueTime = new Date(message.timestamp).getTime();
+            // If timestamps are within 10 seconds, consider it the same message
+            if (Math.abs(mTime - queueTime) < 10000) {
+              return true;
+            }
+          }
+          
+          return false;
+        });
+        
+        if (alreadySent) {
+          console.log(`✅ [processOfflineQueue] Message already sent, removing temp message and queue item: ${message.tempId}`);
+          
+          // Remove the temp message from store
+          if (message.tempId) {
+            set((state) => {
+              const existingMessages = state.messages[chatId] || [];
+              return {
+                messages: {
+                  ...state.messages,
+                  [chatId]: existingMessages.filter(m => m.tempId !== message.tempId),
+                },
+              };
+            });
+          }
+          
+          // Remove from queue
+          await storageService.removeFromOfflineQueue(i);
+          continue;
+        }
+        
+        // Message not sent yet, try to send it
         try {
-          // Try to send the message
+          console.log(`📤 [processOfflineQueue] Sending queued message: ${message.tempId}`);
           const realMessageId = await chatService.sendMessage(
             chatId,
             message.text,
             message.senderId
           );
+          console.log(`✅ [processOfflineQueue] Queued message sent successfully: ${realMessageId}`);
           
           // Remove the temp message from store - Firestore will provide the real one
           if (message.tempId) {
@@ -491,19 +576,82 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
             });
           }
           
-          // Remove from queue (always remove index 0 since we're processing in order)
-          await storageService.removeFromOfflineQueue(0);
-        } catch (error) {
+          // Remove from queue
+          await storageService.removeFromOfflineQueue(i);
+        } catch (error: any) {
           console.error(`❌ Failed to send queued message for chat ${chatId}:`, error);
-          // Keep in queue for next retry, but mark as failed in UI
-          if (message.tempId) {
-            get().updateMessage(chatId, message.tempId, {
-              pending: false,
-              failed: true,
+          
+          // If chat doesn't exist anymore, remove from queue
+          if (error?.message?.includes('No document to update') || 
+              error?.code === 'not-found') {
+            console.log(`🗑️ [processOfflineQueue] Chat ${chatId} no longer exists, removing from queue`);
+            await storageService.removeFromOfflineQueue(i);
+            
+            // Also remove temp message from store if present
+            if (message.tempId) {
+              set((state) => {
+                const existingMessages = state.messages[chatId] || [];
+                return {
+                  messages: {
+                    ...state.messages,
+                    [chatId]: existingMessages.filter(m => m.tempId !== message.tempId),
+                  },
+                };
+              });
+            }
+          } else {
+            // For other errors, mark as failed in UI but keep in queue for retry
+            if (message.tempId) {
+              get().updateMessage(chatId, message.tempId, {
+                pending: false,
+                failed: true,
+              });
+            }
+          }
+        }
+      }
+      
+      // Step 2: Clean up any orphaned temp messages that might be stuck
+      // (messages that are pending but don't have a queue entry)
+      console.log('🧹 [processOfflineQueue] Cleaning up orphaned temp messages...');
+      const state = get();
+      for (const [chatId, messages] of Object.entries(state.messages)) {
+        const pendingMessages = messages.filter(m => m.pending && m.tempId);
+        
+        for (const pendingMsg of pendingMessages) {
+          console.log(`🔍 [processOfflineQueue] Checking pending message: ${pendingMsg.tempId}`);
+          
+          // Check if there's a real message with the same content
+          const realMessageExists = messages.some(m => {
+            if (!m.id || m.id.startsWith('temp_')) return false;
+            
+            if (m.senderId === pendingMsg.senderId && m.text === pendingMsg.text) {
+              const mTime = m.timestamp instanceof Date ? m.timestamp.getTime() : m.timestamp.toMillis();
+              const pendingTime = pendingMsg.timestamp instanceof Date ? pendingMsg.timestamp.getTime() : pendingMsg.timestamp.toMillis();
+              if (Math.abs(mTime - pendingTime) < 10000) {
+                return true;
+              }
+            }
+            
+            return false;
+          });
+          
+          if (realMessageExists) {
+            console.log(`🗑️ [processOfflineQueue] Removing orphaned temp message: ${pendingMsg.tempId}`);
+            set((state) => {
+              const existingMessages = state.messages[chatId] || [];
+              return {
+                messages: {
+                  ...state.messages,
+                  [chatId]: existingMessages.filter(m => m.tempId !== pendingMsg.tempId),
+                },
+              };
             });
           }
         }
       }
+      
+      console.log('✅ [processOfflineQueue] Complete!');
     } catch (error) {
       console.error('❌ Error processing offline queue:', error);
     }

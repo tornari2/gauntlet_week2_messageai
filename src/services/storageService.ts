@@ -6,13 +6,14 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Message } from '../types';
+import { Message, User } from '../types';
 
 // Storage keys
 const STORAGE_KEYS = {
   MESSAGES: 'messages_',
   CHAT_LIST: 'chat_list',
   OFFLINE_QUEUE: 'offline_queue',
+  USER_PROFILES: 'user_profiles',
 } as const;
 
 // Maximum number of messages to cache per chat
@@ -176,11 +177,132 @@ export const clearAllCache = async (): Promise<void> => {
       ...messageKeys,
       STORAGE_KEYS.CHAT_LIST,
       STORAGE_KEYS.OFFLINE_QUEUE,
+      STORAGE_KEYS.USER_PROFILES,
     ]);
     
     console.log('All cache cleared');
   } catch (error) {
     console.error('Error clearing all cache:', error);
+  }
+};
+
+/**
+ * Safely convert any date-like value to ISO string
+ */
+const toISOString = (value: any): string => {
+  if (!value) {
+    return new Date().toISOString();
+  }
+  
+  // Already a string
+  if (typeof value === 'string') {
+    return value;
+  }
+  
+  // Date object
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  
+  // Firestore Timestamp
+  if (value && typeof value.toDate === 'function') {
+    return value.toDate().toISOString();
+  }
+  
+  // Timestamp in milliseconds
+  if (typeof value === 'number') {
+    return new Date(value).toISOString();
+  }
+  
+  // Fallback
+  return new Date().toISOString();
+};
+
+/**
+ * Cache user profiles for offline access
+ * Stores user profile data in AsyncStorage
+ */
+export const cacheUserProfiles = async (
+  users: User[]
+): Promise<void> => {
+  try {
+    // Get existing cached profiles
+    const existingProfiles = await getCachedUserProfiles();
+    
+    // Merge with new profiles (new ones override existing)
+    const profilesMap = new Map<string, User>();
+    
+    // Add existing profiles
+    existingProfiles.forEach(user => {
+      profilesMap.set(user.uid, user);
+    });
+    
+    // Add/update with new profiles
+    users.forEach(user => {
+      profilesMap.set(user.uid, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        avatarColor: user.avatarColor,
+        isOnline: user.isOnline,
+        lastSeen: user.lastSeen,
+        createdAt: user.createdAt,
+      });
+    });
+    
+    // Convert to array and serialize dates safely
+    const profilesToCache = Array.from(profilesMap.values()).map(user => ({
+      ...user,
+      lastSeen: toISOString(user.lastSeen),
+      createdAt: toISOString(user.createdAt),
+    }));
+    
+    await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILES, JSON.stringify(profilesToCache));
+    
+    console.log(`📦 Cached ${profilesToCache.length} user profiles`);
+  } catch (error) {
+    console.error('Error caching user profiles:', error);
+    // Don't throw - caching is not critical
+  }
+};
+
+/**
+ * Get cached user profiles
+ * Returns empty array if no cache exists
+ */
+export const getCachedUserProfiles = async (): Promise<User[]> => {
+  try {
+    const cached = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILES);
+    
+    if (!cached) {
+      return [];
+    }
+    
+    const profiles = JSON.parse(cached);
+    
+    // Convert ISO strings back to Date objects safely
+    return profiles.map((user: any) => ({
+      ...user,
+      lastSeen: user.lastSeen ? new Date(user.lastSeen) : new Date(),
+      createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+    }));
+  } catch (error) {
+    console.error('Error retrieving cached user profiles:', error);
+    return [];
+  }
+};
+
+/**
+ * Get a specific cached user profile by ID
+ */
+export const getCachedUserProfile = async (userId: string): Promise<User | null> => {
+  try {
+    const profiles = await getCachedUserProfiles();
+    return profiles.find(user => user.uid === userId) || null;
+  } catch (error) {
+    console.error('Error retrieving cached user profile:', error);
+    return null;
   }
 };
 

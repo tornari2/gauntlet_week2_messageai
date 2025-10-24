@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { OnlineIndicator } from './OnlineIndicator';
 import { Colors } from '../constants/Colors';
+import { useNetworkStore } from '../stores/networkStore';
 
 type ChatListItemNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ChatsList'>;
 
@@ -22,6 +23,7 @@ interface ChatListItemProps {
 
 export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) => {
   const navigation = useNavigation<ChatListItemNavigationProp>();
+  const isConnected = useNetworkStore((state) => state.isConnected);
 
   const handlePress = () => {
     navigation.navigate('Chat', { chatId: chat.id, chatName: getChatName() });
@@ -107,6 +109,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) =
               isOnline={chat.otherUserOnline || false}
               lastSeen={chat.otherUserLastSeen}
               size="small"
+              isUnknown={!isConnected}
             />
           </View>
         )}

@@ -25,9 +25,11 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { getAllUsers } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
+import { useNetworkStore } from '../stores/networkStore';
 import { User } from '../types';
 import { Colors } from '../constants/Colors';
 import { getUserAvatarColor } from '../utils/userColors';
+import { OnlineIndicator } from '../components/OnlineIndicator';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -35,6 +37,7 @@ export const NewChatScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuthStore();
   const { createOrGetDirectChat } = useChatStore();
+  const isConnected = useNetworkStore((state) => state.isConnected);
   
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -112,7 +115,11 @@ export const NewChatScreen: React.FC = () => {
         <Text style={styles.userName}>{item.displayName}</Text>
         <Text style={styles.userEmail}>{item.email}</Text>
       </View>
-      {item.isOnline && <View style={styles.onlineIndicator} />}
+      <OnlineIndicator 
+        isOnline={item.isOnline || false}
+        size="small"
+        isUnknown={!isConnected}
+      />
     </TouchableOpacity>
   );
 
@@ -281,13 +288,6 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 14,
     color: '#8e8e93',
-  },
-  onlineIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.online,
-    marginLeft: 8,
   },
   emptyList: {
     flexGrow: 1,

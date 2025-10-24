@@ -12,6 +12,7 @@ export const Colors = {
   // Status colors
   online: '#51CF66', // Green for online status dot
   offline: '#6C757D', // Gray for offline status dot
+  unknown: '#FFC107', // Yellow for unknown status (when user is offline)
   error: '#FF6B6B',
   warning: '#FFC107',
   success: '#51CF66',
