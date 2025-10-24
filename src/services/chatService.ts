@@ -545,6 +545,9 @@ export function subscribeToMessages(
           pending: messageData.pending,
           failed: messageData.failed,
           tempId: messageData.tempId,
+          imageUrl: messageData.imageUrl,
+          imageWidth: messageData.imageWidth,
+          imageHeight: messageData.imageHeight,
         } as Message);
       });
       
