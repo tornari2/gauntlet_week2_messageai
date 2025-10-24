@@ -11,17 +11,21 @@ import { Pinecone } from '@pinecone-database/pinecone';
 // Initialize Firebase Admin
 admin.initializeApp();
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Initialize Pinecone
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY || '',
-});
-
 const PINECONE_INDEX_NAME = 'messageai-messages';
+
+// Lazy initialize OpenAI (only when actually called)
+function getOpenAI() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
+
+// Lazy initialize Pinecone (only when actually called)
+function getPinecone() {
+  return new Pinecone({
+    apiKey: process.env.PINECONE_API_KEY || '',
+  });
+}
 
 /**
  * 1. Thread Summarization
@@ -59,7 +63,7 @@ ${contextMessages.map((m: any) => `${m.senderName}: ${m.text}`).join('\n')}
 
 Format your response as JSON with keys: summary, mainTopics (array), keyPoints (array), participantContributions (array of {userName, mainPoints})`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
@@ -107,7 +111,7 @@ ${messages.map((m: any) => `${m.senderName}: ${m.text}`).join('\n')}
 
 Return JSON array of action items with keys: task, assignedToName, dueDate, priority, context, sourceMessageId`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.5,
@@ -153,7 +157,7 @@ export const analyzePriority = functions.https.onCall(async (data, context) => {
 
 Message: "${messageText}"`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
@@ -201,7 +205,7 @@ ${messages.map((m: any) => `${m.id} - ${m.senderName}: ${m.text}`).join('\n')}
 
 Return JSON array with keys: decision, agreedByNames, context, category, sourceMessageIds`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.5,
@@ -240,7 +244,7 @@ export const createEmbedding = functions.https.onCall(async (data, context) => {
 
   try {
     // Create embedding using OpenAI
-    const embeddingResponse = await openai.embeddings.create({
+    const embeddingResponse = await getOpenAI().embeddings.create({
       model: 'text-embedding-3-small',
       input: text,
     });
@@ -248,7 +252,7 @@ export const createEmbedding = functions.https.onCall(async (data, context) => {
     const embedding = embeddingResponse.data[0].embedding;
 
     // Store in Pinecone
-    const index = pinecone.index(PINECONE_INDEX_NAME);
+    const index = getPinecone().index(PINECONE_INDEX_NAME);
     
     await index.upsert([{
       id: messageId,
@@ -288,7 +292,7 @@ export const smartSearch = functions.https.onCall(async (data, context) => {
 
   try {
     // Create query embedding
-    const embeddingResponse = await openai.embeddings.create({
+    const embeddingResponse = await getOpenAI().embeddings.create({
       model: 'text-embedding-3-small',
       input: query,
     });
@@ -296,7 +300,7 @@ export const smartSearch = functions.https.onCall(async (data, context) => {
     const queryEmbedding = embeddingResponse.data[0].embedding;
 
     // Search Pinecone
-    const index = pinecone.index(PINECONE_INDEX_NAME);
+    const index = getPinecone().index(PINECONE_INDEX_NAME);
     const searchResults = await index.query({
       vector: queryEmbedding,
       topK,
@@ -327,7 +331,7 @@ ${context}
 
 Provide a helpful 2-3 sentence answer.`;
 
-      const answerResponse = await openai.chat.completions.create({
+      const answerResponse = await getOpenAI().chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: answerPrompt }],
         temperature: 0.7,
