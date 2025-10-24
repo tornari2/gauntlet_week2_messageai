@@ -11,6 +11,7 @@ import type { Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getDatabase, Database } from 'firebase/database';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getFunctions, Functions } from 'firebase/functions';
 
 // Firebase configuration from environment variables
 // Use EXPO_PUBLIC_ prefix for Expo to expose them to the client
@@ -56,6 +57,7 @@ let auth: Auth;
 let firestore: Firestore;
 let database: Database;
 let storage: FirebaseStorage;
+let functions: Functions;
 
 try {
   // Initialize Firebase app
@@ -80,6 +82,9 @@ try {
   // Initialize Firebase Storage (used for image uploads)
   storage = getStorage(firebaseApp);
 
+  // Initialize Firebase Functions (used for AI operations)
+  functions = getFunctions(firebaseApp);
+
   console.log('Firebase initialized successfully with automatic offline persistence');
 } catch (error) {
   console.error('Firebase initialization error:', error);
@@ -87,7 +92,7 @@ try {
 }
 
 // Export Firebase instances
-export { firebaseApp, auth, firestore, database, storage };
+export { firebaseApp, auth, firestore, database, storage, functions };
 
 // Export Firebase for testing purposes
 export const getFirebaseApp = (): FirebaseApp => firebaseApp;
@@ -95,4 +100,5 @@ export const getFirebaseAuth = (): Auth => auth;
 export const getFirebaseFirestore = (): Firestore => firestore;
 export const getFirebaseDatabase = (): Database => database;
 export const getFirebaseStorage = (): FirebaseStorage => storage;
+export const getFirebaseFunctions = (): Functions => functions;
 
