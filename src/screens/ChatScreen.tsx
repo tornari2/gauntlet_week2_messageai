@@ -25,11 +25,18 @@ import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { useNetworkStore } from '../stores/networkStore';
 import { useNotificationStore } from '../stores/notificationStore';
+import { useAIStore } from '../stores/aiStore';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageInput } from '../components/MessageInput';
 import { OnlineIndicator } from '../components/OnlineIndicator';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { ReadReceiptModal } from '../components/ReadReceiptModal';
+import { SmartSearchBar } from '../components/SmartSearchBar';
+import { AIFeaturesMenu } from '../components/AIFeaturesMenu';
+import { ThreadSummaryModal } from '../components/ThreadSummaryModal';
+import { ActionItemsList } from '../components/ActionItemsList';
+import { DecisionsModal } from '../components/DecisionsModal';
+import { PriorityBadge } from '../components/PriorityBadge';
 import { Message, User } from '../types';
 import { firestore, database } from '../services/firebase';
 import { chatService } from '../services/chatService';
@@ -58,7 +65,14 @@ export const ChatScreen: React.FC = () => {
   const [showReadReceiptModal, setShowReadReceiptModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   
+  // AI Features state
+  const [showAIMenu, setShowAIMenu] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showActionItemsModal, setShowActionItemsModal] = useState(false);
+  const [showDecisionsModal, setShowDecisionsModal] = useState(false);
+  
   const { user } = useAuthStore();
+  const aiStore = useAIStore();
   const { chats } = useChatStore();
   const { isConnected } = useNetworkStore();
   const { setActiveChatId } = useNotificationStore();
@@ -555,6 +569,103 @@ export const ChatScreen: React.FC = () => {
     );
   };
 
+  // AI Features handlers
+  const handleShowAIMenu = () => {
+    if (chatMessages.length < 5) {
+      alert('Need at least 5 messages for AI features');
+      return;
+    }
+    setShowAIMenu(true);
+  };
+
+  const handleSummarize = async () => {
+    if (!user) return;
+    setShowSummaryModal(true);
+    
+    try {
+      // Build users map for AI service
+      const usersMap: Record<string, User> = {};
+      if (currentChat?.type === 'group') {
+        participantUsers.forEach(u => {
+          usersMap[u.uid] = u;
+        });
+      } else if (otherUser) {
+        usersMap[otherUser.uid] = otherUser;
+      }
+      usersMap[user.uid] = user;
+      
+      await aiStore.getSummary(chatId, chatMessages, usersMap);
+    } catch (error) {
+      console.error('Summarization error:', error);
+    }
+  };
+
+  const handleExtractActionItems = async () => {
+    if (!user) return;
+    setShowActionItemsModal(true);
+    
+    try {
+      const usersMap: Record<string, User> = {};
+      if (currentChat?.type === 'group') {
+        participantUsers.forEach(u => {
+          usersMap[u.uid] = u;
+        });
+      } else if (otherUser) {
+        usersMap[otherUser.uid] = otherUser;
+      }
+      usersMap[user.uid] = user;
+      
+      await aiStore.getActionItems(chatId, chatMessages, usersMap);
+    } catch (error) {
+      console.error('Action items error:', error);
+    }
+  };
+
+  const handleTrackDecisions = async () => {
+    if (!user) return;
+    setShowDecisionsModal(true);
+    
+    try {
+      const usersMap: Record<string, User> = {};
+      if (currentChat?.type === 'group') {
+        participantUsers.forEach(u => {
+          usersMap[u.uid] = u;
+        });
+      } else if (otherUser) {
+        usersMap[otherUser.uid] = otherUser;
+      }
+      usersMap[user.uid] = user;
+      
+      await aiStore.getDecisions(chatId, chatMessages, usersMap);
+    } catch (error) {
+      console.error('Decision tracking error:', error);
+    }
+  };
+
+  const aiMenuOptions = [
+    {
+      id: 'summarize',
+      label: 'Summarize Thread',
+      icon: '📝',
+      description: 'AI-generated summary of the conversation',
+      onPress: handleSummarize,
+    },
+    {
+      id: 'actions',
+      label: 'Extract Action Items',
+      icon: '✅',
+      description: 'Find tasks and assignments',
+      onPress: handleExtractActionItems,
+    },
+    {
+      id: 'decisions',
+      label: 'Track Decisions',
+      icon: '🎯',
+      description: 'Surface agreements and consensus',
+      onPress: handleTrackDecisions,
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -612,8 +723,25 @@ export const ChatScreen: React.FC = () => {
               </View>
             ) : null}
           </View>
-          <View style={styles.headerRight} />
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={handleShowAIMenu}
+              style={styles.aiButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={styles.aiButtonText}>✨ AI</Text>
+            </TouchableOpacity>
+          </View>
       </View>
+
+      {/* Smart Search Bar */}
+      <SmartSearchBar 
+        chatId={chatId}
+        onMessageSelect={(messageId) => {
+          // Scroll to message (optional enhancement)
+          console.log('Navigate to message:', messageId);
+        }}
+      />
 
       {/* Messages List */}
       {isLoading && chatMessages.length === 0 ? (
@@ -664,6 +792,44 @@ export const ChatScreen: React.FC = () => {
           setShowReadReceiptModal(false);
           setSelectedMessage(null);
         }}
+      />
+
+      {/* AI Features Menu */}
+      <AIFeaturesMenu
+        visible={showAIMenu}
+        onClose={() => setShowAIMenu(false)}
+        options={aiMenuOptions}
+      />
+
+      {/* Thread Summary Modal */}
+      <ThreadSummaryModal
+        visible={showSummaryModal}
+        summary={aiStore.summaries[chatId] || null}
+        loading={aiStore.loading.summarization}
+        error={aiStore.errors.summarization}
+        onClose={() => setShowSummaryModal(false)}
+        onRetry={handleSummarize}
+      />
+
+      {/* Action Items Modal */}
+      <ActionItemsList
+        visible={showActionItemsModal}
+        actionItems={aiStore.actionItems[chatId] || []}
+        loading={aiStore.loading.actionItems}
+        error={aiStore.errors.actionItems}
+        onClose={() => setShowActionItemsModal(false)}
+        onToggleStatus={(itemId) => aiStore.toggleActionItemStatus(chatId, itemId)}
+        onRetry={handleExtractActionItems}
+      />
+
+      {/* Decisions Modal */}
+      <DecisionsModal
+        visible={showDecisionsModal}
+        decisions={aiStore.decisions[chatId] || []}
+        loading={aiStore.loading.decisions}
+        error={aiStore.errors.decisions}
+        onClose={() => setShowDecisionsModal(false)}
+        onRetry={handleTrackDecisions}
       />
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -741,6 +907,19 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 60, // Balance the back button
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  aiButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#E8F5E9',
+  },
+  aiButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2E7D32',
   },
   messagesList: {
     flex: 1,

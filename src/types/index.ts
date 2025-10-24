@@ -3,6 +3,7 @@
  */
 
 import { Timestamp } from 'firebase/firestore';
+import { MessageAIMetadata } from './ai';
 
 /**
  * User interface matching Firestore users collection
@@ -53,6 +54,7 @@ export interface Message {
   imageUrl?: string; // URL of uploaded image
   imageWidth?: number; // Image dimensions for proper display
   imageHeight?: number;
+  aiMetadata?: MessageAIMetadata; // AI-generated metadata (priority, etc.)
 }
 
 /**
