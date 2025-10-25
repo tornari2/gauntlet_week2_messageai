@@ -1,11 +1,138 @@
 # Active Context: WhatsApp Clone MVP
 
 ## Current Status
-**Phase:** Translation & AI Features Complete ✅
+**Phase:** UI/UX Improvements & Group Chat Enhancements Complete ✅
 **Date Updated:** October 25, 2025
 **Next Action:** Ready for next feature development or testing
 
-## Recent Completion: Comprehensive AI Translation & Messaging Features ✅
+## Recent Completion: UI/UX Improvements & Group Chat Enhancements ✅
+**Status:** COMPLETE
+**Date:** October 25, 2025
+**Commit:** d008c3e
+
+### What Was Implemented
+
+#### 1. Notification System Improvements
+- **Fixed notification duplication** with debounced batching system
+- Implemented notification buffer in `realtimeNotificationService.ts`
+- Notifications now grouped by chat with message count (e.g., "(3 new messages) Last message")
+- Single notification per chat showing last message
+- 300ms debounce window for batching rapid messages
+- Tracking system to prevent re-processing notifications
+
+#### 2. Group Chat Creation Consolidated
+- **Multi-user selection** in NewChatScreen
+- Select 1 user → direct chat
+- Select 2+ users → group chat with naming modal
+- Removed dedicated group chat creation button from ChatsListScreen
+- Default group name shows all participant names
+- Visual selection feedback with checkmarks and darker background
+
+#### 3. Chat Management UX
+- **Changed deletion from swipe to long-press**
+- Simplified `SwipeableChatListItem` component
+- Removed all `PanResponder` and `Animated` logic
+- Alert dialog confirms deletion
+- Cleaner, more intuitive deletion flow
+
+#### 4. Group Chat UI Improvements
+- **Fixed header flickering** by removing conditional participant count render
+- Always shows participant list (no fallback to count)
+- **Updated group chat icon** to simple two-people emoji (👥)
+- Removed complex multi-colored avatar system
+- **Participant count** displayed as gray text with parentheses
+- No background/border on count (e.g., "(5)")
+
+#### 5. Read Receipt Modal Enhancements
+- **Removed gray overlay** (transparent background)
+- Chat messages visible behind popup
+- **User avatar colors** match profile colors
+- Each participant shows their unique color in read receipt list
+- Better visual consistency across app
+
+#### 6. Online Status Fixes
+- **Fixed NewChatScreen** showing all users as online
+- Subscribed to real-time presence from Firebase RTDB
+- Each user's online status updates dynamically
+- Accurate green/gray indicators
+
+#### 7. Color Scheme Updates
+- **NewChatScreen styling:**
+  - Container background: `#F5F5F5` (light gray)
+  - User items: `#F5EBE0` (light tan, matches chat list)
+  - Selected users: `#E8D7C7` (darker tan)
+  - Borders: `#E8D7C7` (subtle tan borders)
+- **ChatsListScreen:**
+  - Background: `#F5F5F5` (light gray)
+  - New chat button: Brown (`Colors.primaryDark`)
+- Consistent warm color palette throughout app
+
+### Files Created
+- None (refactored existing components)
+
+### Files Modified
+- `src/services/realtimeNotificationService.ts` - Notification batching
+- `src/services/notificationService.ts` - Single notification per chat
+- `src/stores/notificationStore.ts` - In-app notification replacement
+- `src/components/SwipeableChatListItem.tsx` - Long-press delete
+- `src/components/ChatListItem.tsx` - Group icon simplification
+- `src/components/ReadReceiptModal.tsx` - Avatar colors, transparent background
+- `src/screens/ChatScreen.tsx` - Fixed header flickering, pass participantUsers
+- `src/screens/NewChatScreen.tsx` - Multi-select, colors, real-time presence
+- `src/screens/ChatsListScreen.tsx` - Removed group button, color updates
+- `src/services/chatService.ts` - Load all participants for group chats
+- `src/types/index.ts` - Added participantDetails to ChatWithDetails
+- `src/utils/userColors.ts` - Used for avatar color consistency
+
+### Key Technical Changes
+
+#### Notification Batching Logic
+```typescript
+// Buffer notifications by chat
+let notificationBuffer: Map<string, MessageNotificationPayload[]> = new Map();
+
+// Process after 300ms debounce
+setTimeout(() => {
+  notificationBuffer.forEach((notifications) => {
+    const lastNotification = notifications[notifications.length - 1];
+    const count = notifications.length;
+    const messageText = count > 1 
+      ? `(${count} new messages) ${lastNotification.messageText}` 
+      : lastNotification.messageText;
+    triggerMessageNotification(...);
+  });
+}, 300);
+```
+
+#### Group Chat Participant Loading
+```typescript
+// Before: Excluded current user
+const otherParticipants = chatData.participants.filter(id => id !== userId);
+
+// After: Include all participants
+const allParticipants = chatData.participants;
+const participantDetails = await Promise.all(
+  allParticipants.slice(0, 6).map(async (participantId) => {
+    // Fetch user details including avatarColor
+  })
+);
+```
+
+### Result
+- ✅ No more duplicate notifications
+- ✅ Single notification per chat with message count
+- ✅ Group chat creation streamlined
+- ✅ Intuitive long-press deletion
+- ✅ Clean group chat icon (👥)
+- ✅ No header flickering in group chats
+- ✅ Accurate online status in user list
+- ✅ Consistent color scheme (tan/gray/brown)
+- ✅ Read receipt modal shows user colors
+- ✅ All changes committed and pushed to GitHub
+
+---
+
+## Previous Completion: Translation & AI Features Complete ✅
 **Status:** COMPLETE
 **Date:** October 25, 2025
 **Commit:** 7b9b73b
