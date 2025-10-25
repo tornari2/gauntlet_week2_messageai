@@ -6,10 +6,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { Message } from '../types';
 import { formatBubbleTime } from '../utils/dateHelpers';
 import { Colors } from '../constants/Colors';
+import { TranslationBadge } from './TranslationBadge';
+import { useTranslationStore } from '../stores/translationStore';
 
 interface MessageBubbleProps {
   message: Message;
@@ -20,6 +22,9 @@ interface MessageBubbleProps {
   onReadReceiptPress?: () => void; // Callback when read receipt is tapped (for group chats)
   isGroupChat?: boolean; // Whether this is a group chat message
   senderColor?: string; // Avatar color of the sender (for group chats)
+  autoTranslateEnabled?: boolean; // Whether auto-translate is enabled for this chat
+  onCulturalContext?: (messageId: string, text: string, language: string) => void;
+  onSlangExplanation?: (messageId: string, text: string, language: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ 
@@ -31,15 +36,98 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onReadReceiptPress,
   isGroupChat = false,
   senderColor,
+  autoTranslateEnabled = false,
+  onCulturalContext,
+  onSlangExplanation,
 }) => {
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [showingTranslation, setShowingTranslation] = useState(false);
+  const [displayText, setDisplayText] = useState(message.text);
+  
+  const translationStore = useTranslationStore();
+  const { userLanguage, translateMessage, translating } = translationStore;
 
   // Reset image states when message changes (e.g., when optimistic message is replaced with real one)
   useEffect(() => {
     setImageLoading(false);
     setImageError(false);
-  }, [message.id, message.imageUrl]);
+    setDisplayText(message.text);
+    setShowingTranslation(false);
+  }, [message.id, message.imageUrl, message.text]);
+  
+  // Auto-translate effect
+  useEffect(() => {
+    const shouldAutoTranslate = 
+      autoTranslateEnabled && 
+      message.detectedLanguage && 
+      message.detectedLanguage !== userLanguage &&
+      message.text &&
+      !showingTranslation;
+    
+    if (shouldAutoTranslate) {
+      console.log(`[AutoTranslate] Translating message ${message.id} from ${message.detectedLanguage} to ${userLanguage}`);
+      handleTranslate();
+    }
+  }, [autoTranslateEnabled, message.id, message.detectedLanguage, userLanguage]);
+
+  const handleTranslate = async () => {
+    if (!message.id || !message.detectedLanguage) return;
+
+    try {
+      const translated = await translateMessage(
+        message.id,
+        message.text,
+        userLanguage,
+        message.detectedLanguage
+      );
+      setDisplayText(translated);
+      setShowingTranslation(true);
+    } catch (error) {
+      console.error('Translation error:', error);
+      Alert.alert('Translation Error', 'Failed to translate message. Please try again.');
+    }
+  };
+
+  const handleShowOriginal = () => {
+    setDisplayText(message.text);
+    setShowingTranslation(false);
+  };
+
+  const handleLongPress = () => {
+    if (!message.text || message.text.trim().length === 0) return;
+
+    const detectedLanguage = message.detectedLanguage || userLanguage;
+    const options = ['Cancel'];
+    
+    // Cultural context option
+    options.unshift('🧠 Explain Cultural Context');
+    
+    // Slang explanation option
+    options.unshift('💬 Explain Slang');
+
+    Alert.alert(
+      'Message Options',
+      message.text.length > 50 ? message.text.substring(0, 50) + '...' : message.text,
+      options.map((option) => {
+        if (option === 'Cancel') {
+          return { text: option, style: 'cancel' };
+        } else if (option === '🧠 Explain Cultural Context') {
+          return { 
+            text: option, 
+            onPress: () => onCulturalContext?.(message.id, message.text, detectedLanguage)
+          };
+        } else if (option === '💬 Explain Slang') {
+          return { 
+            text: option, 
+            onPress: () => onSlangExplanation?.(message.id, message.text, detectedLanguage)
+          };
+        }
+        return { text: option };
+      }),
+      { cancelable: true }
+    );
+  };
 
   // Get bubble background color
   const getBubbleColor = () => {
@@ -103,7 +191,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       ]}
       testID="message-bubble"
     >
-      <View
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onLongPress={handleLongPress}
+        delayLongPress={500}
         style={[
           styles.bubble,
           { backgroundColor: getBubbleColor() },
@@ -122,6 +213,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           ]}>
             {senderName}
           </Text>
+        )}
+
+        {/* Translation Badge */}
+        {message.text && (
+          <TranslationBadge
+            message={message}
+            userLanguage={userLanguage}
+            translated={showingTranslation}
+            translating={translating[message.id] || false}
+            autoTranslated={autoTranslateEnabled && showingTranslation}
+            onTranslate={handleTranslate}
+            onShowOriginal={showingTranslation ? handleShowOriginal : undefined}
+          />
         )}
         
         {/* Show image if present */}
@@ -165,7 +269,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
         
         {/* Show text if present */}
-        {message.text && (
+        {displayText && (
           <Text
             style={[
               styles.text,
@@ -173,7 +277,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               message.imageUrl && styles.textWithImage, // Add spacing if there's an image
             ]}
           >
-            {message.text}
+            {displayText}
           </Text>
         )}
         
@@ -216,7 +320,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <Text style={styles.retryText}>Tap to retry</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };

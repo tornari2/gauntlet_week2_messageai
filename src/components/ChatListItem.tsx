@@ -19,9 +19,10 @@ type ChatListItemNavigationProp = NativeStackNavigationProp<MainStackParamList, 
 
 interface ChatListItemProps {
   chat: ChatWithDetails;
+  onLongPress?: () => void;
 }
 
-export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) => {
+export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat, onLongPress }) => {
   const navigation = useNavigation<ChatListItemNavigationProp>();
   const isConnected = useNetworkStore((state) => state.isConnected);
 
@@ -89,6 +90,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat }) =
     <TouchableOpacity
       style={styles.container}
       onPress={handlePress}
+      onLongPress={onLongPress}
       activeOpacity={0.7}
       testID="chat-list-item"
     >

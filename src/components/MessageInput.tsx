@@ -15,6 +15,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { FormalitySelector } from './FormalitySelector';
+import { useTranslationStore } from '../stores/translationStore';
+import { FormalityLevel } from '../types/translation';
 
 interface MessageInputProps {
   onSend: (text: string) => void;
@@ -31,8 +34,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showFormalitySelector, setShowFormalitySelector] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const translationStore = useTranslationStore();
+  const { userLanguage, adjustFormality } = translationStore;
 
   // Cleanup on unmount only
   useEffect(() => {
@@ -124,6 +131,22 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
+  const handleFormalityPress = () => {
+    if (text.trim()) {
+      setShowFormalitySelector(true);
+    }
+  };
+
+  const handleFormalityPreview = async (originalText: string, level: FormalityLevel): Promise<string> => {
+    return await adjustFormality(originalText, level, userLanguage);
+  };
+
+  const handleFormalitySendMessage = (adjustedText: string) => {
+    stopTyping();
+    onSend(adjustedText);
+    setText('');
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -141,6 +164,20 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             name="image-outline"
             size={24}
             color={disabled ? '#C7C7CC' : '#007AFF'}
+          />
+        </TouchableOpacity>
+
+        {/* Formality button */}
+        <TouchableOpacity
+          style={styles.formalityButton}
+          onPress={handleFormalityPress}
+          disabled={disabled || !text.trim()}
+          testID="formality-button"
+        >
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={22}
+            color={disabled || !text.trim() ? '#C7C7CC' : '#007AFF'}
           />
         </TouchableOpacity>
 
@@ -174,6 +211,16 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           />
         </TouchableOpacity>
       </View>
+
+      {/* Formality Selector Modal */}
+      <FormalitySelector
+        visible={showFormalitySelector}
+        originalText={text}
+        targetLanguage={userLanguage}
+        onClose={() => setShowFormalitySelector(false)}
+        onSend={handleFormalitySendMessage}
+        onPreview={handleFormalityPreview}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -189,9 +236,17 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E5EA',
   },
   imageButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  formalityButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,

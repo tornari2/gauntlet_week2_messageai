@@ -3,7 +3,6 @@
  */
 
 import { Timestamp } from 'firebase/firestore';
-import { MessageAIMetadata } from './ai';
 
 /**
  * User interface matching Firestore users collection
@@ -18,6 +17,7 @@ export interface User {
   pushToken?: string | null;
   avatarColor?: string; // Hex color for avatar background
   createdAt: Timestamp | Date;
+  preferredLanguage?: string; // ISO 639-1 code (e.g., 'en', 'es', 'fr')
 }
 
 /**
@@ -54,7 +54,8 @@ export interface Message {
   imageUrl?: string; // URL of uploaded image
   imageWidth?: number; // Image dimensions for proper display
   imageHeight?: number;
-  aiMetadata?: MessageAIMetadata; // AI-generated metadata (priority, etc.)
+  detectedLanguage?: string; // ISO 639-1 code
+  translationCache?: Record<string, string>; // { 'es': 'translated text', 'fr': '...' }
 }
 
 /**

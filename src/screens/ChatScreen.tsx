@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
-import { doc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { ref, onValue } from 'firebase/database';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useMessageStore } from '../stores/messageStore';
@@ -25,17 +25,15 @@ import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { useNetworkStore } from '../stores/networkStore';
 import { useNotificationStore } from '../stores/notificationStore';
-import { useAIStore } from '../stores/aiStore';
+import { useTranslationStore } from '../stores/translationStore';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageInput } from '../components/MessageInput';
 import { OnlineIndicator } from '../components/OnlineIndicator';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { ReadReceiptModal } from '../components/ReadReceiptModal';
-import { SmartSearchBar } from '../components/SmartSearchBar';
-import { AIFeaturesMenu } from '../components/AIFeaturesMenu';
-import { ThreadSummaryModal } from '../components/ThreadSummaryModal';
-import { ActionItemsList } from '../components/ActionItemsList';
-import { DecisionsModal } from '../components/DecisionsModal';
+import { CulturalContextModal } from '../components/CulturalContextModal';
+import { SlangExplanationModal } from '../components/SlangExplanationModal';
+import { MultilingualSummaryModal } from '../components/MultilingualSummaryModal';
 import { Message, User } from '../types';
 import { firestore, database } from '../services/firebase';
 import { chatService } from '../services/chatService';
@@ -65,16 +63,16 @@ export const ChatScreen: React.FC = () => {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   
   // AI Features state
-  const [showAIMenu, setShowAIMenu] = useState(false);
+  const [selectedMessageForContext, setSelectedMessageForContext] = useState<Message | null>(null);
+  const [showCulturalContextModal, setShowCulturalContextModal] = useState(false);
+  const [showSlangModal, setShowSlangModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
-  const [showActionItemsModal, setShowActionItemsModal] = useState(false);
-  const [showDecisionsModal, setShowDecisionsModal] = useState(false);
   
   const { user } = useAuthStore();
-  const aiStore = useAIStore();
   const { chats } = useChatStore();
   const { isConnected } = useNetworkStore();
   const { setActiveChatId } = useNotificationStore();
+  const translationStore = useTranslationStore();
   const {
     messages,
     loading,
@@ -88,6 +86,18 @@ export const ChatScreen: React.FC = () => {
   const chatMessages = messages[chatId] || [];
   const isLoading = loading[chatId];
 
+  // Debug: Log messages to see if detectedLanguage exists
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      console.log('[DEBUG] Messages:', chatMessages.map(m => ({
+        id: m.id,
+        text: m.text?.substring(0, 20),
+        hasDetectedLang: !!m.detectedLanguage,
+        detectedLang: m.detectedLanguage
+      })));
+    }
+  }, [chatMessages]);
+
   // Get the current chat to find the other user
   const currentChat = chats.find(c => c.id === chatId);
   const isGroupChat = currentChat?.type === 'group';
@@ -100,11 +110,19 @@ export const ChatScreen: React.FC = () => {
   useEffect(() => {
     setActiveChatId(chatId);
     
+    // Load user language preference
+    if (user) {
+      translationStore.loadUserLanguage(user.uid);
+    }
+    
+    // Load auto-translate setting for this chat
+    translationStore.loadAutoTranslateSetting(chatId);
+    
     return () => {
       // Clear active chat ID when leaving the screen
       setActiveChatId(null);
     };
-  }, [chatId, setActiveChatId]);
+  }, [chatId, setActiveChatId, user]);
   
   // Get chat participants and their names
   useEffect(() => {
@@ -144,7 +162,6 @@ export const ChatScreen: React.FC = () => {
             
             if (userSnap.exists()) {
               const data = userSnap.data();
-              console.log(`[ChatScreen] 📦 Loaded ${data.displayName} from cache/firestore`);
               
               const userProfile = {
                 uid: userSnap.id,
@@ -168,7 +185,6 @@ export const ChatScreen: React.FC = () => {
               }
             } else {
               // Not in cache - add placeholder
-              console.log(`[ChatScreen] ⚠️ User ${uid} not in cache, adding placeholder`);
               loadedParticipants.push({
                 uid: uid,
                 email: '',
@@ -181,20 +197,16 @@ export const ChatScreen: React.FC = () => {
               });
             }
           } catch (error: any) {
-            console.log(`[ChatScreen] ⚠️ Error loading user ${uid}:`, error);
-            
             // If offline, try to load from AsyncStorage cache
             if (error?.code === 'unavailable' || 
                 error?.message?.includes('offline') ||
                 error?.message?.includes('network')) {
-              console.log(`[ChatScreen] 📦 Loading user ${uid} from AsyncStorage cache`);
               
               try {
                 const { getCachedUserProfile } = await import('../services/storageService');
                 const cachedUser = await getCachedUserProfile(uid);
                 
                 if (cachedUser) {
-                  console.log(`[ChatScreen] ✅ Loaded ${cachedUser.displayName} from AsyncStorage cache`);
                   loadedParticipants.push({
                     ...cachedUser,
                     isOnline: false, // Will be updated by RTDB if online
@@ -222,7 +234,6 @@ export const ChatScreen: React.FC = () => {
       );
       
       // Set all participants at once (prevents race conditions)
-      console.log(`[ChatScreen] 📦 Setting ${loadedParticipants.length} participants:`, loadedParticipants.map(p => p.displayName));
       setParticipantUsers(loadedParticipants);
     };
     
@@ -241,7 +252,6 @@ export const ChatScreen: React.FC = () => {
             setParticipantUsers(prev => {
               const existing = prev.find(u => u.uid === uid);
               if (!existing) {
-                console.log(`[ChatScreen] ⚠️ onSnapshot for ${uid} but not in state yet, cache still loading`);
                 return prev; // Don't add yet, wait for cache load
               }
               
@@ -261,7 +271,6 @@ export const ChatScreen: React.FC = () => {
         },
         () => {
           // Errors are expected when offline - cache load already handled this
-          console.log(`[ChatScreen] ⚠️ Firestore listener error for ${uid} (likely offline)`);
         }
       );
       unsubscribers.push(firestoreUnsub);
@@ -271,16 +280,13 @@ export const ChatScreen: React.FC = () => {
     const rtdbTimeout = setTimeout(() => {
       participantIds.forEach(uid => {
         const statusRef = ref(database, `/status/${uid}`);
-        console.log(`[ChatScreen] 📡 Setting up RTDB for group participant: ${uid}`);
         const rtdbUnsub = onValue(
           statusRef,
           (snapshot) => {
             const status = snapshot.val();
             const isOnline = status ? status.state === 'online' : false;
-            console.log(`[ChatScreen] 🔔 Group presence update for ${uid}:`, { status, isOnline });
             setParticipantUsers(prev => {
               if (prev.length === 0) {
-                console.log(`[ChatScreen] ⚠️ participantUsers is empty, skipping update`);
                 return prev;
               }
               const updated = prev.map(u =>
@@ -292,7 +298,6 @@ export const ChatScreen: React.FC = () => {
                     }
                   : u
               );
-              console.log(`[ChatScreen] 📝 Updated participantUsers:`, updated.map(u => ({ uid: u.uid, name: u.displayName, isOnline: u.isOnline })));
               return updated;
             });
           },
@@ -395,11 +400,51 @@ export const ChatScreen: React.FC = () => {
     };
   }, [chatId, subscribeToMessages, unsubscribeFromMessages]);
 
+  // Track which messages we've already started detecting
+  const detectingRef = useRef<Set<string>>(new Set());
+
+  // Detect language for new messages
+  useEffect(() => {
+    if (!user) return;
+
+    chatMessages.forEach((message) => {
+      // Skip if already processing or has language
+      if (
+        !message.text ||
+        !message.text.trim() ||
+        message.detectedLanguage ||
+        message.pending ||
+        message.tempId ||
+        !message.id ||
+        detectingRef.current.has(message.id)
+      ) {
+        return;
+      }
+
+      // Mark as detecting
+      detectingRef.current.add(message.id);
+
+      console.log(`[DETECT] Processing: ${message.id} - "${message.text}"`);
+
+      // Detect async
+      (async () => {
+        try {
+          const detected = await translationStore.detectLanguage(message.id, message.text);
+          console.log(`[DETECT] Got: ${detected}`);
+          const messageRef = doc(firestore, `chats/${chatId}/messages`, message.id);
+          await setDoc(messageRef, { detectedLanguage: detected }, { merge: true });
+          console.log(`[DETECT] Saved`);
+        } catch (error: any) {
+          console.log(`[DETECT] Error: ${error?.message}`);
+          detectingRef.current.delete(message.id); // Allow retry
+        }
+      })();
+    });
+  }, [chatMessages, user, chatId]);
+
   // Subscribe to typing indicators
   useEffect(() => {
     if (!user) return;
-    
-    console.log(`🟢 [ChatScreen] Setting up typing subscription for chat ${chatId}, currentUser=${user.uid}`);
     
     // Track the latest request to avoid race conditions
     let latestRequestId = 0;
@@ -408,8 +453,6 @@ export const ChatScreen: React.FC = () => {
       chatId,
       user.uid,
       (userIds) => {
-        console.log(`🟢 [ChatScreen] Received typing user IDs:`, userIds);
-        
         // Increment request ID for this update
         const currentRequestId = ++latestRequestId;
         
@@ -422,10 +465,7 @@ export const ChatScreen: React.FC = () => {
               // Only update if this is still the latest request
               if (currentRequestId === latestRequestId) {
                 const namesList = userIds.map(id => names[id] || 'Unknown');
-                console.log(`🟢 [ChatScreen] Typing users resolved (request ${currentRequestId}):`, { userIds, names, namesList });
                 setTypingUserNames(namesList);
-              } else {
-                console.log(`🟢 [ChatScreen] Ignoring stale name resolution (request ${currentRequestId}, latest is ${latestRequestId})`);
               }
             })
             .catch(err => console.error('Error loading typing user names:', err));
@@ -436,7 +476,6 @@ export const ChatScreen: React.FC = () => {
     );
     
     return () => {
-      console.log(`🟢 [ChatScreen] Cleaning up typing subscription for chat ${chatId}`);
       unsubscribe();
       // Stop our own typing indicator when leaving
       typingService.setUserStoppedTyping(chatId, user.uid).catch(err => 
@@ -494,8 +533,6 @@ export const ChatScreen: React.FC = () => {
   const handleTypingChange = (isTyping: boolean) => {
     if (!user) return;
     
-    console.log(`🟡 [ChatScreen] User ${user.uid} typing status changed to: ${isTyping}`);
-    
     if (isTyping) {
       typingService.setUserTyping(chatId, user.uid).catch(err =>
         console.error('Error setting typing status:', err)
@@ -522,6 +559,60 @@ export const ChatScreen: React.FC = () => {
     }
   };
 
+  // AI Feature Handlers
+  const handleCulturalContext = async (messageId: string, text: string, language: string) => {
+    setSelectedMessageForContext({ id: messageId, text, detectedLanguage: language } as Message);
+    setShowCulturalContextModal(true);
+    
+    try {
+      await translationStore.getCulturalContext(messageId, text, language);
+    } catch (error) {
+      console.error('Error getting cultural context:', error);
+    }
+  };
+
+  const handleSlangExplanation = async (messageId: string, text: string, language: string) => {
+    setSelectedMessageForContext({ id: messageId, text, detectedLanguage: language } as Message);
+    setShowSlangModal(true);
+    
+    try {
+      await translationStore.getSlangExplanations(messageId, text, language);
+    } catch (error) {
+      console.error('Error getting slang explanations:', error);
+    }
+  };
+
+  const handleSummary = async () => {
+    if (!user || chatMessages.length < 5) {
+      return;
+    }
+
+    setShowSummaryModal(true);
+
+    try {
+      // Build users map
+      const usersMap: Record<string, User> = {};
+      if (currentChat?.type === 'group') {
+        participantUsers.forEach(u => {
+          usersMap[u.uid] = u;
+        });
+      } else if (otherUser) {
+        usersMap[otherUser.uid] = otherUser;
+      }
+      usersMap[user.uid] = user;
+
+      await translationStore.getSummary(chatId, chatMessages, usersMap, true);
+    } catch (error) {
+      console.error('Error generating summary:', error);
+    }
+  };
+
+  const handleShareSummaryToChat = (text: string) => {
+    if (user) {
+      handleSend(text);
+    }
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isSent = item.senderId === user?.uid;
     const senderName = isGroupChat && !isSent ? senderNames[item.senderId] : undefined;
@@ -541,8 +632,12 @@ export const ChatScreen: React.FC = () => {
         senderName={senderName}
         senderColor={senderColor}
         isGroupChat={isGroupChat}
+        chatId={chatId}
+        autoTranslateEnabled={translationStore.isAutoTranslateEnabled(chatId)}
         onReadReceiptPress={isSent ? () => handleReadReceiptPress(item) : undefined}
         onRetry={item.failed && item.tempId ? () => handleRetry(item.tempId!) : undefined}
+        onCulturalContext={handleCulturalContext}
+        onSlangExplanation={handleSlangExplanation}
       />
     );
   };
@@ -567,106 +662,6 @@ export const ChatScreen: React.FC = () => {
       </View>
     );
   };
-
-  // AI Features handlers
-  const handleShowAIMenu = () => {
-    if (chatMessages.length < 5) {
-      alert('Need at least 5 messages for AI features');
-      return;
-    }
-    setShowAIMenu(true);
-  };
-
-  const handleSummarize = async () => {
-    if (!user) return;
-    setShowSummaryModal(true);
-    
-    try {
-      // Build users map for AI service
-      const usersMap: Record<string, User> = {};
-      if (currentChat?.type === 'group') {
-        participantUsers.forEach(u => {
-          usersMap[u.uid] = u;
-        });
-      } else if (otherUser) {
-        usersMap[otherUser.uid] = otherUser;
-      }
-      usersMap[user.uid] = user;
-      
-      // Force refresh to reanalyze with new messages
-      await aiStore.getSummary(chatId, chatMessages, usersMap, true);
-    } catch (error) {
-      console.error('Summarization error:', error);
-    }
-  };
-
-  const handleExtractActionItems = async () => {
-    if (!user) return;
-    setShowActionItemsModal(true);
-    
-    try {
-      const usersMap: Record<string, User> = {};
-      if (currentChat?.type === 'group') {
-        participantUsers.forEach(u => {
-          usersMap[u.uid] = u;
-        });
-      } else if (otherUser) {
-        usersMap[otherUser.uid] = otherUser;
-      }
-      usersMap[user.uid] = user;
-      
-      // Force refresh to reanalyze with new messages
-      await aiStore.getActionItems(chatId, chatMessages, usersMap, true);
-    } catch (error) {
-      console.error('Action items error:', error);
-    }
-  };
-
-  const handleTrackDecisions = async () => {
-    if (!user) return;
-    setShowDecisionsModal(true);
-    
-    try {
-      const usersMap: Record<string, User> = {};
-      if (currentChat?.type === 'group') {
-        participantUsers.forEach(u => {
-          usersMap[u.uid] = u;
-        });
-      } else if (otherUser) {
-        usersMap[otherUser.uid] = otherUser;
-      }
-      usersMap[user.uid] = user;
-      
-      // Force refresh to reanalyze with new messages
-      await aiStore.getDecisions(chatId, chatMessages, usersMap, true);
-    } catch (error) {
-      console.error('Decision tracking error:', error);
-    }
-  };
-
-  const aiMenuOptions = [
-    {
-      id: 'summarize',
-      label: 'Summarize Thread',
-      icon: '📝',
-      description: 'AI-generated summary of the conversation',
-      onPress: handleSummarize,
-    },
-    {
-      id: 'actions',
-      label: 'Extract Action Items',
-      icon: '✅',
-      description: 'Find tasks and assignments',
-      onPress: handleExtractActionItems,
-    },
-    {
-      id: 'decisions',
-      label: 'Track Decisions',
-      icon: '🎯',
-      description: 'Surface agreements and consensus',
-      onPress: handleTrackDecisions,
-    },
-  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -726,24 +721,42 @@ export const ChatScreen: React.FC = () => {
             ) : null}
           </View>
           <View style={styles.headerRight}>
+            {/* Auto-translate toggle */}
             <TouchableOpacity
-              onPress={handleShowAIMenu}
-              style={styles.aiButton}
+              onPress={() => {
+                const currentSetting = translationStore.isAutoTranslateEnabled(chatId);
+                translationStore.setAutoTranslate(chatId, !currentSetting);
+              }}
+              style={[
+                styles.autoTranslateButton,
+                translationStore.isAutoTranslateEnabled(chatId) && styles.autoTranslateButtonActive
+              ]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={styles.aiButtonText}>✨ AI</Text>
+              <Text style={[
+                styles.autoTranslateIcon,
+                translationStore.isAutoTranslateEnabled(chatId) && styles.autoTranslateIconActive
+              ]}>
+                🌐
+              </Text>
+            </TouchableOpacity>
+            
+            {/* Summary button */}
+            <TouchableOpacity
+              onPress={handleSummary}
+              style={styles.summaryButton}
+              disabled={chatMessages.length < 5}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={[
+                styles.summaryButtonText,
+                chatMessages.length < 5 && styles.summaryButtonDisabled
+              ]}>
+                📝
+              </Text>
             </TouchableOpacity>
           </View>
       </View>
-
-      {/* Smart Search Bar */}
-      <SmartSearchBar 
-        chatId={chatId}
-        onMessageSelect={(messageId) => {
-          // Scroll to message (optional enhancement)
-          console.log('Navigate to message:', messageId);
-        }}
-      />
 
       {/* Messages List */}
       {isLoading && chatMessages.length === 0 ? (
@@ -796,43 +809,49 @@ export const ChatScreen: React.FC = () => {
         }}
       />
 
-      {/* AI Features Menu */}
-      <AIFeaturesMenu
-        visible={showAIMenu}
-        onClose={() => setShowAIMenu(false)}
-        options={aiMenuOptions}
+      {/* Cultural Context Modal */}
+      <CulturalContextModal
+        visible={showCulturalContextModal}
+        context={selectedMessageForContext ? translationStore.culturalContexts[selectedMessageForContext.id] : null}
+        loading={selectedMessageForContext ? translationStore.loadingCulturalContext[selectedMessageForContext.id] || false : false}
+        error={selectedMessageForContext ? translationStore.errors[`cultural_${selectedMessageForContext.id}`] : null}
+        onClose={() => {
+          setShowCulturalContextModal(false);
+          setSelectedMessageForContext(null);
+        }}
+        onRetry={() => selectedMessageForContext && handleCulturalContext(
+          selectedMessageForContext.id,
+          selectedMessageForContext.text,
+          selectedMessageForContext.detectedLanguage || translationStore.userLanguage
+        )}
       />
 
-      {/* Thread Summary Modal */}
-      <ThreadSummaryModal
+      {/* Slang Explanation Modal */}
+      <SlangExplanationModal
+        visible={showSlangModal}
+        explanations={selectedMessageForContext ? translationStore.slangExplanations[selectedMessageForContext.id] : null}
+        loading={selectedMessageForContext ? translationStore.loadingSlangExplanations[selectedMessageForContext.id] || false : false}
+        error={selectedMessageForContext ? translationStore.errors[`slang_${selectedMessageForContext.id}`] : null}
+        onClose={() => {
+          setShowSlangModal(false);
+          setSelectedMessageForContext(null);
+        }}
+        onRetry={() => selectedMessageForContext && handleSlangExplanation(
+          selectedMessageForContext.id,
+          selectedMessageForContext.text,
+          selectedMessageForContext.detectedLanguage || translationStore.userLanguage
+        )}
+      />
+
+      {/* Multilingual Summary Modal */}
+      <MultilingualSummaryModal
         visible={showSummaryModal}
-        summary={aiStore.summaries[chatId] || null}
-        loading={aiStore.loading.summarization}
-        error={aiStore.errors.summarization}
+        summary={translationStore.summaries[chatId] || null}
+        loading={translationStore.loadingSummary[chatId] || false}
+        error={translationStore.errors[`summary_${chatId}`] || null}
         onClose={() => setShowSummaryModal(false)}
-        onRetry={handleSummarize}
-        onShareToChat={(text) => handleSend(text)}
-      />
-
-      {/* Action Items Modal */}
-      <ActionItemsList
-        visible={showActionItemsModal}
-        actionItems={aiStore.actionItems[chatId] || []}
-        loading={aiStore.loading.actionItems}
-        error={aiStore.errors.actionItems}
-        onClose={() => setShowActionItemsModal(false)}
-        onRetry={handleExtractActionItems}
-        onShareToChat={(text) => handleSend(text)}
-      />
-
-      {/* Decisions Modal */}
-      <DecisionsModal
-        visible={showDecisionsModal}
-        decisions={aiStore.decisions[chatId] || []}
-        loading={aiStore.loading.decisions}
-        error={aiStore.errors.decisions}
-        onClose={() => setShowDecisionsModal(false)}
-        onRetry={handleTrackDecisions}
+        onRetry={handleSummary}
+        onShareToChat={handleShareSummaryToChat}
       />
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -909,9 +928,44 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   headerRight: {
-    width: 60, // Balance the back button
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 80, // Increased to accommodate both buttons
+  },
+  autoTranslateButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  autoTranslateButtonActive: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  autoTranslateIcon: {
+    fontSize: 16,
+  },
+  autoTranslateIconActive: {
+    // Can add any style changes for active state
+  },
+  summaryButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+  },
+  summaryButtonText: {
+    fontSize: 20,
+  },
+  summaryButtonDisabled: {
+    opacity: 0.3,
   },
   aiButton: {
     paddingHorizontal: 8,

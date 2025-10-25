@@ -17,13 +17,16 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../stores/authStore';
 import { useNetworkStore } from '../stores/networkStore';
+import { useTranslationStore } from '../stores/translationStore';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../services/firebase';
 import { Colors } from '../constants/Colors';
+import { COMMON_LANGUAGES } from '../services/languageService';
 
 const AVATAR_COLORS = [
   { name: 'Green', value: '#25D366' },
@@ -40,13 +43,35 @@ const AVATAR_COLORS = [
   { name: 'Lime', value: '#CDDC39' },
 ];
 
+// Helper function to get flag emoji for language
+const getLanguageFlag = (languageCode: string): string => {
+  const flags: Record<string, string> = {
+    en: '🇺🇸',
+    es: '🇪🇸',
+    fr: '🇫🇷',
+    de: '🇩🇪',
+    it: '🇮🇹',
+    pt: '🇵🇹',
+    ru: '🇷🇺',
+    zh: '🇨🇳',
+    ja: '🇯🇵',
+    ko: '🇰🇷',
+    ar: '🇸🇦',
+    hi: '🇮🇳',
+  };
+  return flags[languageCode] || '🌐';
+};
+
 export const UserProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuthStore();
   const { isConnected } = useNetworkStore();
+  const translationStore = useTranslationStore();
   
   const [displayName, setDisplayName] = useState('');
   const [selectedColor, setSelectedColor] = useState<string | null>(null); // Start with null to prevent flicker
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Load user data
@@ -55,8 +80,22 @@ export const UserProfileScreen: React.FC = () => {
       setDisplayName(user.displayName || '');
       // Load color immediately (sync from cache if available)
       loadUserColor();
+      // Load language preference
+      loadUserLanguage();
     }
   }, [user]);
+
+  const loadUserLanguage = async () => {
+    if (!user) return;
+    
+    try {
+      await translationStore.loadUserLanguage(user.uid);
+      setSelectedLanguage(translationStore.userLanguage);
+    } catch (error) {
+      console.error('Error loading user language:', error);
+      setSelectedLanguage('en'); // Default to English
+    }
+  };
 
   const loadUserColor = async () => {
     if (!user) return;
@@ -181,7 +220,11 @@ export const UserProfileScreen: React.FC = () => {
       await updateDoc(userRef, {
         displayName: displayName.trim(),
         avatarColor: selectedColor,
+        preferredLanguage: selectedLanguage,
       });
+
+      // Update translation store
+      await translationStore.setUserLanguage(selectedLanguage, user.uid);
 
       // Update local auth store
       useAuthStore.setState({
@@ -269,6 +312,30 @@ export const UserProfileScreen: React.FC = () => {
             />
           </View>
 
+          {/* Preferred Language */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🌐 Preferred Language</Text>
+            <Text style={styles.sectionSubtitle}>
+              Messages in other languages will be translated to your preferred language
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.languageDropdown}
+              onPress={() => setShowLanguagePicker(true)}
+              testID="language-dropdown"
+            >
+              <View style={styles.languageDropdownContent}>
+                <Text style={styles.languageDropdownFlag}>
+                  {getLanguageFlag(selectedLanguage)}
+                </Text>
+                <Text style={styles.languageDropdownText}>
+                  {COMMON_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'English'}
+                </Text>
+              </View>
+              <Text style={styles.languageDropdownArrow}>▼</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Avatar Color */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Avatar Color</Text>
@@ -310,6 +377,58 @@ export const UserProfileScreen: React.FC = () => {
             )}
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Language Picker Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showLanguagePicker}
+          onRequestClose={() => setShowLanguagePicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Language</Text>
+                <TouchableOpacity
+                  onPress={() => setShowLanguagePicker(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.modalScrollView}>
+                {COMMON_LANGUAGES.map((language) => (
+                  <TouchableOpacity
+                    key={language.code}
+                    style={[
+                      styles.modalLanguageOption,
+                      selectedLanguage === language.code && styles.modalLanguageOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setSelectedLanguage(language.code);
+                      setShowLanguagePicker(false);
+                    }}
+                    testID={`language-${language.code}`}
+                  >
+                    <Text style={styles.modalLanguageFlag}>
+                      {getLanguageFlag(language.code)}
+                    </Text>
+                    <Text style={[
+                      styles.modalLanguageText,
+                      selectedLanguage === language.code && styles.modalLanguageTextSelected
+                    ]}>
+                      {language.name}
+                    </Text>
+                    {selectedLanguage === language.code && (
+                      <Text style={styles.modalLanguageCheck}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -423,6 +542,104 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  languageDropdown: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  languageDropdownContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  languageDropdownFlag: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  languageDropdownText: {
+    fontSize: 16,
+    color: '#000',
+    fontWeight: '500',
+  },
+  languageDropdownArrow: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalCloseText: {
+    fontSize: 24,
+    color: '#8E8E93',
+    fontWeight: '300',
+  },
+  modalScrollView: {
+    paddingHorizontal: 20,
+  },
+  modalLanguageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  modalLanguageOptionSelected: {
+    backgroundColor: '#F0EDE6',
+  },
+  modalLanguageFlag: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  modalLanguageText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
+    fontWeight: '500',
+  },
+  modalLanguageTextSelected: {
+    fontWeight: '600',
+    color: Colors.primaryDark,
+  },
+  modalLanguageCheck: {
+    fontSize: 18,
+    color: Colors.primary,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   saveButton: {
     backgroundColor: Colors.primary,

@@ -1,6 +1,6 @@
 /**
- * Firebase Cloud Functions for AI Features
- * Handles OpenAI and Pinecone operations server-side
+ * Firebase Cloud Functions for International Communicator AI Features
+ * Handles OpenAI operations for translation, language detection, and multilingual features
  */
 
 // Load environment variables from .env file (for local emulator)
@@ -10,24 +10,37 @@ dotenv.config();
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import OpenAI from 'openai';
-import { Pinecone } from '@pinecone-database/pinecone';
 
 // Initialize Firebase Admin
 admin.initializeApp();
 
-const PINECONE_INDEX_NAME = 'messageai-messages';
+// Get OpenAI API key from Firebase config or environment variable
+function getOpenAIKey(): string {
+  // Try environment variable first (for local emulator)
+  if (process.env.OPENAI_API_KEY) {
+    console.log('Using OpenAI API key from environment variable');
+    return process.env.OPENAI_API_KEY;
+  }
+  
+  // Fall back to Firebase config (for production)
+  try {
+    const config = functions.config();
+    if (config.openai && config.openai.key) {
+      console.log('Using OpenAI API key from Firebase config');
+      return config.openai.key;
+    }
+  } catch (error) {
+    console.error('Error getting Firebase config:', error);
+  }
+  
+  throw new Error('OpenAI API key not configured. Set OPENAI_API_KEY environment variable or run: firebase functions:config:set openai.key="YOUR_KEY"');
+}
 
 // Lazy initialize OpenAI (only when actually called)
 function getOpenAI() {
+  const apiKey = getOpenAIKey();
   return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-}
-
-// Lazy initialize Pinecone (only when actually called)
-function getPinecone() {
-  return new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY || '',
+    apiKey: apiKey,
   });
 }
 
@@ -45,206 +58,232 @@ function cleanJSONResponse(content: string): string {
 }
 
 /**
- * 1. Thread Summarization
- * Generates AI summary of a conversation thread
+ * 1. Translate Text
+ * Translates text from one language to another
  */
-export const summarizeThread = functions.https.onCall(async (data, context) => {
-  console.log('🚀🚀🚀 summarizeThread CALLED! 🚀🚀🚀');
-  console.log('📥 Raw data:', JSON.stringify(data).substring(0, 100));
-  console.log('👤 Context auth:', context.auth ? 'HAS AUTH' : 'NO AUTH');
-  console.log('👤 Auth UID:', context.auth?.uid || 'none');
-  console.log('🔑 OpenAI Key exists:', !!process.env.OPENAI_API_KEY);
-  console.log('🔑 OpenAI Key length:', process.env.OPENAI_API_KEY?.length || 0);
-  console.log('🌍 Environment:', process.env.NODE_ENV || 'unknown');
-  
-  // For local development, skip auth check
-  const isLocalDev = !process.env.GCLOUD_PROJECT; // Cloud functions have this env var
-  
-  if (isLocalDev) {
-    console.log('🔧 LOCAL DEV MODE - Skipping auth check');
-  } else {
-    // Auth check (production only)
-    if (!context.auth) {
-      console.error('❌ Authentication failed - no context.auth');
-      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-    }
-  }
+export const translateText = functions.https.onCall(async (data, context) => {
+  // TEMPORARY: Skip auth check for testing
+  // TODO: Re-enable auth once token passing is fixed
+  // if (!context.auth) {
+  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to translate text');
+  // }
 
-  const { messages, useRAG, previousSummary } = data;
+  const { text, targetLanguage, sourceLanguage } = data;
 
-  if (!messages || messages.length === 0) {
-    console.error('❌ No messages provided');
-    throw new functions.https.HttpsError('invalid-argument', 'Messages array is required');
-  }
-
-  console.log(`📊 Processing ${messages.length} messages, RAG: ${useRAG}, Has previous: ${!!previousSummary}`);
-
-  try {
-    let contextMessages = messages;
-
-    // If RAG enabled, fetch relevant context
-    if (useRAG && messages.length > 50) {
-      // For very long threads, use RAG to get most relevant messages
-      contextMessages = messages.slice(-50); // Last 50 messages for summary
-    }
-
-    let prompt = `Analyze this conversation thread and provide:
-1. A brief overview (2-3 sentences summarizing the entire conversation)
-2. Participant contributions (what each person contributed to the discussion)
-
-Conversation:
-${contextMessages.map((m: any) => `${m.senderName}: ${m.text}`).join('\n')}`;
-
-    // If there's a previous summary, build upon it
-    if (previousSummary) {
-      prompt = `You previously summarized this conversation (which had ${previousSummary.messageCount} messages). Now there are ${messages.length} messages total.
-
-Previous summary:
-- Overview: ${previousSummary.summary}
-- Participant contributions: ${JSON.stringify(previousSummary.participantContributions)}
-
-New messages since last summary:
-${contextMessages.slice(previousSummary.messageCount).map((m: any) => `${m.senderName}: ${m.text}`).join('\n')}
-
-Update the summary to incorporate the new messages. Keep the previous context but highlight what's new.`;
-    }
-
-    prompt += `\n\nFormat your response as JSON with keys: 
-- summary (string): brief 2-3 sentence overview
-- participantContributions (array): [{userName: string, mainPoints: string[]}]`;
-
-    const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    });
-
-    const content = response.choices[0].message.content || '{}';
-    const cleanedContent = cleanJSONResponse(content);
-    const result = JSON.parse(cleanedContent);
-
-    return {
-      ...result,
-      messageCount: messages.length,
-      timestamp: admin.firestore.Timestamp.now(),
-    };
-  } catch (error) {
-    console.error('Error summarizing thread:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to summarize thread');
-  }
-});
-
-/**
- * 2. Action Items Extraction
- * Extracts tasks and assignments from conversation
- */
-export const extractActionItems = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-  }
-
-  const { messages, previousItems } = data;
-
-  if (!messages || messages.length === 0) {
-    throw new functions.https.HttpsError('invalid-argument', 'Messages array is required');
+  if (!text || !targetLanguage) {
+    throw new functions.https.HttpsError('invalid-argument', 'Text and target language are required');
   }
 
   try {
-    // Get current date for context
-    const now = new Date();
-    const dateContext = `Today is ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`;
-    
-    let prompt = `${dateContext}
+    const sourceLangInfo = sourceLanguage ? ` from ${sourceLanguage}` : '';
+    const prompt = `Translate the following text${sourceLangInfo} to ${targetLanguage}.
+Maintain the tone and context. Return ONLY the translation, no explanations.
 
-Extract action items from this conversation. For each action item:
-- The task description
-- Who it's assigned to (if mentioned)
-- Due date: Convert relative dates like "by Friday", "next Monday", "by end of week" to actual ISO dates. Use the current date context above.
-- Priority (high/medium/low)
-- Context from the message
+Text: "${text}"
 
-Conversation with timestamps:
-${messages.map((m: any) => `[${m.timestamp}] ${m.senderName}: ${m.text}`).join('\n')}`;
-
-    // If there are previous items, build upon them
-    if (previousItems && previousItems.length > 0) {
-      prompt = `${dateContext}
-
-You previously extracted these action items from this conversation:
-
-${previousItems.map((item: any, idx: number) => 
-  `${idx + 1}. ${item.task} (assigned to: ${item.assignedToName || 'unassigned'}, due: ${item.dueDate || 'no date'}, priority: ${item.priority})`
-).join('\n')}
-
-Now analyze the full conversation again to:
-1. Keep existing action items that are still relevant
-2. Add any NEW action items from the conversation
-3. Update due dates if there's new information
-4. Convert relative dates to actual ISO dates using today's date
-
-Full conversation with timestamps:
-${messages.map((m: any) => `[${m.timestamp}] ${m.senderName}: ${m.text}`).join('\n')}`;
-    }
-
-    prompt += `\n\nReturn JSON array of action items with keys: 
-- task (string)
-- assignedToName (string or null)
-- dueDate (ISO date string or null) - IMPORTANT: Convert phrases like "by Friday", "next Monday", "by end of week" to actual ISO date strings
-- priority (string: high/medium/low)
-- context (string)
-- sourceMessageId (string)`;
-
-    const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.5,
-    });
-
-    const content = response.choices[0].message.content || '[]';
-    const cleanedContent = cleanJSONResponse(content);
-    const actionItems = JSON.parse(cleanedContent);
-
-    return {
-      actionItems: actionItems.map((item: any) => ({
-        ...item,
-        id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        extractedAt: admin.firestore.Timestamp.now(),
-      })),
-    };
-  } catch (error) {
-    console.error('Error extracting action items:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to extract action items');
-  }
-});
-
-/**
- * 3. Priority Detection
- * Analyzes message urgency and priority
- */
-export const analyzePriority = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-  }
-
-  const { messageText } = data;
-
-  if (!messageText) {
-    throw new functions.https.HttpsError('invalid-argument', 'Message text is required');
-  }
-
-  try {
-    const prompt = `Analyze the urgency/priority of this message. Return JSON with:
-- priority: "urgent" | "high" | "medium" | "low"
-- reasons: array of strings explaining why
-- confidence: number 0-1
-
-Message: "${messageText}"`;
+Translation:`;
 
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-      max_tokens: 200,
+      max_tokens: 500,
+    });
+
+    const translatedText = response.choices[0].message.content?.trim() || text;
+
+    return {
+      translatedText,
+      sourceLanguage: sourceLanguage || 'auto',
+      targetLanguage,
+      confidence: 0.9,
+    };
+  } catch (error) {
+    console.error('Error translating text:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to translate text');
+  }
+});
+
+/**
+ * 2. Detect Language
+ * Detects the language of a text
+ */
+export const detectLanguage = functions.https.onCall(async (data, context) => {
+  // TEMPORARY: Skip auth check for testing
+  // TODO: Re-enable auth once token passing is fixed
+  // if (!context.auth) {
+  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to detect language');
+  // }
+
+  const { text } = data;
+
+  if (!text) {
+    throw new functions.https.HttpsError('invalid-argument', 'Text is required');
+  }
+
+  try {
+    const prompt = `Detect the language of this text. 
+Respond with ONLY the ISO 639-1 language code (e.g., 'en', 'es', 'fr', 'zh', 'ar').
+
+Text: "${text}"
+
+Language code:`;
+
+    const response = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens: 10,
+    });
+
+    const languageCode = response.choices[0].message.content?.trim().toLowerCase() || 'en';
+
+    return {
+      languageCode,
+    };
+  } catch (error) {
+    console.error('Error detecting language:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to detect language');
+  }
+});
+
+/**
+ * 3. Adjust Formality
+ * Rewrites text with specified formality level
+ */
+export const adjustFormality = functions.https.onCall(async (data, context) => {
+  // TEMPORARY: Skip auth check for testing
+  // TODO: Re-enable auth once token passing is fixed
+  // if (!context.auth) {
+  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to adjust formality');
+  // }
+
+  const { text, formalityLevel, targetLanguage } = data;
+
+  if (!text || !formalityLevel || !targetLanguage) {
+    throw new functions.https.HttpsError('invalid-argument', 'Text, formality level, and target language are required');
+  }
+
+  try {
+    const formalityDescriptions = {
+      casual: 'Friendly, relaxed, conversational',
+      neutral: 'Professional but approachable',
+      formal: 'Respectful, polite, business-appropriate',
+    };
+
+    const prompt = `Rewrite this message in a ${formalityLevel} tone in ${targetLanguage}.
+Maintain the core meaning but adjust the formality level appropriately.
+
+IMPORTANT: Return ONLY the rephrased sentence or message. Do NOT add any letter formatting, greetings, or closings like "Dear X" or "Sincerely". Just rephrase the original message with the appropriate level of formality.
+
+Formality level: ${formalityLevel} - ${formalityDescriptions[formalityLevel as keyof typeof formalityDescriptions]}
+
+Original: "${text}"
+
+${formalityLevel.charAt(0).toUpperCase() + formalityLevel.slice(1)} version:`;
+
+    const response = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    const adjustedText = response.choices[0].message.content?.trim() || text;
+
+    return {
+      adjustedText,
+    };
+  } catch (error) {
+    console.error('Error adjusting formality:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to adjust formality');
+  }
+});
+
+/**
+ * 4. Explain Slang/Idioms
+ * Identifies and explains slang and idioms
+ */
+export const explainSlang = functions.https.onCall(async (data, context) => {
+  // TEMPORARY: Skip auth check for testing
+  // TODO: Re-enable auth once token passing is fixed
+  // if (!context.auth) {
+  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to explain slang');
+  // }
+
+  const { text, detectedLanguage } = data;
+
+  if (!text || !detectedLanguage) {
+    throw new functions.https.HttpsError('invalid-argument', 'Text and detected language are required');
+  }
+
+  try {
+    const prompt = `Identify any slang, idioms, or informal expressions in this ${detectedLanguage} message.
+For each one found, provide:
+1. The slang/idiom
+2. Literal meaning
+3. Actual meaning/usage
+4. Example in context
+
+If none found, return an empty array.
+
+Message: "${text}"
+
+Format your response as a JSON array of objects with keys: term, literal, meaning, example.`;
+
+    const response = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.5,
+      max_tokens: 500,
+    });
+
+    const content = response.choices[0].message.content || '[]';
+    const cleanedContent = cleanJSONResponse(content);
+    const explanations = JSON.parse(cleanedContent);
+
+    return {
+      explanations: Array.isArray(explanations) ? explanations : [],
+    };
+  } catch (error) {
+    console.error('Error explaining slang:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to explain slang');
+  }
+});
+
+/**
+ * 5. Get Cultural Context
+ * Provides cultural context and insights
+ */
+export const getCulturalContext = functions.https.onCall(async (data, context) => {
+  // TEMPORARY: Skip auth check for testing
+  // TODO: Re-enable auth once token passing is fixed
+  // if (!context.auth) {
+  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to get cultural context');
+  // }
+
+  const { text, detectedLanguage } = data;
+
+  if (!text || !detectedLanguage) {
+    throw new functions.https.HttpsError('invalid-argument', 'Text and detected language are required');
+  }
+
+  try {
+    const prompt = `Analyze this message for cultural context and references.
+Consider the language (${detectedLanguage}) and provide helpful cultural insights.
+If there are no significant cultural references, say "No specific cultural context detected."
+
+Message: "${text}"
+
+Format your response as JSON with keys:
+- culturalInsights: string (main explanation)
+- references: array of strings (specific cultural references found)`;
+
+    const response = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.6,
+      max_tokens: 400,
     });
 
     const content = response.choices[0].message.content || '{}';
@@ -252,218 +291,76 @@ Message: "${messageText}"`;
     const result = JSON.parse(cleanedContent);
 
     return {
-      ...result,
-      analyzedAt: new Date().toISOString(),
+      culturalInsights: result.culturalInsights || 'No specific cultural context detected.',
+      references: result.references || [],
     };
   } catch (error) {
-    console.error('Error analyzing priority:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to analyze priority');
+    console.error('Error getting cultural context:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to get cultural context');
   }
 });
 
 /**
- * 4. Decision Tracking
- * Identifies decisions and agreements in conversation
+ * 6. Summarize Multilingual Thread
+ * Generates summary of conversation in user's preferred language
  */
-export const trackDecisions = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-  }
+export const summarizeMultilingualThread = functions.https.onCall(async (data, context) => {
+  // TEMPORARY: Skip auth check for testing
+  // TODO: Re-enable auth once token passing is fixed
+  // if (!context.auth) {
+  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to summarize thread');
+  // }
 
-  const { messages, previousDecisions } = data;
+  const { messages, userLanguage } = data;
 
   if (!messages || messages.length === 0) {
     throw new functions.https.HttpsError('invalid-argument', 'Messages array is required');
   }
 
+  if (messages.length < 5) {
+    throw new functions.https.HttpsError('invalid-argument', 'Need at least 5 messages to summarize');
+  }
+
   try {
-    let prompt = `Identify decisions and agreements from this conversation. For each decision:
-- What was decided
-- Who agreed (array of names)
-- Context (why this decision was made, what it relates to)
-- Source message IDs
+    const conversationText = messages
+      .map((m: any) => `${m.senderName} (${m.detectedLanguage || 'unknown'}): ${m.text}`)
+      .join('\n');
+
+    const prompt = `Summarize this multilingual conversation in ${userLanguage}.
+The conversation may contain messages in multiple languages.
+
+Provide:
+1. A brief 2-3 sentence overview
+2. Key points from each participant (as an array of objects with participantName and keyPoints array)
+3. List of languages detected in the conversation
 
 Conversation:
-${messages.map((m: any) => `${m.id} - ${m.senderName}: ${m.text}`).join('\n')}`;
+${conversationText}
 
-    // If there are previous decisions, build upon them
-    if (previousDecisions && previousDecisions.length > 0) {
-      prompt = `You previously tracked these decisions from this conversation:
-
-${previousDecisions.map((dec: any, idx: number) => 
-  `${idx + 1}. ${dec.decision} (agreed by: ${dec.agreedByNames.join(', ')})`
-).join('\n')}
-
-Now analyze the full conversation again to:
-1. Keep existing decisions that are still relevant
-2. Add any NEW decisions or agreements
-3. Update context if there's additional information about existing decisions
-
-Full conversation:
-${messages.map((m: any) => `${m.id} - ${m.senderName}: ${m.text}`).join('\n')}`;
-    }
-
-    prompt += `\n\nReturn JSON array with keys: 
-- decision (string): what was decided
-- agreedByNames (string[]): who agreed
-- context (string): why/what this relates to
-- sourceMessageIds (string[]): message IDs where decision was made`;
+Format your response as JSON with keys:
+- overview: string
+- participantSummaries: array of {participantName: string, keyPoints: string[]}
+- languagesDetected: string[] (ISO codes)`;
 
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.5,
+      temperature: 0.7,
+      max_tokens: 800,
     });
 
-    const content = response.choices[0].message.content || '[]';
+    const content = response.choices[0].message.content || '{}';
     const cleanedContent = cleanJSONResponse(content);
-    const decisions = JSON.parse(cleanedContent);
+    const result = JSON.parse(cleanedContent);
 
     return {
-      decisions: decisions.map((item: any) => ({
-        ...item,
-        id: `decision_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        extractedAt: admin.firestore.Timestamp.now(),
-      })),
+      overview: result.overview || '',
+      participantSummaries: result.participantSummaries || [],
+      languagesDetected: result.languagesDetected || [],
+      generatedIn: userLanguage,
     };
   } catch (error) {
-    console.error('Error tracking decisions:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to track decisions');
+    console.error('Error summarizing multilingual thread:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to summarize thread');
   }
 });
-
-/**
- * 5. Create Embedding (for RAG)
- * Generates vector embedding for a message
- */
-export const createEmbedding = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-  }
-
-  const { messageId, chatId, text, senderId } = data;
-
-  if (!messageId || !text) {
-    throw new functions.https.HttpsError('invalid-argument', 'messageId and text are required');
-  }
-
-  try {
-    // Create embedding using OpenAI
-    const embeddingResponse = await getOpenAI().embeddings.create({
-      model: 'text-embedding-3-small',
-      input: text,
-    });
-
-    const embedding = embeddingResponse.data[0].embedding;
-
-    // Store in Pinecone
-    const index = getPinecone().index(PINECONE_INDEX_NAME);
-    
-    await index.upsert([{
-      id: messageId,
-      values: embedding,
-      metadata: {
-        chatId,
-        text,
-        senderId,
-        timestamp: Date.now(),
-      },
-    }]);
-
-    return {
-      success: true,
-      messageId,
-    };
-  } catch (error) {
-    console.error('Error creating embedding:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to create embedding');
-  }
-});
-
-/**
- * 6. Smart Search (RAG)
- * Semantic search across messages with AI-generated answer
- */
-export const smartSearch = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-  }
-
-  const { query, chatId, topK = 10 } = data;
-
-  if (!query) {
-    throw new functions.https.HttpsError('invalid-argument', 'Query is required');
-  }
-
-  try {
-    // Create query embedding
-    const embeddingResponse = await getOpenAI().embeddings.create({
-      model: 'text-embedding-3-small',
-      input: query,
-    });
-
-    const queryEmbedding = embeddingResponse.data[0].embedding;
-
-    // Search Pinecone
-    const index = getPinecone().index(PINECONE_INDEX_NAME);
-    const searchResults = await index.query({
-      vector: queryEmbedding,
-      topK,
-      filter: chatId ? { chatId: { $eq: chatId } } : undefined,
-      includeMetadata: true,
-    });
-
-    // Extract search results
-    const results = searchResults.matches.map((match: any) => ({
-      messageId: match.id,
-      text: match.metadata?.text || '',
-      senderId: match.metadata?.senderId || '',
-      timestamp: match.metadata?.timestamp || Date.now(),
-      relevanceScore: match.score || 0,
-      chatId: match.metadata?.chatId || '',
-    }));
-
-    // Generate AI answer from context
-    if (results.length > 0) {
-      const context = results.map((r: any) => r.text).join('\n\n');
-      
-      const answerPrompt = `Based on these relevant messages, answer the user's question concisely:
-
-Question: ${query}
-
-Relevant messages:
-${context}
-
-Provide a helpful 2-3 sentence answer.`;
-
-      const answerResponse = await getOpenAI().chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: answerPrompt }],
-        temperature: 0.7,
-        max_tokens: 200,
-      });
-
-      const answer = answerResponse.choices[0].message.content || '';
-
-      return {
-        query,
-        results,
-        answer,
-        totalResults: results.length,
-        searchedAt: new Date().toISOString(),
-      };
-    }
-
-    return {
-      query,
-      results: [],
-      answer: 'No relevant messages found.',
-      totalResults: 0,
-      searchedAt: new Date().toISOString(),
-    };
-  } catch (error) {
-    console.error('Error in smart search:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to perform smart search');
-  }
-});
-

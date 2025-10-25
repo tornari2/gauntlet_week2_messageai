@@ -11,8 +11,6 @@ import { Message } from '../types';
 import { chatService } from '../services/chatService';
 import * as storageService from '../services/storageService';
 import { useNetworkStore } from './networkStore';
-import { ragService } from '../services/ragService';
-import { useAuthStore } from './authStore';
 
 interface MessageState {
   // Messages organized by chatId: { chatId: Message[] }
@@ -254,17 +252,6 @@ export const useMessageStore = create<MessageState & MessageActions>((set, get) 
     
     // Save to cache asynchronously
     get().saveMessagesToCache(chatId);
-    
-    // Embed message for RAG (async, don't block)
-    // Only embed non-temporary messages with real IDs
-    if (!message.pending && !message.tempId && message.text.trim().length > 0) {
-      const user = useAuthStore.getState().user;
-      const senderName = user?.uid === message.senderId ? user.displayName : 'User';
-      ragService.embedMessage(message, chatId, senderName).catch(error => {
-        console.warn('Failed to embed message:', error);
-        // Don't throw - embedding failures shouldn't break messaging
-      });
-    }
   },
   
   updateMessage: (chatId, messageId, updates) => {

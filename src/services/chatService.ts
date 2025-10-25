@@ -548,6 +548,8 @@ export function subscribeToMessages(
           imageUrl: messageData.imageUrl,
           imageWidth: messageData.imageWidth,
           imageHeight: messageData.imageHeight,
+          detectedLanguage: messageData.detectedLanguage,
+          translationCache: messageData.translationCache,
         } as Message);
       });
       

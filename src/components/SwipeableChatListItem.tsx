@@ -47,7 +47,7 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponder: () => true, // Changed to true to capture touch
       onMoveShouldSetPanResponder: (_, gestureState) => {
         // Only activate if horizontal swipe is significant
         return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
@@ -170,7 +170,21 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
         ]}
         {...panResponder.panHandlers}
       >
-        <ChatListItem chat={chat} />
+        <ChatListItem 
+          chat={chat}
+          onLongPress={() => {
+            // Open swipe view on long press
+            if (!isSwipeOpen.current) {
+              isSwipeOpen.current = true;
+              Animated.spring(translateX, {
+                toValue: -DELETE_BUTTON_WIDTH,
+                useNativeDriver: true,
+                tension: 50,
+                friction: 7,
+              }).start();
+            }
+          }}
+        />
       </Animated.View>
     </View>
   );

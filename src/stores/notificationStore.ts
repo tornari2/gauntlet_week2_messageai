@@ -12,8 +12,8 @@ interface NotificationState {
   // Current in-app notification being displayed
   currentNotification: NotificationData | null;
   
-  // Queue of pending notifications
-  notificationQueue: NotificationData[];
+  // Grouped notifications by chat (chatId -> { count, lastNotification })
+  groupedNotifications: Record<string, { count: number; lastNotification: NotificationData }>;
   
   // Whether the app is currently showing a notification
   isShowingNotification: boolean;
@@ -42,7 +42,7 @@ interface NotificationActions {
 export const useNotificationStore = create<NotificationState & NotificationActions>((set, get) => ({
   // Initial state
   currentNotification: null,
-  notificationQueue: [],
+  groupedNotifications: {},
   isShowingNotification: false,
   activeChatId: null,
   
@@ -56,12 +56,38 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       return;
     }
     
-    // If already showing a notification, add to queue
+    // If already showing a notification, group it
     if (state.isShowingNotification) {
-      console.log('📬 Adding notification to queue');
-      set((state) => ({
-        notificationQueue: [...state.notificationQueue, notification],
-      }));
+      set((state) => {
+        const chatId = notification.chatId;
+        const existing = state.groupedNotifications[chatId];
+        
+        if (existing) {
+          // Update existing group
+          console.log(`📬 Grouping notification for chat ${chatId} (${existing.count + 1} total)`);
+          return {
+            groupedNotifications: {
+              ...state.groupedNotifications,
+              [chatId]: {
+                count: existing.count + 1,
+                lastNotification: notification,
+              },
+            },
+          };
+        } else {
+          // Create new group
+          console.log(`📬 Creating notification group for chat ${chatId}`);
+          return {
+            groupedNotifications: {
+              ...state.groupedNotifications,
+              [chatId]: {
+                count: 1,
+                lastNotification: notification,
+              },
+            },
+          };
+        }
+      });
       return;
     }
     
@@ -86,13 +112,20 @@ export const useNotificationStore = create<NotificationState & NotificationActio
   },
   
   setActiveChatId: (chatId) => {
-    set({ activeChatId: chatId });
+    // Clear grouped notifications for this chat when user enters it
+    set((state) => {
+      const { [chatId as string]: _, ...rest } = state.groupedNotifications;
+      return {
+        activeChatId: chatId,
+        groupedNotifications: rest,
+      };
+    });
   },
   
   clearAllNotifications: () => {
     set({
       currentNotification: null,
-      notificationQueue: [],
+      groupedNotifications: {},
       isShowingNotification: false,
     });
   },
@@ -100,17 +133,31 @@ export const useNotificationStore = create<NotificationState & NotificationActio
   processNextNotification: () => {
     const state = get();
     
-    if (state.notificationQueue.length === 0) {
+    // Get the next grouped notification
+    const chatIds = Object.keys(state.groupedNotifications);
+    if (chatIds.length === 0) {
       return;
     }
     
-    // Get the next notification from the queue
-    const nextNotification = state.notificationQueue[0];
-    const remainingQueue = state.notificationQueue.slice(1);
+    // Get the first chat's grouped notification
+    const chatId = chatIds[0];
+    const group = state.groupedNotifications[chatId];
     
+    // Create a notification with count
+    const notification = {
+      ...group.lastNotification,
+      body: group.count > 1 
+        ? `(${group.count} new messages) ${group.lastNotification.body}`
+        : group.lastNotification.body,
+    };
+    
+    // Remove this group and show the notification
+    const { [chatId]: _, ...remainingGroups } = state.groupedNotifications;
+    
+    console.log(`🔔 Showing grouped notification for ${chatId} (${group.count} messages)`);
     set({
-      currentNotification: nextNotification,
-      notificationQueue: remainingQueue,
+      currentNotification: notification,
+      groupedNotifications: remainingGroups,
       isShowingNotification: true,
     });
   },
