@@ -76,15 +76,15 @@ export function showInAppNotification(notification: NotificationData): void {
   notificationStore.showNotification(notification);
 }
 
-// Track pending notifications per chat to group them
-const pendingNotifications: Map<string, { count: number, lastMessage: string, chatName: string }> = new Map();
+// Track displayed notifications per chat to prevent duplicates
+const displayedNotifications: Map<string, string> = new Map();
 
 /**
- * Schedule a local notification with grouping
+ * Schedule a local notification
  * Shown when app is in background or not in the specific chat
- * Groups multiple messages from the same chat
+ * Replaces any existing notification for the same chat
  * @param title - Notification title
- * @param body - Notification body
+ * @param body - Notification body (should already include message count if multiple)
  * @param chatId - Chat ID for grouping
  * @param data - Custom data to include
  */
@@ -95,7 +95,13 @@ export async function scheduleLocalNotification(
   data?: any
 ): Promise<string> {
   try {
-    // Cancel any existing notification for this chat
+    // Cancel any existing notification for this chat to prevent duplicates
+    const existingNotificationId = displayedNotifications.get(chatId);
+    if (existingNotificationId) {
+      await Notifications.dismissNotificationAsync(existingNotificationId);
+    }
+
+    // Also check for any other notifications from this chat
     const existingNotifications = await Notifications.getPresentedNotificationsAsync();
     for (const notif of existingNotifications) {
       if (notif.request.content.data?.chatId === chatId) {
@@ -103,35 +109,21 @@ export async function scheduleLocalNotification(
       }
     }
 
-    // Track this notification
-    const existing = pendingNotifications.get(chatId);
-    if (existing) {
-      existing.count++;
-      existing.lastMessage = body;
-    } else {
-      pendingNotifications.set(chatId, {
-        count: 1,
-        lastMessage: body,
-        chatName: title,
-      });
-    }
-
-    const groupData = pendingNotifications.get(chatId)!;
-    const displayBody = groupData.count > 1 
-      ? `(${groupData.count} new messages) ${groupData.lastMessage}`
-      : groupData.lastMessage;
-
+    // Schedule the new notification
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
-        title: groupData.chatName,
-        body: displayBody,
-        data: { ...data, chatId, messageCount: groupData.count },
+        title: title,
+        body: body,
+        data: { ...data, chatId },
         sound: true,
-        badge: groupData.count,
+        badge: 1,
         priority: Notifications.AndroidNotificationPriority.HIGH,
       },
       trigger: null, // Show immediately
     });
+    
+    // Track this notification
+    displayedNotifications.set(chatId, notificationId);
     
     return notificationId;
   } catch (error) {
@@ -145,7 +137,7 @@ export async function scheduleLocalNotification(
  * Shows in-app banner if app is foreground, local notification if background
  * @param chatId - Chat ID
  * @param chatName - Name of the chat/sender
- * @param messageText - Message content
+ * @param messageText - Message content (may already include count like "(3 new messages) text")
  * @param senderId - ID of the sender
  */
 export async function triggerMessageNotification(
@@ -161,8 +153,8 @@ export async function triggerMessageNotification(
 
     // Don't notify if user is viewing this chat
     if (activeChatId === chatId) {
-      // Clear pending count for this chat since they're viewing it
-      pendingNotifications.delete(chatId);
+      // Clear displayed notification for this chat since they're viewing it
+      displayedNotifications.delete(chatId);
       return;
     }
 
@@ -179,7 +171,7 @@ export async function triggerMessageNotification(
     if (appState === 'active') {
       showInAppNotification(notification);
     } else {
-      // If app is in background, show grouped local notification
+      // If app is in background, show local notification
       await scheduleLocalNotification(
         chatName,
         messageText,
@@ -193,24 +185,36 @@ export async function triggerMessageNotification(
 }
 
 /**
- * Cancel all scheduled notifications and clear pending counts
+ * Cancel all scheduled notifications and clear tracking
  */
 export async function cancelAllNotifications(): Promise<void> {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
     await Notifications.dismissAllNotificationsAsync();
-    pendingNotifications.clear();
+    displayedNotifications.clear();
   } catch (error) {
     console.error('Error canceling notifications:', error);
   }
 }
 
 /**
- * Clear notification count for a specific chat
+ * Clear notification tracking for a specific chat
  * Call this when user opens a chat
  */
-export function clearChatNotificationCount(chatId: string): void {
-  pendingNotifications.delete(chatId);
+export async function clearChatNotificationCount(chatId: string): Promise<void> {
+  displayedNotifications.delete(chatId);
+  
+  // Also dismiss any visible notifications for this chat
+  try {
+    const existingNotifications = await Notifications.getPresentedNotificationsAsync();
+    for (const notif of existingNotifications) {
+      if (notif.request.content.data?.chatId === chatId) {
+        await Notifications.dismissNotificationAsync(notif.request.identifier);
+      }
+    }
+  } catch (error) {
+    console.error('Error clearing chat notifications:', error);
+  }
 }
 
 /**

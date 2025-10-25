@@ -77,6 +77,11 @@ export interface ChatWithDetails extends Chat {
   otherUserLastSeen?: Date; // For direct chats (converted from Timestamp)
   otherUserAvatarColor?: string; // For direct chats - avatar color
   unreadCount?: number;
+  participantDetails?: Array<{ // For group chats
+    uid: string;
+    displayName: string;
+    avatarColor: string;
+  }>;
 }
 
 /**

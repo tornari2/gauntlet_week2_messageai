@@ -15,15 +15,17 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { Message } from '../types';
+import { Message, User } from '../types';
 import { formatReadReceiptList, ReadReceiptUser } from '../utils/readReceiptHelpers';
 import { Colors } from '../constants/Colors';
+import { getUserAvatarColor } from '../utils/userColors';
 
 interface ReadReceiptModalProps {
   visible: boolean;
   message: Message | null;
   participants: string[];
   userNames: Record<string, string>;
+  participantUsers: User[];
   onClose: () => void;
 }
 
@@ -32,6 +34,7 @@ export const ReadReceiptModal: React.FC<ReadReceiptModalProps> = ({
   message,
   participants,
   userNames,
+  participantUsers,
   onClose,
 }) => {
   if (!message) {
@@ -45,10 +48,16 @@ export const ReadReceiptModal: React.FC<ReadReceiptModalProps> = ({
     message.senderId
   );
 
+  // Helper function to get user's avatar color
+  const getUserColor = (userId: string): string => {
+    const user = participantUsers.find(u => u.uid === userId);
+    return getUserAvatarColor(user || null);
+  };
+
   const renderUser = (user: ReadReceiptUser, hasRead: boolean) => (
     <View key={user.userId} style={styles.userRow}>
       {/* Avatar placeholder */}
-      <View style={styles.avatar}>
+      <View style={[styles.avatar, { backgroundColor: getUserColor(user.userId) }]}>
         <Text style={styles.avatarText}>
           {user.displayName.charAt(0).toUpperCase()}
         </Text>
@@ -139,7 +148,7 @@ export const ReadReceiptModal: React.FC<ReadReceiptModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   modalContainer: {
@@ -195,7 +204,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

@@ -38,6 +38,7 @@ import { Message, User } from '../types';
 import { firestore, database } from '../services/firebase';
 import { chatService } from '../services/chatService';
 import { typingService } from '../services/typingService';
+import { notificationService } from '../services/notificationService';
 import { Colors } from '../constants/Colors';
 import { getUserAvatarColor } from '../utils/userColors';
 
@@ -109,6 +110,9 @@ export const ChatScreen: React.FC = () => {
   // Set active chat ID when entering the screen
   useEffect(() => {
     setActiveChatId(chatId);
+    
+    // Clear any notifications for this chat
+    notificationService.clearChatNotificationCount(chatId);
     
     // Load user language preference
     if (user) {
@@ -685,27 +689,21 @@ export const ChatScreen: React.FC = () => {
             </Text>
             {isGroupChat ? (
               <View style={styles.participantsContainer}>
-                {participantUsers.length > 0 ? (
-                  participantUsers.map((participant, index) => (
-                    <View key={participant.uid} style={styles.participantItem}>
-                      <OnlineIndicator 
-                        isOnline={participant.isOnline}
-                        lastSeen={participant.lastSeen}
-                        showText={false}
-                        size="small"
-                        isUnknown={!isConnected}
-                      />
-                      <Text style={styles.participantName}>
-                        {participant.displayName}
-                        {index < participantUsers.length - 1 ? ', ' : ''}
-                      </Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.participantCount}>
-                    {participants.length} participant{participants.length !== 1 ? 's' : ''}
-                  </Text>
-                )}
+                {participantUsers.map((participant, index) => (
+                  <View key={participant.uid} style={styles.participantItem}>
+                    <OnlineIndicator 
+                      isOnline={participant.isOnline}
+                      lastSeen={participant.lastSeen}
+                      showText={false}
+                      size="small"
+                      isUnknown={!isConnected}
+                    />
+                    <Text style={styles.participantName}>
+                      {participant.displayName}
+                      {index < participantUsers.length - 1 ? ', ' : ''}
+                    </Text>
+                  </View>
+                ))}
               </View>
             ) : otherUser ? (
               <View style={styles.presenceContainer}>
@@ -802,6 +800,7 @@ export const ChatScreen: React.FC = () => {
         message={selectedMessage}
         participants={participants}
         userNames={senderNames}
+        participantUsers={participantUsers}
         onClose={() => {
           setShowReadReceiptModal(false);
           setSelectedMessage(null);

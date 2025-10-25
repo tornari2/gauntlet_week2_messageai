@@ -5,7 +5,7 @@
  * for instant message notifications without polling.
  */
 
-import { ref, onValue, set, remove, DatabaseReference } from 'firebase/database';
+import { ref, onValue, set, remove } from 'firebase/database';
 import { database } from './firebase';
 import { triggerMessageNotification } from './notificationService';
 import { useAuthStore } from '../stores/authStore';
@@ -19,6 +19,12 @@ interface MessageNotificationPayload {
 }
 
 let notificationListener: (() => void) | null = null;
+let processedNotificationIds: Set<string> = new Set();
+
+// Clear old processed IDs every 5 minutes to prevent memory leak
+setInterval(() => {
+  processedNotificationIds.clear();
+}, 5 * 60 * 1000);
 
 /**
  * Initialize real-time notification listener for a user
@@ -34,6 +40,10 @@ export function initializeRealtimeNotifications(userId: string): () => void {
   // Reference to user's notification queue in Realtime Database
   const notificationsRef = ref(database, `notifications/${userId}`);
 
+  // Track notifications per chat for grouping
+  let notificationBuffer: Map<string, MessageNotificationPayload[]> = new Map();
+  let processingTimeout: NodeJS.Timeout | null = null;
+
   // Listen for new notifications
   const unsubscribe = onValue(notificationsRef, (snapshot) => {
     const data = snapshot.val();
@@ -42,26 +52,63 @@ export function initializeRealtimeNotifications(userId: string): () => void {
       return;
     }
 
-    // Process each notification
+    // Collect all new notifications, grouped by chat
     Object.entries(data).forEach(([notificationId, payload]) => {
       const notification = payload as MessageNotificationPayload;
       
-      // Trigger the notification (in-app or local)
-      triggerMessageNotification(
-        notification.chatId,
-        notification.chatName,
-        notification.messageText,
-        notification.senderId
-      ).catch(error => {
-        console.error('Error triggering notification:', error);
-      });
+      // Skip if already processed (prevents duplicates on rapid changes)
+      if (processedNotificationIds.has(notificationId)) {
+        return;
+      }
+      processedNotificationIds.add(notificationId);
+      
+      // Add to buffer, grouped by chatId
+      const chatNotifications = notificationBuffer.get(notification.chatId) || [];
+      chatNotifications.push(notification);
+      notificationBuffer.set(notification.chatId, chatNotifications);
 
-      // Remove the notification from the queue after processing
+      // Remove the notification from the queue
       const notificationRef = ref(database, `notifications/${userId}/${notificationId}`);
       remove(notificationRef).catch(error => {
         console.error('Error removing notification from queue:', error);
       });
     });
+
+    // Clear any existing timeout and schedule new processing
+    if (processingTimeout) {
+      clearTimeout(processingTimeout);
+    }
+
+    // Wait a short time to batch notifications from the same chat
+    processingTimeout = setTimeout(() => {
+      // Process all buffered notifications
+      notificationBuffer.forEach((notifications) => {
+        if (notifications.length === 0) return;
+
+        // Get the last notification for this chat
+        const lastNotification = notifications[notifications.length - 1];
+        const count = notifications.length;
+
+        // Build the message with count if multiple
+        const messageText = count > 1 
+          ? `(${count} new messages) ${lastNotification.messageText}`
+          : lastNotification.messageText;
+        
+        // Trigger a single grouped notification per chat
+        triggerMessageNotification(
+          lastNotification.chatId,
+          lastNotification.chatName,
+          messageText,
+          lastNotification.senderId
+        ).catch(error => {
+          console.error('Error triggering notification:', error);
+        });
+      });
+
+      // Clear the buffer
+      notificationBuffer.clear();
+      processingTimeout = null;
+    }, 300); // 300ms debounce to group rapid messages
   });
 
   notificationListener = unsubscribe;
@@ -116,6 +163,8 @@ export function cleanupRealtimeNotifications(): void {
     notificationListener();
     notificationListener = null;
   }
+  // Clear the processed notifications set
+  processedNotificationIds.clear();
 }
 
 /**

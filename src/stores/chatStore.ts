@@ -27,6 +27,7 @@ interface ChatActions {
   clearError: () => void;
   subscribeToChats: (userId: string) => () => void;
   createOrGetDirectChat: (currentUserId: string, otherUserId: string) => Promise<string>;
+  createGroupChat: (creatorId: string, participantIds: string[], groupName: string) => Promise<string>;
   deleteChat: (chatId: string, userId: string) => Promise<void>;
 }
 
@@ -81,6 +82,22 @@ export const useChatStore = create<ChatStore>((set) => ({
     } catch (error: any) {
       console.error('Error creating/getting chat:', error);
       set({ error: error.message || 'Failed to create chat', loading: false });
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new group chat
+   */
+  createGroupChat: async (creatorId: string, participantIds: string[], groupName: string) => {
+    try {
+      set({ loading: true, error: null });
+      const chatId = await chatService.createGroupChat(creatorId, participantIds, groupName);
+      set({ loading: false });
+      return chatId;
+    } catch (error: any) {
+      console.error('Error creating group chat:', error);
+      set({ error: error.message || 'Failed to create group chat', loading: false });
       throw error;
     }
   },

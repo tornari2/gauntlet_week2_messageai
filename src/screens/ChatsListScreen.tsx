@@ -126,15 +126,6 @@ export const ChatsListScreen: React.FC = () => {
         <Ionicons name="person" size={24} color="#fff" />
       </TouchableOpacity>
 
-      {/* Floating action button for creating new group */}
-      <TouchableOpacity
-        style={[styles.fab, styles.fabSecondary]}
-        onPress={() => navigation.navigate('CreateGroup')}
-        testID="new-group-button"
-      >
-        <Text style={styles.fabText}>👥</Text>
-      </TouchableOpacity>
-
       {/* Floating action button for creating new chats */}
       <TouchableOpacity
         style={styles.fab}
@@ -155,7 +146,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff', // White background
+    backgroundColor: '#F5F5F5', // Light gray background (matches UserProfileScreen)
   },
   header: {
     flexDirection: 'row',
@@ -221,7 +212,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark, // Brown color (matches profile button)
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
@@ -233,25 +224,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
   },
-  fabSecondary: {
-    bottom: 90, // Position above the main FAB
-    backgroundColor: Colors.primaryDark,
-  },
   fabProfile: {
     left: 20,
     right: 'auto', // Override right position
     bottom: 20,
-    backgroundColor: Colors.primaryDark, // Same as group button
+    backgroundColor: Colors.primaryDark,
   },
   fabIcon: {
     fontSize: 32,
     color: '#fff',
     fontWeight: '300',
     lineHeight: 32,
-  },
-  fabText: {
-    fontSize: 24,
-    color: '#fff',
   },
 });
 

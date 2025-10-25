@@ -202,7 +202,39 @@ export function subscribeToUserChats(
             }
           }
         } else {
-          // Group chat
+          // Group chat - load participant details (including current user)
+          const allParticipants = chatData.participants;
+          const participantDetails = await Promise.all(
+            allParticipants.slice(0, 6).map(async (participantId: string) => { // Limit to first 6 for circular display
+              try {
+                const userRef = doc(firestore, 'users', participantId);
+                const userSnap = await getDoc(userRef);
+                
+                if (userSnap.exists()) {
+                  const userData = userSnap.data();
+                  return {
+                    uid: participantId,
+                    displayName: userData.displayName || 'Unknown',
+                    avatarColor: userData.avatarColor || '#25D366',
+                  };
+                } else {
+                  return {
+                    uid: participantId,
+                    displayName: 'Unknown',
+                    avatarColor: '#25D366',
+                  };
+                }
+              } catch (error) {
+                console.error(`Error loading participant ${participantId}:`, error);
+                return {
+                  uid: participantId,
+                  displayName: 'Unknown',
+                  avatarColor: '#25D366',
+                };
+              }
+            })
+          );
+          
           chats.push({
             id: docSnap.id,
             type: chatData.type,
@@ -213,6 +245,7 @@ export function subscribeToUserChats(
             groupName: chatData.groupName,
             groupPhoto: chatData.groupPhoto,
             unreadCount: latestChats.find(c => c.id === docSnap.id)?.unreadCount ?? 0, // Preserve existing count
+            participantDetails,
           });
         }
       }

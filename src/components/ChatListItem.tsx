@@ -96,14 +96,20 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat, onL
     >
       {/* Avatar placeholder */}
       <View style={styles.avatarContainer}>
-        <View style={[
-          styles.avatar,
-          { backgroundColor: getAvatarColor() }
-        ]}>
-          <Text style={styles.avatarText}>
-            {chat.type === 'group' ? '👥' : getChatName().charAt(0).toUpperCase()}
-          </Text>
-        </View>
+        {chat.type === 'group' ? (
+          <View style={[styles.avatar, styles.groupAvatar]}>
+            <Text style={styles.groupAvatarIcon}>👥</Text>
+          </View>
+        ) : (
+          <View style={[
+            styles.avatar,
+            { backgroundColor: getAvatarColor() }
+          ]}>
+            <Text style={styles.avatarText}>
+              {getChatName().charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
         {/* Online indicator for direct chats */}
         {chat.type === 'direct' && (
           <View style={styles.onlineIndicatorWrapper}>
@@ -200,6 +206,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  groupAvatar: {
+    backgroundColor: Colors.primaryDark,
+  },
+  groupAvatarIcon: {
+    fontSize: 28,
+    color: '#fff',
+  },
   avatarText: {
     color: '#fff',
     fontSize: 24,
@@ -224,16 +237,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: 8,
   },
   chatName: {
     fontSize: 17,
     fontWeight: '600',
     color: '#000',
+    flexShrink: 1,
   },
   participantCount: {
-    fontSize: 13,
-    color: '#8e8e93',
+    fontSize: 14,
+    color: '#a0a0a0',
     marginLeft: 4,
+    flexShrink: 0,
   },
   timestamp: {
     fontSize: 13,

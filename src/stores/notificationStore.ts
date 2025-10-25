@@ -56,8 +56,8 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       return;
     }
     
-    // If already showing a notification, group it
-    if (state.isShowingNotification) {
+    // If already showing a notification from a different chat, group it
+    if (state.isShowingNotification && state.currentNotification?.chatId !== notification.chatId) {
       set((state) => {
         const chatId = notification.chatId;
         const existing = state.groupedNotifications[chatId];
@@ -87,6 +87,16 @@ export const useNotificationStore = create<NotificationState & NotificationActio
             },
           };
         }
+      });
+      return;
+    }
+    
+    // If showing notification from the SAME chat, replace it instead of queueing
+    if (state.isShowingNotification && state.currentNotification?.chatId === notification.chatId) {
+      console.log(`🔄 Replacing notification for same chat ${notification.chatId}`);
+      set({
+        currentNotification: notification,
+        isShowingNotification: true,
       });
       return;
     }

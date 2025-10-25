@@ -1,83 +1,90 @@
 # Active Context: WhatsApp Clone MVP
 
 ## Current Status
-**Phase:** Critical Bug Fixes Complete ✅
-**Date Updated:** October 23, 2025
-**Next Action:** Remove debug logging, ready for production testing
+**Phase:** Translation & AI Features Complete ✅
+**Date Updated:** October 25, 2025
+**Next Action:** Ready for next feature development or testing
 
-## Recent Completion: ChatScreen Presence Updates Fixed ✅
+## Recent Completion: Comprehensive AI Translation & Messaging Features ✅
 **Status:** COMPLETE
-**Date:** October 23, 2025
-**Commits:** a8ae8bb, 466b6b3, d475aa2, 5984b21, 372a832, c8be171, 86bba2a, fe3c892
+**Date:** October 25, 2025
+**Commit:** 7b9b73b
 
-### What Was Fixed
-Fixed critical issue where online/offline status indicators weren't updating in ChatScreen (both direct and group chats) after users force-quit the app.
+### What Was Implemented
 
-#### The Journey (4 Compounding Issues)
+#### 1. Language Detection & Flag Badges
+- Added `TranslationBadge` component with country flag emojis (🇫🇷 🇪🇸 🇺🇸 etc)
+- Implemented tap-to-translate functionality
+- Language detection via OpenAI's `gpt-4o-mini`
+- Flag emojis map to ISO 639-1 language codes
+- Unknown language handling (filters OpenAI's 'xx' code)
 
-**Issue 1: Missing Error Callbacks**
-- RTDB `onValue()` calls were missing error callback parameters
-- Subscription failures were happening silently
-- Added error callbacks to all RTDB listeners
+#### 2. Auto-Translation Toggle
+- Per-chat auto-translate setting
+- Toggle button in ChatScreen header
+- Settings persist via AsyncStorage
+- Auto-translated messages show 🤖 icon
+- Manual translations show ✓ icon
+- "Show Original" always available
 
-**Issue 2: Infinite Re-subscription Loop**
-- useEffect dependencies included full objects (`currentChat`, `user`)
-- Objects recreated on every render caused constant re-subscriptions
-- Fixed by depending only on IDs: `[currentChat?.id, user?.uid]`
+#### 3. Formality Adjustment
+- Firebase Cloud Function for formality changes
+- Three levels: casual, neutral, formal
+- Fixed AI prompting to prevent letter formatting
+- Only rephrases sentences, no greetings/closings
 
-**Issue 3: Duplicate Subscriptions (Direct Chats)**
-- ChatScreen was creating its own RTDB subscription
-- `chatService` already subscribed to the same data
-- Solution: Use `currentChat.otherUserOnline` from chatService
-- Removed duplicate subscription entirely
+#### 4. Cultural Context & Slang
+- `CulturalContextModal` with OpenAI analysis
+- `SlangExplanationModal` for slang terms
+- Explains cultural nuances and idioms
 
-**Issue 4: Race Condition (Group Chats)**
-- RTDB listeners fired before Firestore loaded user profiles
-- `participantUsers` was empty when presence updates arrived
-- Solution: Load Firestore first, then set up RTDB after 500ms delay
-- Added safety check to skip updates if array is empty
+#### 5. Multilingual Thread Summarization
+- `MultilingualSummaryModal` component
+- Summarizes conversations in user's preferred language
+- Handles mixed-language conversations
 
-### The Fix Summary
+#### 6. UI/UX Improvements
+- Long-press delete slider for chat list items
+- Fixed SwipeableChatListItem touch handling
+- Removed redundant translate option from long-press menu
+- Grouped notifications by chat (shows message count)
+- Fixed detectedLanguage field mapping in chatService
 
-**Direct Chats:**
-```typescript
-// No longer creates separate RTDB subscription
-// Uses presence data from currentChat object
-const directChatOnlineStatus = currentChat?.otherUserOnline;
-setOtherUser({
-  ...profile,
-  isOnline: directChatOnlineStatus ?? false,
-});
-```
+### Files Created
+- `src/components/TranslationBadge.tsx`
+- `src/components/TranslationTestButton.tsx`
+- `src/components/FormalitySelector.tsx`
+- `src/components/CulturalContextModal.tsx`
+- `src/components/SlangExplanationModal.tsx`
+- `src/components/MultilingualSummaryModal.tsx`
+- `src/services/translationService.ts`
+- `src/services/languageService.ts`
+- `src/stores/translationStore.ts`
+- `src/types/translation.ts`
+- `LANGUAGE_PREFERENCE_UI.md`
+- `test-translation-features.js`
 
-**Group Chats:**
-```typescript
-// Load profiles first
-participantIds.forEach(uid => {
-  onSnapshot(userDocRef, (doc) => {
-    // Populate participantUsers
-  });
-});
-
-// Then set up RTDB after delay
-setTimeout(() => {
-  participantIds.forEach(uid => {
-    onValue(statusRef, (snapshot) => {
-      // Now participantUsers is populated
-      setParticipantUsers(prev => 
-        prev.map(u => u.uid === uid ? { ...u, isOnline } : u)
-      );
-    });
-  });
-}, 500);
-```
+### Files Modified
+- `src/screens/ChatScreen.tsx` - Auto-translate toggle, badge integration
+- `src/components/MessageBubble.tsx` - Auto-translate logic, badge props
+- `src/components/ChatListItem.tsx` - Long-press support
+- `src/components/SwipeableChatListItem.tsx` - Long-press delete slider
+- `src/screens/UserProfileScreen.tsx` - Language preference
+- `src/services/chatService.ts` - DetectedLanguage field mapping
+- `src/stores/notificationStore.ts` - Notification grouping by chat
+- `src/stores/messageStore.ts` - Translation cache support
+- `functions/src/index.ts` - Formality adjustment fix
+- `functions/package.json` - OpenAI dependency
 
 ### Result
-- ✅ Direct chat presence updates correctly
-- ✅ Group chat presence updates correctly
-- ✅ Both update within 30-60 seconds (Firebase's onDisconnect timeout)
-- ✅ No memory leaks or duplicate subscriptions
-- ✅ Works identically to ChatsListScreen
+- ✅ Language detection with flag badges working
+- ✅ Auto-translation toggle per chat
+- ✅ Unknown language handling (no translation for 'xx')
+- ✅ Formality adjustment without letter formatting
+- ✅ Long-press delete slider on chat items
+- ✅ Grouped notifications prevent spam
+- ✅ All translation features deployed to Firebase
+- ✅ Changes committed and pushed to GitHub
 
 ---
 
