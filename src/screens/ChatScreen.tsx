@@ -632,7 +632,6 @@ export const ChatScreen: React.FC = () => {
         senderName={senderName}
         senderColor={senderColor}
         isGroupChat={isGroupChat}
-        chatId={chatId}
         autoTranslateEnabled={translationStore.isAutoTranslateEnabled(chatId)}
         onReadReceiptPress={isSent ? () => handleReadReceiptPress(item) : undefined}
         onRetry={item.failed && item.tempId ? () => handleRetry(item.tempId!) : undefined}
