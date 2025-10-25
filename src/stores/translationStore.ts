@@ -369,7 +369,6 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
     try {
       const userLanguage = get().userLanguage;
       const summary = await translationService.summarizeMultilingualThread(
-        chatId,
         messages,
         users,
         userLanguage

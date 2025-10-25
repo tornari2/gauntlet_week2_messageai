@@ -10,8 +10,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Ale
 import { Message } from '../types';
 import { formatBubbleTime } from '../utils/dateHelpers';
 import { Colors } from '../constants/Colors';
-import { TranslationBadge } from './TranslationBadge';
 import { useTranslationStore } from '../stores/translationStore';
+import { getLanguageName, getLanguageFlag } from '../services/languageService';
 
 interface MessageBubbleProps {
   message: Message;
@@ -46,7 +46,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [displayText, setDisplayText] = useState(message.text);
   
   const translationStore = useTranslationStore();
-  const { userLanguage, translateMessage, translating } = translationStore;
+  const { userLanguage, translateMessage } = translationStore;
 
   // Reset image states when message changes (e.g., when optimistic message is replaced with real one)
   useEffect(() => {
@@ -94,10 +94,27 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     setShowingTranslation(false);
   };
 
+  const handleBubbleTap = () => {
+    // Toggle translation on tap
+    if (!message.text || message.text.trim().length === 0) return;
+    
+    // If showing translation, show original
+    if (showingTranslation) {
+      handleShowOriginal();
+    } else {
+      // If not showing translation, translate it
+      if (message.detectedLanguage && message.detectedLanguage !== userLanguage) {
+        handleTranslate();
+      }
+    }
+  };
+
   const handleLongPress = () => {
     if (!message.text || message.text.trim().length === 0) return;
 
     const detectedLanguage = message.detectedLanguage || userLanguage;
+    const languageName = getLanguageName(detectedLanguage);
+    const languageFlag = getLanguageFlag(detectedLanguage);
     const options = ['Cancel'];
     
     // Cultural context option
@@ -106,9 +123,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     // Slang explanation option
     options.unshift('💬 Explain Slang');
 
+    // Create the subtitle showing the language information
+    let subtitle = '';
+    if (showingTranslation && detectedLanguage && detectedLanguage !== userLanguage) {
+      // If currently showing translation, show the flag and "Translated from..."
+      subtitle = `${languageFlag} Translated from ${languageName}`;
+    } else if (detectedLanguage && detectedLanguage !== userLanguage) {
+      // If not translated but message is in foreign language
+      subtitle = `Originally in ${languageName}`;
+    } else {
+      // Message in user's language
+      subtitle = `Message in ${languageName}`;
+    }
+
     Alert.alert(
       'Message Options',
-      message.text.length > 50 ? message.text.substring(0, 50) + '...' : message.text,
+      subtitle,
       options.map((option) => {
         if (option === 'Cancel') {
           return { text: option, style: 'cancel' };
@@ -193,6 +223,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     >
       <TouchableOpacity
         activeOpacity={0.9}
+        onPress={handleBubbleTap}
         onLongPress={handleLongPress}
         delayLongPress={500}
         style={[
@@ -213,19 +244,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           ]}>
             {senderName}
           </Text>
-        )}
-
-        {/* Translation Badge */}
-        {message.text && (
-          <TranslationBadge
-            message={message}
-            userLanguage={userLanguage}
-            translated={showingTranslation}
-            translating={translating[message.id] || false}
-            autoTranslated={autoTranslateEnabled && showingTranslation}
-            onTranslate={handleTranslate}
-            onShowOriginal={showingTranslation ? handleShowOriginal : undefined}
-          />
         )}
         
         {/* Show image if present */}

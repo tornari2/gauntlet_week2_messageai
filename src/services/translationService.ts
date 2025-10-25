@@ -4,7 +4,7 @@
  */
 
 import { httpsCallable } from 'firebase/functions';
-import { functions, auth } from './firebase';
+import { functions } from './firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   TranslationResult,
@@ -30,9 +30,6 @@ async function retryWithBackoff<T>(
       return await fn();
     } catch (error: any) {
       lastError = error as Error;
-      
-      // TEMPORARY: Don't skip retries on auth errors - just keep retrying
-      // The backend doesn't require auth anymore
       
       console.error(`Attempt ${attempt + 1} failed:`, error);
       
@@ -67,37 +64,28 @@ export async function translateText(
     );
   }
 
-  // TEMPORARY: Call function directly via HTTP instead of httpsCallable to bypass auth
-  const functionUrl = 'https://us-central1-messageai-42e78.cloudfunctions.net/translateText';
+  const translateTextFn = httpsCallable(functions, 'translateText');
   
   return retryWithBackoff(async () => {
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          text,
-          targetLanguage,
-          sourceLanguage,
-        },
-      }),
-    });
+    try {
+      const result = await translateTextFn({
+        text,
+        targetLanguage,
+        sourceLanguage,
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      const data = result.data as any;
+
+      return {
+        translatedText: data.translatedText || '',
+        sourceLanguage: data.sourceLanguage || sourceLanguage || 'unknown',
+        targetLanguage: data.targetLanguage || targetLanguage,
+        confidence: data.confidence || 0.8,
+      };
+    } catch (error) {
+      console.error('translateText function call failed:', error);
+      throw error;
     }
-
-    const result = await response.json();
-    const data = result.result;
-
-    return {
-      translatedText: data.translatedText || '',
-      sourceLanguage: data.sourceLanguage || sourceLanguage || 'unknown',
-      targetLanguage: data.targetLanguage || targetLanguage,
-      confidence: data.confidence || 0.8,
-    };
   });
 }
 
@@ -110,26 +98,14 @@ export async function detectLanguage(text: string): Promise<string> {
     return 'en';
   }
 
-  const functionUrl = 'https://us-central1-messageai-42e78.cloudfunctions.net/detectLanguage';
+  const detectLanguageFn = httpsCallable(functions, 'detectLanguage');
   
   try {
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: { text },
-      }),
-    });
-
-    if (!response.ok) {
-      return 'en';
-    }
-
-    const result = await response.json();
-    return result.result?.languageCode || 'en';
-  } catch (error: any) {
+    const result = await detectLanguageFn({ text });
+    const data = result.data as any;
+    return data.languageCode || 'en';
+  } catch (error) {
+    console.error('detectLanguage function call failed:', error);
     return 'en';
   }
 }
@@ -176,30 +152,21 @@ export async function explainSlang(
     return [];
   }
 
-  // TEMPORARY: Call function directly via HTTP instead of httpsCallable to bypass auth
-  const functionUrl = 'https://us-central1-messageai-42e78.cloudfunctions.net/explainSlang';
+  const explainSlangFn = httpsCallable(functions, 'explainSlang');
   
   return retryWithBackoff(async () => {
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          text,
-          detectedLanguage,
-        },
-      }),
-    });
+    try {
+      const result = await explainSlangFn({
+        text,
+        detectedLanguage,
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      const data = result.data as any;
+      return data.explanations || [];
+    } catch (error) {
+      console.error('explainSlang function call failed:', error);
+      throw error;
     }
-
-    const result = await response.json();
-    const data = result.result;
-    return data.explanations || [];
   });
 }
 
@@ -218,36 +185,27 @@ export async function getCulturalContext(
     );
   }
 
-  // TEMPORARY: Call function directly via HTTP instead of httpsCallable to bypass auth
-  const functionUrl = 'https://us-central1-messageai-42e78.cloudfunctions.net/getCulturalContext';
+  const getCulturalContextFn = httpsCallable(functions, 'getCulturalContext');
   
   return retryWithBackoff(async () => {
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          text,
-          detectedLanguage,
-        },
-      }),
-    });
+    try {
+      const result = await getCulturalContextFn({
+        text,
+        detectedLanguage,
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      const data = result.data as any;
+      
+      return {
+        messageText: text,
+        detectedLanguage,
+        culturalInsights: data.culturalInsights || 'No specific cultural context detected.',
+        references: data.references || [],
+      };
+    } catch (error) {
+      console.error('getCulturalContext function call failed:', error);
+      throw error;
     }
-
-    const result = await response.json();
-    const data = result.result;
-    
-    return {
-      messageText: text,
-      detectedLanguage,
-      culturalInsights: data.culturalInsights || 'No specific cultural context detected.',
-      references: data.references || [],
-    };
   });
 }
 
@@ -256,7 +214,6 @@ export async function getCulturalContext(
  * Generates a summary of a conversation in the user's preferred language
  */
 export async function summarizeMultilingualThread(
-  chatId: string,
   messages: Message[],
   users: Record<string, User>,
   userLanguage: string

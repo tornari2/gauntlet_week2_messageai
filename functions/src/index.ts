@@ -62,11 +62,10 @@ function cleanJSONResponse(content: string): string {
  * Translates text from one language to another
  */
 export const translateText = functions.https.onCall(async (data, context) => {
-  // TEMPORARY: Skip auth check for testing
-  // TODO: Re-enable auth once token passing is fixed
-  // if (!context.auth) {
-  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to translate text');
-  // }
+  if (!context.auth) {
+    console.error('Unauthenticated request to translateText');
+    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to translate text');
+  }
 
   const { text, targetLanguage, sourceLanguage } = data;
 
@@ -90,7 +89,13 @@ Translation:`;
       max_tokens: 500,
     });
 
-    const translatedText = response.choices[0].message.content?.trim() || text;
+    let translatedText = response.choices[0].message.content?.trim() || text;
+    
+    // Remove surrounding quotes if present (AI sometimes adds them)
+    if ((translatedText.startsWith('"') && translatedText.endsWith('"')) ||
+        (translatedText.startsWith("'") && translatedText.endsWith("'"))) {
+      translatedText = translatedText.slice(1, -1);
+    }
 
     return {
       translatedText,
@@ -109,11 +114,10 @@ Translation:`;
  * Detects the language of a text
  */
 export const detectLanguage = functions.https.onCall(async (data, context) => {
-  // TEMPORARY: Skip auth check for testing
-  // TODO: Re-enable auth once token passing is fixed
-  // if (!context.auth) {
-  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to detect language');
-  // }
+  if (!context.auth) {
+    console.error('Unauthenticated request to detectLanguage');
+    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to detect language');
+  }
 
   const { text } = data;
 
@@ -152,11 +156,10 @@ Language code:`;
  * Rewrites text with specified formality level
  */
 export const adjustFormality = functions.https.onCall(async (data, context) => {
-  // TEMPORARY: Skip auth check for testing
-  // TODO: Re-enable auth once token passing is fixed
-  // if (!context.auth) {
-  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to adjust formality');
-  // }
+  if (!context.auth) {
+    console.error('Unauthenticated request to adjustFormality');
+    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to adjust formality');
+  }
 
   const { text, formalityLevel, targetLanguage } = data;
 
@@ -205,11 +208,10 @@ ${formalityLevel.charAt(0).toUpperCase() + formalityLevel.slice(1)} version:`;
  * Identifies and explains slang and idioms
  */
 export const explainSlang = functions.https.onCall(async (data, context) => {
-  // TEMPORARY: Skip auth check for testing
-  // TODO: Re-enable auth once token passing is fixed
-  // if (!context.auth) {
-  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to explain slang');
-  // }
+  if (!context.auth) {
+    console.error('Unauthenticated request to explainSlang');
+    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to explain slang');
+  }
 
   const { text, detectedLanguage } = data;
 
@@ -256,11 +258,10 @@ Format your response as a JSON array of objects with keys: term, literal, meanin
  * Provides cultural context and insights
  */
 export const getCulturalContext = functions.https.onCall(async (data, context) => {
-  // TEMPORARY: Skip auth check for testing
-  // TODO: Re-enable auth once token passing is fixed
-  // if (!context.auth) {
-  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to get cultural context');
-  // }
+  if (!context.auth) {
+    console.error('Unauthenticated request to getCulturalContext');
+    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to get cultural context');
+  }
 
   const { text, detectedLanguage } = data;
 
@@ -305,11 +306,10 @@ Format your response as JSON with keys:
  * Generates summary of conversation in user's preferred language
  */
 export const summarizeMultilingualThread = functions.https.onCall(async (data, context) => {
-  // TEMPORARY: Skip auth check for testing
-  // TODO: Re-enable auth once token passing is fixed
-  // if (!context.auth) {
-  //   throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to summarize thread');
-  // }
+  if (!context.auth) {
+    console.error('Unauthenticated request to summarizeMultilingualThread');
+    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to summarize thread');
+  }
 
   const { messages, userLanguage } = data;
 
