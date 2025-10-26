@@ -22,7 +22,6 @@ export default function App(): React.ReactElement {
   const appState = useRef(AppState.currentState);
   const { user } = useAuthStore();
   const { currentNotification, dismissNotification } = useNotificationStore();
-  const { loadUserLanguage } = useTranslationStore();
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
   const presenceCleanup = useRef<(() => void) | null>(null);
@@ -37,7 +36,7 @@ export default function App(): React.ReactElement {
   useEffect(() => {
     if (user) {
       // Load user's language preference FIRST (before any UI renders)
-      loadUserLanguage(user.uid).catch(error => {
+      useTranslationStore.getState().loadUserLanguage(user.uid).catch(error => {
         console.error('Failed to load user language:', error);
       });
       
@@ -72,7 +71,7 @@ export default function App(): React.ReactElement {
         realtimeCleanup.current();
       }
     };
-  }, [user, loadUserLanguage]);
+  }, [user]);
 
   // Helper functions defined before useEffects that use them
   const registerLocalNotifications = async () => {
