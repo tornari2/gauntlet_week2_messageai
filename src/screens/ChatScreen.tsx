@@ -139,19 +139,31 @@ export const ChatScreen: React.FC = () => {
     const autoTranslateEnabled = translationStore.isAutoTranslateEnabled(chatId);
     const userLanguage = translationStore.userLanguage;
     
+    console.log(`[ChatScreen] Auto-translate effect triggered. Enabled: ${autoTranslateEnabled}, Messages: ${chatMessages.length}`);
+    
     if (!autoTranslateEnabled || !chatMessages.length) return;
     
     // Find messages that need translation (foreign language, not sent by user, not already translated)
-    const messagesToTranslate = chatMessages.filter(msg => 
-      msg.senderId !== user?.uid && // Not our own messages
-      msg.text && 
-      msg.detectedLanguage && 
-      msg.detectedLanguage !== userLanguage &&
-      !translationStore.translations[msg.id]?.[userLanguage] && // Not already translated
-      !processedMessageIds.current.has(msg.id) // Not already processed (prevent infinite loop)
-    );
+    const messagesToTranslate = chatMessages.filter(msg => {
+      const needsTranslation = 
+        msg.senderId !== user?.uid && // Not our own messages
+        msg.text && 
+        msg.detectedLanguage && 
+        msg.detectedLanguage !== userLanguage &&
+        !translationStore.translations[msg.id]?.[userLanguage] && // Not already translated
+        !processedMessageIds.current.has(msg.id); // Not already processed (prevent infinite loop)
+      
+      if (msg.detectedLanguage && msg.detectedLanguage !== userLanguage) {
+        console.log(`[ChatScreen] Message ${msg.id}: needsTranslation=${needsTranslation}, detectedLang=${msg.detectedLanguage}, cached=${!!translationStore.translations[msg.id]?.[userLanguage]}, processed=${processedMessageIds.current.has(msg.id)}`);
+      }
+      
+      return needsTranslation;
+    });
     
-    if (messagesToTranslate.length === 0) return;
+    if (messagesToTranslate.length === 0) {
+      console.log('[ChatScreen] No messages need translation');
+      return;
+    }
     
     console.log(`[ChatScreen] Batch auto-translating ${messagesToTranslate.length} messages`);
     
@@ -170,7 +182,7 @@ export const ChatScreen: React.FC = () => {
       // Remove from processed set on error so we can retry
       messagesToTranslate.forEach(msg => processedMessageIds.current.delete(msg.id));
     });
-  }, [chatId, chatMessages.length, user?.uid]); // FIXED: Only depend on length, not the whole array
+  }, [chatId, chatMessages, user?.uid]); // Changed to full chatMessages array to catch all changes
   
   // Get chat participants and their names
   useEffect(() => {
