@@ -9,7 +9,7 @@ import en from './translations/en';
 import es from './translations/es';
 import fr from './translations/fr';
 
-// Initialize i18next
+// Initialize i18next SYNCHRONOUSLY (important!)
 i18n
   .use(initReactI18next) // Connect with React
   .init({
@@ -24,7 +24,12 @@ i18n
       escapeValue: false, // React already escapes values
     },
     compatibilityJSON: 'v3', // Important for React Native
+    initImmediate: false, // CRITICAL: Make initialization synchronous
   });
+
+console.log('[i18n] Initialized with react-i18next');
+console.log('[i18n] Current language:', i18n.language);
+console.log('[i18n] Test translation:', i18n.t('common.create'));
 
 export default i18n;
 
