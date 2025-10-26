@@ -1,32 +1,30 @@
 /**
- * i18n Configuration
- * Configures internationalization for the app
+ * i18n Configuration using react-i18next
+ * More robust and React Native friendly
  */
 
-import { I18n } from 'i18n-js';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import en from './translations/en';
+import es from './translations/es';
+import fr from './translations/fr';
 
-// Create i18n instance FIRST
-const i18n = new I18n();
-
-// Configure BEFORE loading translations (important for Metro bundler)
-i18n.defaultLocale = 'en';
-i18n.locale = 'en';
-i18n.fallbacks = true;
-
-// Lazy load translations AFTER configuration
-try {
-  const getTranslations = () => ({
-    en: require('./translations/en').default,
-    es: require('./translations/es').default,
-    fr: require('./translations/fr').default,
+// Initialize i18next
+i18n
+  .use(initReactI18next) // Connect with React
+  .init({
+    resources: {
+      en: { translation: en },
+      es: { translation: es },
+      fr: { translation: fr },
+    },
+    lng: 'en', // Default language
+    fallbackLng: 'en', // Fallback language
+    interpolation: {
+      escapeValue: false, // React already escapes values
+    },
+    compatibilityJSON: 'v3', // Important for React Native
   });
-  
-  i18n.store(getTranslations());
-} catch (error) {
-  console.error('[i18n] Error loading translations:', error);
-  // Fallback: empty translations to prevent crashes
-  i18n.store({ en: { common: { create: 'Create' } }, es: {}, fr: {} });
-}
 
 export default i18n;
 
@@ -35,12 +33,8 @@ export default i18n;
  * @param languageCode ISO 639-1 language code (e.g., 'en', 'es', 'fr')
  */
 export function setAppLanguage(languageCode: string): void {
-  try {
-    i18n.locale = languageCode;
-    console.log(`[i18n] Language set to: ${languageCode}`);
-  } catch (error) {
-    console.error('[i18n] Error setting language:', error);
-  }
+  i18n.changeLanguage(languageCode);
+  console.log(`[i18n] Language changed to: ${languageCode}`);
 }
 
 /**
@@ -48,7 +42,7 @@ export function setAppLanguage(languageCode: string): void {
  * @returns Current language code
  */
 export function getAppLanguage(): string {
-  return i18n.locale;
+  return i18n.language;
 }
 
 /**
@@ -77,4 +71,5 @@ export function isLanguageSupported(languageCode: string): boolean {
 export function getSupportedLanguages(): string[] {
   return ['en', 'es', 'fr'];
 }
+
 
