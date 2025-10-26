@@ -16,6 +16,84 @@ import {
 } from '../types/translation';
 import { Message, User } from '../types';
 
+// ==================== CACHING CONFIGURATION ====================
+
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CACHE_PREFIX = 'ai_cache_v1_';
+
+/**
+ * Simple string hash function for cache keys
+ */
+function hashString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
+/**
+ * Generic cache getter
+ */
+async function getCachedResult<T>(
+  feature: string,
+  input: string,
+  params: Record<string, any> = {}
+): Promise<T | null> {
+  try {
+    const paramsStr = JSON.stringify(params);
+    const hash = hashString(input + paramsStr);
+    const key = `${CACHE_PREFIX}${feature}_${hash}`;
+    
+    const cached = await AsyncStorage.getItem(key);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      
+      // Check if cache is still valid
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        console.log(`[Cache HIT] ${feature}`);
+        return data as T;
+      } else {
+        // Cache expired, remove it
+        await AsyncStorage.removeItem(key);
+      }
+    }
+  } catch (error) {
+    console.error(`Error reading cache for ${feature}:`, error);
+  }
+  
+  console.log(`[Cache MISS] ${feature}`);
+  return null;
+}
+
+/**
+ * Generic cache setter
+ */
+async function setCachedResult<T>(
+  feature: string,
+  input: string,
+  params: Record<string, any> = {},
+  data: T
+): Promise<void> {
+  try {
+    const paramsStr = JSON.stringify(params);
+    const hash = hashString(input + paramsStr);
+    const key = `${CACHE_PREFIX}${feature}_${hash}`;
+    
+    const cacheEntry = {
+      data,
+      timestamp: Date.now(),
+    };
+    
+    await AsyncStorage.setItem(key, JSON.stringify(cacheEntry));
+  } catch (error) {
+    console.error(`Error writing cache for ${feature}:`, error);
+    // Don't throw - caching is not critical
+  }
+}
+
 /**
  * Helper: Retry with exponential backoff
  */
@@ -64,6 +142,13 @@ export async function translateText(
     );
   }
 
+  // Check cache first
+  const cacheParams = { targetLanguage, sourceLanguage: sourceLanguage || 'auto' };
+  const cached = await getCachedResult<TranslationResult>('translate', text, cacheParams);
+  if (cached) {
+    return cached;
+  }
+
   const translateTextFn = httpsCallable(functions, 'translateText');
   
   return retryWithBackoff(async () => {
@@ -76,12 +161,17 @@ export async function translateText(
 
       const data = result.data as any;
 
-      return {
+      const translationResult: TranslationResult = {
         translatedText: data.translatedText || '',
         sourceLanguage: data.sourceLanguage || sourceLanguage || 'unknown',
         targetLanguage: data.targetLanguage || targetLanguage,
         confidence: data.confidence || 0.8,
       };
+
+      // Cache the result
+      await setCachedResult('translate', text, cacheParams, translationResult);
+
+      return translationResult;
     } catch (error) {
       console.error('translateText function call failed:', error);
       throw error;
@@ -98,12 +188,23 @@ export async function detectLanguage(text: string): Promise<string> {
     return 'en';
   }
 
+  // Check cache first
+  const cached = await getCachedResult<string>('detectLang', text);
+  if (cached) {
+    return cached;
+  }
+
   const detectLanguageFn = httpsCallable(functions, 'detectLanguage');
   
   try {
     const result = await detectLanguageFn({ text });
     const data = result.data as any;
-    return data.languageCode || 'en';
+    const languageCode = data.languageCode || 'en';
+    
+    // Cache the result
+    await setCachedResult('detectLang', text, {}, languageCode);
+    
+    return languageCode;
   } catch (error) {
     console.error('detectLanguage function call failed:', error);
     return 'en';
@@ -126,6 +227,13 @@ export async function adjustFormality(
     );
   }
 
+  // Check cache first
+  const cacheParams = { formalityLevel, targetLanguage };
+  const cached = await getCachedResult<string>('formality', text, cacheParams);
+  if (cached) {
+    return cached;
+  }
+
   const formalityFunction = httpsCallable(functions, 'adjustFormality');
   
   return retryWithBackoff(async () => {
@@ -136,7 +244,12 @@ export async function adjustFormality(
     });
 
     const data = result.data as any;
-    return data.adjustedText || text;
+    const adjustedText = data.adjustedText || text;
+    
+    // Cache the result
+    await setCachedResult('formality', text, cacheParams, adjustedText);
+    
+    return adjustedText;
   });
 }
 
@@ -152,6 +265,13 @@ export async function explainSlang(
     return [];
   }
 
+  // Check cache first
+  const cacheParams = { detectedLanguage };
+  const cached = await getCachedResult<SlangExplanation[]>('slang', text, cacheParams);
+  if (cached) {
+    return cached;
+  }
+
   const explainSlangFn = httpsCallable(functions, 'explainSlang');
   
   return retryWithBackoff(async () => {
@@ -162,7 +282,12 @@ export async function explainSlang(
       });
 
       const data = result.data as any;
-      return data.explanations || [];
+      const explanations = data.explanations || [];
+      
+      // Cache the result
+      await setCachedResult('slang', text, cacheParams, explanations);
+      
+      return explanations;
     } catch (error) {
       console.error('explainSlang function call failed:', error);
       throw error;
@@ -185,6 +310,13 @@ export async function getCulturalContext(
     );
   }
 
+  // Check cache first
+  const cacheParams = { detectedLanguage };
+  const cached = await getCachedResult<CulturalContext>('cultural', text, cacheParams);
+  if (cached) {
+    return cached;
+  }
+
   const getCulturalContextFn = httpsCallable(functions, 'getCulturalContext');
   
   return retryWithBackoff(async () => {
@@ -196,12 +328,17 @@ export async function getCulturalContext(
 
       const data = result.data as any;
       
-      return {
+      const culturalContext: CulturalContext = {
         messageText: text,
         detectedLanguage,
         culturalInsights: data.culturalInsights || 'No specific cultural context detected.',
         references: data.references || [],
       };
+      
+      // Cache the result
+      await setCachedResult('cultural', text, cacheParams, culturalContext);
+      
+      return culturalContext;
     } catch (error) {
       console.error('getCulturalContext function call failed:', error);
       throw error;
