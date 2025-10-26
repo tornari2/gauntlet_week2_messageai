@@ -55,6 +55,7 @@ export const ChatScreen: React.FC = () => {
   const [participantUsers, setParticipantUsers] = useState<User[]>([]); // For group chats
   const [senderNames, setSenderNames] = useState<Record<string, string>>({});
   const processedMessageIds = useRef<Set<string>>(new Set()); // Track processed messages to prevent infinite loop
+  const [autoTranslateTrigger, setAutoTranslateTrigger] = useState(0); // Trigger to force effect re-run
   
   // Typing indicator state
   const [typingUserIds, setTypingUserIds] = useState<string[]>([]);
@@ -137,8 +138,10 @@ export const ChatScreen: React.FC = () => {
   // This allows re-translation of existing messages
   useEffect(() => {
     if (isAutoTranslateEnabled) {
-      console.log('[ChatScreen] Auto-translate enabled - clearing processed message IDs');
+      console.log('[ChatScreen] Auto-translate enabled - clearing processed message IDs and triggering batch translate');
       processedMessageIds.current.clear();
+      // Increment trigger to force batch translate effect to run
+      setAutoTranslateTrigger(prev => prev + 1);
     }
   }, [isAutoTranslateEnabled]); // Watch the extracted value
   
@@ -148,7 +151,7 @@ export const ChatScreen: React.FC = () => {
   useEffect(() => {
     const userLanguage = translationStore.userLanguage;
     
-    console.log(`[ChatScreen] Auto-translate effect triggered. Enabled: ${isAutoTranslateEnabled}, Messages: ${chatMessages.length}`);
+    console.log(`[ChatScreen] Auto-translate effect triggered. Enabled: ${isAutoTranslateEnabled}, Messages: ${chatMessages.length}, Trigger: ${autoTranslateTrigger}`);
     
     if (!isAutoTranslateEnabled || !chatMessages.length) return;
     
@@ -191,7 +194,7 @@ export const ChatScreen: React.FC = () => {
       // Remove from processed set on error so we can retry
       messagesToTranslate.forEach(msg => processedMessageIds.current.delete(msg.id));
     });
-  }, [chatId, chatMessages, user?.uid]); // Changed to full chatMessages array to catch all changes
+  }, [chatId, chatMessages, user?.uid, autoTranslateTrigger]); // Added autoTranslateTrigger to dependencies
   
   // Get chat participants and their names
   useEffect(() => {
