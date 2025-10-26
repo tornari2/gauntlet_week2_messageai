@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FormalitySelector } from './FormalitySelector';
 import { useTranslationStore } from '../stores/translationStore';
 import { FormalityLevel } from '../types/translation';
+import i18n from '../i18n';
 
 interface MessageInputProps {
   onSend: (text: string) => void;
@@ -168,17 +169,17 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         </TouchableOpacity>
 
         <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={text}
-            onChangeText={handleTextChange}
-            placeholder="Type a message..."
-            placeholderTextColor="#8E8E93"
-            multiline
-            maxLength={1000}
-            editable={!disabled}
-            testID="message-input"
-          />
+        <TextInput
+          style={styles.input}
+          value={text}
+          onChangeText={handleTextChange}
+          placeholder={i18n.t('chat.typing')}
+          placeholderTextColor="#8E8E93"
+          multiline
+          maxLength={1000}
+          editable={!disabled}
+          testID="message-input"
+        />
           {/* Formality indicator - appears when text is present */}
           {text.trim() && (
             <TouchableOpacity

@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FormalityLevel } from '../types/translation';
+import i18n from '../i18n';
 
 interface FormalitySelectorProps {
   originalText: string;
@@ -46,18 +47,18 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
   const formalityOptions: { level: FormalityLevel; label: string; description: string }[] = [
     {
       level: 'casual',
-      label: 'Casual',
-      description: 'Friendly, relaxed, conversational',
+      label: i18n.t('formality.casual'),
+      description: i18n.t('formality.casualDesc'),
     },
     {
       level: 'neutral',
-      label: 'Neutral',
-      description: 'Professional but approachable',
+      label: i18n.t('formality.neutral'),
+      description: i18n.t('formality.neutralDesc'),
     },
     {
       level: 'formal',
-      label: 'Formal',
-      description: 'Respectful, polite, business-appropriate',
+      label: i18n.t('formality.formal'),
+      description: i18n.t('formality.formalDesc'),
     },
   ];
 
@@ -88,7 +89,7 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
       });
     } catch (err) {
       console.error('Error loading formality previews:', err);
-      setError('Failed to adjust formality. Please try again.');
+      setError(i18n.t('formality.error'));
     } finally {
       setLoading(false);
     }
@@ -120,7 +121,7 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>Adjust Formality</Text>
+            <Text style={styles.title}>{i18n.t('formality.title')}</Text>
             <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
@@ -129,7 +130,7 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
           <ScrollView style={styles.content}>
             {/* Original Text */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Original Message:</Text>
+              <Text style={styles.sectionTitle}>{i18n.t('formality.original')}</Text>
               <Text style={styles.originalText}>{originalText}</Text>
             </View>
 
@@ -137,7 +138,7 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
             {loading && (
               <View style={styles.section}>
                 <ActivityIndicator size="large" color="#1976D2" />
-                <Text style={styles.loadingText}>Generating formality options...</Text>
+                <Text style={styles.loadingText}>{i18n.t('formality.loading')}</Text>
               </View>
             )}
 
@@ -190,7 +191,7 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
               style={[styles.button, styles.cancelButton]}
               onPress={handleClose}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{i18n.t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -202,7 +203,7 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
               disabled={!selectedLevel}
             >
               <Text style={styles.applyButtonText}>
-                {selectedLevel ? 'Apply Changes' : 'Select a Version'}
+                {selectedLevel ? i18n.t('formality.applyChanges') : i18n.t('formality.selectVersion')}
               </Text>
             </TouchableOpacity>
           </View>
