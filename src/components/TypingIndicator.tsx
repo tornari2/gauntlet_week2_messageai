@@ -7,6 +7,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import i18n from '../i18n';
 
 interface TypingIndicatorProps {
   typingUsers: string[]; // Array of display names
@@ -72,14 +73,14 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
   // Format typing text based on number of users
   const getTypingText = (): string => {
     if (typingUsers.length === 1) {
-      return `${typingUsers[0]} is typing`;
+      return `${typingUsers[0]} ${i18n.t('typing.isTyping')}`;
     } else if (typingUsers.length === 2) {
-      return `${typingUsers[0]} and ${typingUsers[1]} are typing`;
+      return `${typingUsers[0]} and ${typingUsers[1]} ${i18n.t('typing.areTyping')}`;
     } else if (typingUsers.length === 3) {
-      return `${typingUsers[0]}, ${typingUsers[1]} and ${typingUsers[2]} are typing`;
+      return `${typingUsers[0]}, ${typingUsers[1]} and ${typingUsers[2]} ${i18n.t('typing.areTyping')}`;
     } else {
       // More than 3 users
-      return `${typingUsers[0]}, ${typingUsers[1]} and ${typingUsers.length - 2} others are typing`;
+      return `${typingUsers[0]}, ${typingUsers[1]} and ${typingUsers.length - 2} others ${i18n.t('typing.areTyping')}`;
     }
   };
 

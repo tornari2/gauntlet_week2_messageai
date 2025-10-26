@@ -11,6 +11,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { useMessageStore } from '../stores/messageStore';
 import { useNetworkStore } from '../stores/networkStore';
 import { Colors } from '../constants/Colors';
+import i18n from '../i18n';
 
 // Test internet connectivity by attempting to reach a reliable endpoint
 const testInternetConnectivity = async (): Promise<boolean> => {
@@ -230,7 +231,7 @@ export const ConnectionStatus: React.FC = () => {
     >
       <View style={[styles.banner, isConnected ? styles.connectedBanner : styles.offlineBanner]}>
         <Text style={styles.text}>
-          {isConnected ? 'Connected' : 'No internet connection'}
+          {isConnected ? i18n.t('connection.online') : i18n.t('connection.offline')}
         </Text>
       </View>
     </Animated.View>
