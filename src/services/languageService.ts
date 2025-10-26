@@ -114,6 +114,44 @@ export function getLanguageName(languageCode: string): string {
 }
 
 /**
+ * Get language name in its native script
+ * Used for language selection UI
+ */
+export function getNativeLanguageName(languageCode: string): string {
+  const nativeLanguageNames: Record<string, string> = {
+    en: 'English',
+    es: 'Español',
+    fr: 'Français',
+    de: 'Deutsch',
+    it: 'Italiano',
+    pt: 'Português',
+    ru: 'Русский',
+    zh: '中文',
+    ja: '日本語',
+    ko: '한국어',
+    ar: 'العربية',
+    hi: 'हिन्दी',
+    tr: 'Türkçe',
+    pl: 'Polski',
+    nl: 'Nederlands',
+    sv: 'Svenska',
+    da: 'Dansk',
+    fi: 'Suomi',
+    no: 'Norsk',
+    cs: 'Čeština',
+    el: 'Ελληνικά',
+    he: 'עברית',
+    th: 'ไทย',
+    vi: 'Tiếng Việt',
+    id: 'Bahasa Indonesia',
+    unknown: 'Unknown',
+    xx: 'Unknown',
+  };
+  
+  return nativeLanguageNames[languageCode] || languageCode.toUpperCase();
+}
+
+/**
  * Get flag emoji for language code
  */
 export function getLanguageFlag(languageCode: string): string {
