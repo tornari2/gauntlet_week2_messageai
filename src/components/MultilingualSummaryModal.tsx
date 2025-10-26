@@ -82,11 +82,11 @@ export const MultilingualSummaryModal: React.FC<MultilingualSummaryModalProps> =
 
             {error && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Failed to generate summary</Text>
+                <Text style={styles.errorText}>{i18n.t('summary.error')}</Text>
                 <Text style={styles.errorSubtext}>{error.message}</Text>
                 {onRetry && (
                   <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-                    <Text style={styles.retryButtonText}>Try Again</Text>
+                    <Text style={styles.retryButtonText}>{i18n.t('common.retry')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -147,11 +147,11 @@ export const MultilingualSummaryModal: React.FC<MultilingualSummaryModalProps> =
           <View style={styles.footer}>
             {summary && onShareToChat && (
               <TouchableOpacity style={styles.shareButton} onPress={handleShareToChat}>
-                <Text style={styles.shareButtonText}>📤 Share to Chat</Text>
+                <Text style={styles.shareButtonText}>📤 {i18n.t('summary.share')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={styles.closeFooterButton} onPress={onClose}>
-              <Text style={styles.closeFooterButtonText}>Close</Text>
+              <Text style={styles.closeFooterButtonText}>{i18n.t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

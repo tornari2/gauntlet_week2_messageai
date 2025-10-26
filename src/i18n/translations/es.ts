@@ -149,6 +149,7 @@ export default {
     error: 'Error al generar el resumen',
     noMessages: 'No hay mensajes para resumir',
     summarize: 'Resumir',
+    share: 'Compartir en Chat',
   },
 
   // Read Receipt Modal

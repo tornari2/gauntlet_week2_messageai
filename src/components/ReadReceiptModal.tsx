@@ -19,6 +19,7 @@ import { Message, User } from '../types';
 import { formatReadReceiptList, ReadReceiptUser } from '../utils/readReceiptHelpers';
 import { Colors } from '../constants/Colors';
 import { getUserAvatarColor } from '../utils/userColors';
+import i18n from '../i18n';
 
 interface ReadReceiptModalProps {
   visible: boolean;
@@ -67,9 +68,9 @@ export const ReadReceiptModal: React.FC<ReadReceiptModalProps> = ({
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{user.displayName}</Text>
         {hasRead ? (
-          <Text style={styles.readStatus}>Read</Text>
+          <Text style={styles.readStatus}>{i18n.t('chat.read')}</Text>
         ) : (
-          <Text style={styles.deliveredStatus}>Delivered</Text>
+          <Text style={styles.deliveredStatus}>{i18n.t('chat.delivered')}</Text>
         )}
       </View>
       
@@ -98,7 +99,7 @@ export const ReadReceiptModal: React.FC<ReadReceiptModalProps> = ({
             <View style={styles.modalContainer}>
               {/* Header */}
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>Message Info</Text>
+                <Text style={styles.headerTitle}>{i18n.t('readReceipt.title')}</Text>
                 <TouchableOpacity
                   onPress={onClose}
                   style={styles.closeButton}
@@ -114,7 +115,7 @@ export const ReadReceiptModal: React.FC<ReadReceiptModalProps> = ({
                 {readBy.length > 0 && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>
-                      READ BY {readBy.length}
+                      {i18n.t('readReceipt.read').toUpperCase()} {readBy.length}
                     </Text>
                     {readBy.map(user => renderUser(user, true))}
                   </View>
@@ -124,7 +125,7 @@ export const ReadReceiptModal: React.FC<ReadReceiptModalProps> = ({
                 {deliveredTo.length > 0 && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>
-                      DELIVERED TO {deliveredTo.length}
+                      {i18n.t('readReceipt.delivered').toUpperCase()} {deliveredTo.length}
                     </Text>
                     {deliveredTo.map(user => renderUser(user, false))}
                   </View>
@@ -133,7 +134,7 @@ export const ReadReceiptModal: React.FC<ReadReceiptModalProps> = ({
                 {/* No participants case */}
                 {readBy.length === 0 && deliveredTo.length === 0 && (
                   <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No recipients</Text>
+                    <Text style={styles.emptyText}>{i18n.t('readReceipt.pending')}</Text>
                   </View>
                 )}
               </ScrollView>

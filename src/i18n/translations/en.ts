@@ -149,6 +149,7 @@ export default {
     error: 'Failed to generate summary',
     noMessages: 'No messages to summarize',
     summarize: 'Summarize',
+    share: 'Share to Chat',
   },
 
   // Read Receipt Modal

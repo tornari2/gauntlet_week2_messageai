@@ -149,6 +149,7 @@ export default {
     error: 'Échec de la génération du résumé',
     noMessages: 'Aucun message à résumer',
     summarize: 'Résumer',
+    share: 'Partager dans le Chat',
   },
 
   // Read Receipt Modal
