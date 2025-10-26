@@ -12,6 +12,7 @@ import { formatBubbleTime } from '../utils/dateHelpers';
 import { Colors } from '../constants/Colors';
 import { useTranslationStore } from '../stores/translationStore';
 import { getLanguageName, getLanguageFlag } from '../services/languageService';
+import i18n from '../i18n';
 
 interface MessageBubbleProps {
   message: Message;
@@ -83,7 +84,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       setShowingTranslation(true);
     } catch (error) {
       console.error('Translation error:', error);
-      Alert.alert('Translation Error', 'Failed to translate message. Please try again.');
+      Alert.alert(i18n.t('errors.generic'), i18n.t('errors.timeout'));
     }
   };
 
@@ -113,19 +114,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     const detectedLanguage = message.detectedLanguage || userLanguage;
     const languageName = getLanguageName(detectedLanguage);
     const languageFlag = getLanguageFlag(detectedLanguage);
-    const options = ['Cancel'];
+    const options = [i18n.t('common.cancel')];
     
     // Cultural context option
-    options.unshift('🧠 Explain Cultural Context');
+    options.unshift(`🧠 ${i18n.t('messageActions.culturalContext')}`);
     
     // Slang explanation option
-    options.unshift('💬 Explain Slang');
+    options.unshift(`💬 ${i18n.t('messageActions.explainSlang')}`);
 
     // Create the subtitle showing the language information
     let subtitle = '';
     if (showingTranslation && detectedLanguage && detectedLanguage !== userLanguage) {
       // If currently showing translation, show the flag and "Translated from..."
-      subtitle = `${languageFlag} Translated from ${languageName}`;
+      subtitle = `${languageFlag} ${i18n.t('messageActions.translatedFrom')} ${languageName}`;
     } else if (detectedLanguage && detectedLanguage !== userLanguage) {
       // If not translated but message is in foreign language
       subtitle = `Originally in ${languageName}`;
@@ -135,17 +136,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
 
     Alert.alert(
-      'Message Options',
+      i18n.t('messageActions.title'),
       subtitle,
       options.map((option) => {
-        if (option === 'Cancel') {
+        if (option === i18n.t('common.cancel')) {
           return { text: option, style: 'cancel' };
-        } else if (option === '🧠 Explain Cultural Context') {
+        } else if (option === `🧠 ${i18n.t('messageActions.culturalContext')}`) {
           return { 
             text: option, 
             onPress: () => onCulturalContext?.(message.id, message.text, detectedLanguage)
           };
-        } else if (option === '💬 Explain Slang') {
+        } else if (option === `💬 ${i18n.t('messageActions.explainSlang')}`) {
           return { 
             text: option, 
             onPress: () => onSlangExplanation?.(message.id, message.text, detectedLanguage)
