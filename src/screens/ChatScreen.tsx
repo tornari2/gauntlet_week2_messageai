@@ -41,6 +41,7 @@ import { typingService } from '../services/typingService';
 import { notificationService } from '../services/notificationService';
 import { Colors } from '../constants/Colors';
 import { getUserAvatarColor } from '../utils/userColors';
+import i18n from '../i18n';
 
 type ChatScreenRouteProp = RouteProp<MainStackParamList, 'Chat'>;
 
