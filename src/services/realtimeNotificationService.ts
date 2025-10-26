@@ -9,6 +9,9 @@ import { ref, onValue, set, remove } from 'firebase/database';
 import { database } from './firebase';
 import { triggerMessageNotification } from './notificationService';
 import { useAuthStore } from '../stores/authStore';
+import { useTranslationStore } from '../stores/translationStore';
+import { detectLanguage, translateText } from './translationService';
+import i18n from '../i18n';
 
 interface MessageNotificationPayload {
   chatId: string;
@@ -80,30 +83,61 @@ export function initializeRealtimeNotifications(userId: string): () => void {
     }
 
     // Wait a short time to batch notifications from the same chat
-    processingTimeout = setTimeout(() => {
+    processingTimeout = setTimeout(async () => {
       // Process all buffered notifications
-      notificationBuffer.forEach((notifications) => {
+      const notificationPromises = Array.from(notificationBuffer.entries()).map(async ([chatId, notifications]) => {
         if (notifications.length === 0) return;
 
         // Get the last notification for this chat
         const lastNotification = notifications[notifications.length - 1];
         const count = notifications.length;
 
+        // Get user's auto-translate settings
+        const translationState = useTranslationStore.getState();
+        const isAutoTranslateEnabled = translationState.isAutoTranslateEnabled;
+        const userLanguage = translationState.userLanguage;
+        
+        let messageText = lastNotification.messageText;
+        
+        // Translate if auto-translate is enabled
+        if (isAutoTranslateEnabled && messageText) {
+          try {
+            console.log('[Notification] Auto-translate enabled, translating notification...');
+            
+            // Detect language of the message
+            const detectedLanguage = await detectLanguage(messageText);
+            console.log(`[Notification] Detected language: ${detectedLanguage}`);
+            
+            // Only translate if it's a different language
+            if (detectedLanguage !== userLanguage) {
+              const translationResult = await translateText(messageText, userLanguage);
+              messageText = translationResult.translatedText;
+              console.log(`[Notification] Translated: "${lastNotification.messageText}" → "${messageText}"`);
+            }
+          } catch (error) {
+            console.error('[Notification] Translation failed, using original text:', error);
+            // Keep original messageText on error
+          }
+        }
+
         // Build the message with count if multiple
-        const messageText = count > 1 
-          ? `(${count} new messages) ${lastNotification.messageText}`
-          : lastNotification.messageText;
+        const finalMessageText = count > 1 
+          ? `(${count} ${i18n.t('notification.newMessages')}) ${messageText}`
+          : messageText;
         
         // Trigger a single grouped notification per chat
-        triggerMessageNotification(
+        await triggerMessageNotification(
           lastNotification.chatId,
           lastNotification.chatName,
-          messageText,
+          finalMessageText,
           lastNotification.senderId
         ).catch(error => {
           console.error('Error triggering notification:', error);
         });
       });
+
+      // Wait for all notifications to be processed
+      await Promise.all(notificationPromises);
 
       // Clear the buffer
       notificationBuffer.clear();
