@@ -23,6 +23,11 @@ i18n.defaultLocale = 'en';
 i18n.locale = 'en';
 i18n.fallbacks = true;
 
+// Verify translations are loaded
+console.log('[i18n] Initialized with locales:', Object.keys(i18n.translations));
+console.log('[i18n] Current locale:', i18n.locale);
+console.log('[i18n] Test translation (common.create):', i18n.t('common.create'));
+
 export default i18n;
 
 /**
