@@ -90,6 +90,8 @@ export default {
     email: 'Correo Electrónico',
     language: 'Idioma Preferido',
     selectLanguage: 'Seleccionar Idioma',
+    avatarColor: 'Color del Avatar',
+    avatarColorDesc: 'Elige un color para tu avatar de perfil',
     logout: 'Cerrar Sesión',
     logoutConfirm: '¿Estás seguro de que quieres cerrar sesión?',
     editProfile: 'Editar Perfil',

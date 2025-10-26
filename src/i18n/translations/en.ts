@@ -90,6 +90,8 @@ export default {
     email: 'Email',
     language: 'Preferred Language',
     selectLanguage: 'Select Language',
+    avatarColor: 'Avatar Color',
+    avatarColorDesc: 'Choose a color for your profile avatar',
     logout: 'Logout',
     logoutConfirm: 'Are you sure you want to logout?',
     editProfile: 'Edit Profile',

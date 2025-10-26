@@ -274,9 +274,9 @@ export const UserProfileScreen: React.FC = () => {
             style={styles.backButton}
             testID="back-button"
           >
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>← {i18n.t('common.cancel')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={styles.headerTitle}>{i18n.t('profile.title')}</Text>
           <View style={styles.headerRight} />
         </View>
 
@@ -301,12 +301,12 @@ export const UserProfileScreen: React.FC = () => {
 
           {/* Display Name */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Display Name</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('profile.displayName')}</Text>
             <TextInput
               style={styles.input}
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder="Enter your name"
+              placeholder={i18n.t('profile.displayName')}
               placeholderTextColor="#999"
               maxLength={50}
               testID="display-name-input"
@@ -315,9 +315,9 @@ export const UserProfileScreen: React.FC = () => {
 
           {/* Preferred Language */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🌐 Preferred Language</Text>
+            <Text style={styles.sectionTitle}>🌐 {i18n.t('profile.language')}</Text>
             <Text style={styles.sectionSubtitle}>
-              Messages in other languages will be translated to your preferred language
+              {i18n.t('autoTranslate.description')}
             </Text>
             
             <TouchableOpacity
@@ -339,9 +339,9 @@ export const UserProfileScreen: React.FC = () => {
 
           {/* Avatar Color */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Avatar Color</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('profile.avatarColor')}</Text>
             <Text style={styles.sectionSubtitle}>
-              Choose a color for your profile avatar
+              {i18n.t('profile.avatarColorDesc')}
             </Text>
             
             <View style={styles.colorGrid}>

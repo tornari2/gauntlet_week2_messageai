@@ -90,6 +90,8 @@ export default {
     email: 'Email',
     language: 'Langue Préférée',
     selectLanguage: 'Sélectionner la Langue',
+    avatarColor: 'Couleur de l\'Avatar',
+    avatarColorDesc: 'Choisissez une couleur pour votre avatar de profil',
     logout: 'Se Déconnecter',
     logoutConfirm: 'Êtes-vous sûr de vouloir vous déconnecter?',
     editProfile: 'Modifier le Profil',
