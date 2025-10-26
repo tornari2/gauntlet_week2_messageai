@@ -172,7 +172,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             style={styles.input}
             value={text}
             onChangeText={handleTextChange}
-            placeholder="Type a message... (long press for formality)"
+            placeholder="Type a message..."
             placeholderTextColor="#8E8E93"
             multiline
             maxLength={1000}
