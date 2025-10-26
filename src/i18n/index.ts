@@ -35,8 +35,12 @@ export default i18n;
  * @param languageCode ISO 639-1 language code (e.g., 'en', 'es', 'fr')
  */
 export function setAppLanguage(languageCode: string): void {
-  i18n.locale = languageCode;
-  console.log(`[i18n] Language set to: ${languageCode}`);
+  try {
+    i18n.locale = languageCode;
+    console.log(`[i18n] Language set to: ${languageCode}`);
+  } catch (error) {
+    console.error('[i18n] Error setting language:', error);
+  }
 }
 
 /**
