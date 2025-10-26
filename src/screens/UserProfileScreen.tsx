@@ -44,25 +44,6 @@ const AVATAR_COLORS = [
   { name: 'Lime', value: '#CDDC39' },
 ];
 
-// Helper function to get flag emoji for language
-const getLanguageFlag = (languageCode: string): string => {
-  const flags: Record<string, string> = {
-    en: '🇺🇸',
-    es: '🇪🇸',
-    fr: '🇫🇷',
-    de: '🇩🇪',
-    it: '🇮🇹',
-    pt: '🇵🇹',
-    ru: '🇷🇺',
-    zh: '🇨🇳',
-    ja: '🇯🇵',
-    ko: '🇰🇷',
-    ar: '🇸🇦',
-    hi: '🇮🇳',
-  };
-  return flags[languageCode] || '🌐';
-};
-
 export const UserProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuthStore();
@@ -74,6 +55,7 @@ export const UserProfileScreen: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [, forceUpdate] = useState(0); // Force re-render when language changes
 
   // Load user data
   useEffect(() => {
@@ -227,6 +209,9 @@ export const UserProfileScreen: React.FC = () => {
       // Update translation store
       await translationStore.setUserLanguage(selectedLanguage, user.uid);
 
+      // Force re-render of all components to show new language
+      forceUpdate(prev => prev + 1);
+
       // Update local auth store
       useAuthStore.setState({
         user: {
@@ -326,9 +311,6 @@ export const UserProfileScreen: React.FC = () => {
               testID="language-dropdown"
             >
               <View style={styles.languageDropdownContent}>
-                <Text style={styles.languageDropdownFlag}>
-                  {getLanguageFlag(selectedLanguage)}
-                </Text>
                 <Text style={styles.languageDropdownText}>
                   {getNativeLanguageName(selectedLanguage)}
                 </Text>
@@ -412,9 +394,6 @@ export const UserProfileScreen: React.FC = () => {
                     }}
                     testID={`language-${language.code}`}
                   >
-                    <Text style={styles.modalLanguageFlag}>
-                      {getLanguageFlag(language.code)}
-                    </Text>
                     <Text style={[
                       styles.modalLanguageText,
                       selectedLanguage === language.code && styles.modalLanguageTextSelected
@@ -560,10 +539,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  languageDropdownFlag: {
-    fontSize: 24,
-    marginRight: 12,
-  },
   languageDropdownText: {
     fontSize: 16,
     color: '#000',
@@ -621,10 +596,6 @@ const styles = StyleSheet.create({
   },
   modalLanguageOptionSelected: {
     backgroundColor: '#F0EDE6',
-  },
-  modalLanguageFlag: {
-    fontSize: 24,
-    marginRight: 12,
   },
   modalLanguageText: {
     flex: 1,

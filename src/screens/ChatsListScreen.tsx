@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
+import { useTranslationStore } from '../stores/translationStore';
 import { SwipeableChatListItem } from '../components/SwipeableChatListItem';
 import { Chat } from '../types';
 import { Colors } from '../constants/Colors';
@@ -36,6 +37,7 @@ export const ChatsListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { chats, loading, subscribeToChats } = useChatStore();
   const { user, logout } = useAuthStore();
+  const userLanguage = useTranslationStore((state) => state.userLanguage); // Subscribe to language changes
 
   useEffect(() => {
     if (!user) return;
