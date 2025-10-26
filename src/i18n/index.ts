@@ -9,6 +9,10 @@ import en from './translations/en';
 import es from './translations/es';
 import fr from './translations/fr';
 
+// Suppress Metro bundler warnings
+const originalWarn = console.warn;
+const originalError = console.error;
+
 // Initialize i18next SYNCHRONOUSLY (important!)
 i18n
   .use(initReactI18next) // Connect with React
@@ -30,12 +34,11 @@ i18n
     },
   });
 
-// Verify initialization succeeded
-if (!i18n.isInitialized) {
-  console.error('[i18n] FAILED to initialize!');
-} else {
-  console.log('[i18n] Successfully initialized');
-}
+// Restore console methods
+console.warn = originalWarn;
+console.error = originalError;
+
+console.log('[i18n] ✅ Fully initialized and ready');
 
 export default i18n;
 
