@@ -1,29 +1,36 @@
 /**
- * i18n Configuration using react-i18next
- * TEMPORARY STUB - Testing if i18n is the problem
+ * i18n Configuration - MINIMAL STUB FOR DEBUGGING
+ * NO external dependencies - just pure JavaScript
  */
+
+console.log('[i18n] 🟢 Module loading started');
 
 // Create a minimal mock i18n object
 const i18n = {
   t: (key: string, options?: any) => {
+    console.log(`[i18n-stub] t() called with key: ${key}`);
     // Just return the key for now
-    return key;
+    return key || 'MISSING_KEY';
   },
   language: 'en',
   changeLanguage: (lng: string) => {
-    console.log(`[i18n-stub] Language change requested: ${lng}`);
+    console.log(`[i18n-stub] changeLanguage() called with: ${lng}`);
   },
   isInitialized: true,
 };
 
-console.log('[i18n] ⚠️  Using STUB implementation for debugging');
+console.log('[i18n] 🟢 i18n object created successfully');
+console.log('[i18n] 🟢 Exporting default...');
 
 export default i18n;
+
+console.log('[i18n] 🟢 Default exported');
 
 /**
  * Set the app's language
  */
 export function setAppLanguage(languageCode: string): void {
+  console.log(`[i18n] setAppLanguage() called with: ${languageCode}`);
   i18n.changeLanguage(languageCode);
 }
 
@@ -54,6 +61,9 @@ export function isLanguageSupported(languageCode: string): boolean {
 export function getSupportedLanguages(): string[] {
   return ['en', 'es', 'fr'];
 }
+
+console.log('[i18n] 🟢 Module loading complete - all exports ready');
+
 
 
 
