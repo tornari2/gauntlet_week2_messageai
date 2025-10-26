@@ -248,5 +248,15 @@ export default {
     vi: 'Vietnamita',
     id: 'Indonesio',
   },
+
+  // Last Seen Timestamps
+  lastSeen: {
+    justNow: 'Activo hace un momento',
+    minutesAgo: 'Activo hace {{minutes}}m',
+    hoursAgo: 'Activo hace {{hours}}h',
+    yesterday: 'Activo ayer',
+    daysAgo: 'Activo hace {{days}} días',
+    aWhileAgo: 'Activo hace un tiempo',
+  },
 };
 

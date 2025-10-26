@@ -248,5 +248,15 @@ export default {
     vi: 'Vietnamien',
     id: 'Indonésien',
   },
+
+  // Last Seen Timestamps
+  lastSeen: {
+    justNow: 'Actif à l\'instant',
+    minutesAgo: 'Actif il y a {{minutes}}m',
+    hoursAgo: 'Actif il y a {{hours}}h',
+    yesterday: 'Actif hier',
+    daysAgo: 'Actif il y a {{days}} jours',
+    aWhileAgo: 'Actif il y a un moment',
+  },
 };
 

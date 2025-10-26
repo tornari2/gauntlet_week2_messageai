@@ -5,6 +5,7 @@
  */
 
 import { Timestamp } from 'firebase/firestore';
+import i18n from '../i18n';
 
 /**
  * Convert Firestore Timestamp or Date to Date object
@@ -97,7 +98,7 @@ export function formatBubbleTime(timestamp: Timestamp | Date): string {
  */
 export function formatLastSeen(lastSeen: Timestamp | Date, isOnline: boolean): string {
   if (isOnline) {
-    return 'Online';
+    return i18n.t('chat.online');
   }
   
   const date = toDate(lastSeen);
@@ -109,26 +110,26 @@ export function formatLastSeen(lastSeen: Timestamp | Date, isOnline: boolean): s
   const diffDays = Math.floor(diffHours / 24);
   
   if (diffMinutes < 1) {
-    return 'Active just now';
+    return i18n.t('lastSeen.justNow');
   }
   
   if (diffMinutes < 60) {
-    return `Active ${diffMinutes}m ago`;
+    return i18n.t('lastSeen.minutesAgo', { minutes: diffMinutes });
   }
   
   if (diffHours < 24) {
-    return `Active ${diffHours}h ago`;
+    return i18n.t('lastSeen.hoursAgo', { hours: diffHours });
   }
   
   if (diffDays === 1) {
-    return 'Active yesterday';
+    return i18n.t('lastSeen.yesterday');
   }
   
   if (diffDays < 7) {
-    return `Active ${diffDays} days ago`;
+    return i18n.t('lastSeen.daysAgo', { days: diffDays });
   }
   
-  return 'Active a while ago';
+  return i18n.t('lastSeen.aWhileAgo');
 }
 
 /**

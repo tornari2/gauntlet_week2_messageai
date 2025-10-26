@@ -129,10 +129,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       subtitle = `${languageFlag} ${i18n.t('messageActions.translatedFrom')} ${languageName}`;
     } else if (detectedLanguage && detectedLanguage !== userLanguage) {
       // If not translated but message is in foreign language
-      subtitle = `Originally in ${languageName}`;
+      subtitle = `${i18n.t('messageActions.originallyIn')} ${languageName}`;
     } else {
       // Message in user's language
-      subtitle = `Message in ${languageName}`;
+      subtitle = `${i18n.t('messageActions.messageIn')} ${languageName}`;
     }
 
     Alert.alert(
