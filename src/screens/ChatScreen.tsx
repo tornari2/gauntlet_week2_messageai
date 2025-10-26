@@ -75,6 +75,7 @@ export const ChatScreen: React.FC = () => {
   const { isConnected } = useNetworkStore();
   const { setActiveChatId } = useNotificationStore();
   const translationStore = useTranslationStore();
+  const isAutoTranslateEnabled = translationStore.isAutoTranslateEnabled(chatId); // Subscribe to this specific value
   const {
     messages,
     loading,
@@ -135,23 +136,21 @@ export const ChatScreen: React.FC = () => {
   // Clear processed messages when auto-translate is toggled on
   // This allows re-translation of existing messages
   useEffect(() => {
-    const autoTranslateEnabled = translationStore.isAutoTranslateEnabled(chatId);
-    if (autoTranslateEnabled) {
+    if (isAutoTranslateEnabled) {
       console.log('[ChatScreen] Auto-translate enabled - clearing processed message IDs');
       processedMessageIds.current.clear();
     }
-  }, [translationStore.autoTranslateEnabled[chatId], chatId]);
+  }, [isAutoTranslateEnabled]); // Watch the extracted value
   
   // Batch auto-translate effect
   // Instead of letting each MessageBubble translate individually,
   // we batch translate all foreign messages at once for much better performance
   useEffect(() => {
-    const autoTranslateEnabled = translationStore.isAutoTranslateEnabled(chatId);
     const userLanguage = translationStore.userLanguage;
     
-    console.log(`[ChatScreen] Auto-translate effect triggered. Enabled: ${autoTranslateEnabled}, Messages: ${chatMessages.length}`);
+    console.log(`[ChatScreen] Auto-translate effect triggered. Enabled: ${isAutoTranslateEnabled}, Messages: ${chatMessages.length}`);
     
-    if (!autoTranslateEnabled || !chatMessages.length) return;
+    if (!isAutoTranslateEnabled || !chatMessages.length) return;
     
     // Find messages that need translation (foreign language, not sent by user, not already translated)
     const messagesToTranslate = chatMessages.filter(msg => {
