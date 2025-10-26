@@ -5,23 +5,28 @@
 
 import { I18n } from 'i18n-js';
 
-// Lazy load translations to avoid initialization timing issues
-const getTranslations = () => ({
-  en: require('./translations/en').default,
-  es: require('./translations/es').default,
-  fr: require('./translations/fr').default,
-});
-
-// Create i18n instance
+// Create i18n instance FIRST
 const i18n = new I18n();
 
-// Store translations
-i18n.store(getTranslations());
-
-// Configure i18n
+// Configure BEFORE loading translations (important for Metro bundler)
 i18n.defaultLocale = 'en';
 i18n.locale = 'en';
 i18n.fallbacks = true;
+
+// Lazy load translations AFTER configuration
+try {
+  const getTranslations = () => ({
+    en: require('./translations/en').default,
+    es: require('./translations/es').default,
+    fr: require('./translations/fr').default,
+  });
+  
+  i18n.store(getTranslations());
+} catch (error) {
+  console.error('[i18n] Error loading translations:', error);
+  // Fallback: empty translations to prevent crashes
+  i18n.store({ en: { common: { create: 'Create' } }, es: {}, fr: {} });
+}
 
 export default i18n;
 
