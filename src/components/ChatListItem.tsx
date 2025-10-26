@@ -5,8 +5,8 @@
  * Shows participant name, last message preview, timestamp, and online indicator
  */
 
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react';
 import { ChatWithDetails } from '../types';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,8 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { OnlineIndicator } from './OnlineIndicator';
 import { Colors } from '../constants/Colors';
 import { useNetworkStore } from '../stores/networkStore';
+import { useTranslationStore } from '../stores/translationStore';
+import { detectLanguage, translateText } from '../services/translationService';
 
 type ChatListItemNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ChatsList'>;
 
@@ -25,6 +27,38 @@ interface ChatListItemProps {
 export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat, onLongPress }) => {
   const navigation = useNavigation<ChatListItemNavigationProp>();
   const isConnected = useNetworkStore((state) => state.isConnected);
+  const userLanguage = useTranslationStore((state) => state.userLanguage);
+  const [translatedMessage, setTranslatedMessage] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Translate last message if needed
+  useEffect(() => {
+    const translateLastMessage = async () => {
+      if (!chat.lastMessage || isTranslating) return;
+      
+      try {
+        setIsTranslating(true);
+        
+        // Detect language
+        const detectedLanguage = await detectLanguage(chat.lastMessage);
+        
+        // Only translate if it's a different language
+        if (detectedLanguage !== userLanguage) {
+          const result = await translateText(chat.lastMessage, userLanguage);
+          setTranslatedMessage(result.translatedText);
+        } else {
+          setTranslatedMessage(null); // Same language, no translation needed
+        }
+      } catch (error) {
+        console.error('[ChatListItem] Translation error:', error);
+        setTranslatedMessage(null); // Fall back to original on error
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+
+    translateLastMessage();
+  }, [chat.lastMessage, userLanguage]);
 
   const handlePress = () => {
     navigation.navigate('Chat', { chatId: chat.id, chatName: getChatName() });
@@ -78,12 +112,15 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat, onL
       return 'No messages yet';
     }
     
+    // Use translated message if available, otherwise use original
+    const messageToDisplay = translatedMessage || chat.lastMessage;
+    
     // Truncate long messages
-    if (chat.lastMessage.length > 40) {
-      return chat.lastMessage.substring(0, 40) + '...';
+    if (messageToDisplay.length > 40) {
+      return messageToDisplay.substring(0, 40) + '...';
     }
     
-    return chat.lastMessage;
+    return messageToDisplay;
   };
 
   return (

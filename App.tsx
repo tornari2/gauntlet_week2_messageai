@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/stores/authStore';
 import { useNotificationStore } from './src/stores/notificationStore';
+import { useTranslationStore } from './src/stores/translationStore';
 import { setupPresence, updatePresence } from './src/services/presenceService';
 import { ConnectionStatus } from './src/components/ConnectionStatus';
 import { NotificationBanner } from './src/components/NotificationBanner';
@@ -21,6 +22,7 @@ export default function App(): React.ReactElement {
   const appState = useRef(AppState.currentState);
   const { user } = useAuthStore();
   const { currentNotification, dismissNotification } = useNotificationStore();
+  const { loadUserLanguage } = useTranslationStore();
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
   const presenceCleanup = useRef<(() => void) | null>(null);
@@ -34,6 +36,11 @@ export default function App(): React.ReactElement {
   // Set up presence system and real-time notifications when user logs in
   useEffect(() => {
     if (user) {
+      // Load user's language preference FIRST (before any UI renders)
+      loadUserLanguage(user.uid).catch(error => {
+        console.error('Failed to load user language:', error);
+      });
+      
       // Set up presence tracking with automatic disconnect detection
       presenceCleanup.current = setupPresence(user.uid);
       
@@ -65,7 +72,7 @@ export default function App(): React.ReactElement {
         realtimeCleanup.current();
       }
     };
-  }, [user]);
+  }, [user, loadUserLanguage]);
 
   // Helper functions defined before useEffects that use them
   const registerLocalNotifications = async () => {
