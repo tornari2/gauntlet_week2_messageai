@@ -59,8 +59,19 @@ interface TranslationActions {
   // Translation
   translateMessage: (messageId: string, text: string, targetLanguage: string, sourceLanguage?: string) => Promise<string>;
   
+  // Batch translation (parallel)
+  batchTranslateMessages: (
+    messages: Array<{ id: string; text: string; sourceLanguage?: string }>,
+    targetLanguage: string
+  ) => Promise<Record<string, string>>;
+  
   // Language detection
   detectLanguage: (messageId: string, text: string) => Promise<string>;
+  
+  // Batch language detection (parallel)
+  batchDetectLanguages: (
+    messages: Array<{ id: string; text: string }>
+  ) => Promise<Record<string, string>>;
   
   // Cultural context
   getCulturalContext: (messageId: string, text: string, detectedLanguage: string) => Promise<CulturalContext>;
@@ -240,6 +251,122 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
         errors: { ...state.errors, [`detect_${messageId}`]: error as Error },
       }));
       return 'en'; // Fallback to English
+    }
+  },
+  
+  batchTranslateMessages: async (messages, targetLanguage) => {
+    console.log(`[Store] Batch translating ${messages.length} messages`);
+    
+    // Filter out messages that are already cached
+    const uncachedMessages = messages.filter((msg) => {
+      const cached = get().translations[msg.id]?.[targetLanguage];
+      return !cached;
+    });
+    
+    if (uncachedMessages.length === 0) {
+      console.log('[Store] All messages already cached');
+      // Return cached translations
+      return messages.reduce((acc, msg) => {
+        acc[msg.id] = get().translations[msg.id][targetLanguage];
+        return acc;
+      }, {} as Record<string, string>);
+    }
+    
+    console.log(`[Store] ${uncachedMessages.length} messages need translation`);
+    
+    // Set loading states
+    uncachedMessages.forEach((msg) => {
+      set((state) => ({
+        translating: { ...state.translating, [msg.id]: true },
+      }));
+    });
+    
+    try {
+      // Batch translate uncached messages
+      const translations = await translationService.batchTranslateMessages(
+        uncachedMessages,
+        targetLanguage
+      );
+      
+      // Store all translations in cache
+      set((state) => {
+        const newTranslations = { ...state.translations };
+        const newTranslating = { ...state.translating };
+        
+        Object.entries(translations).forEach(([id, translatedText]) => {
+          if (!newTranslations[id]) {
+            newTranslations[id] = {};
+          }
+          newTranslations[id][targetLanguage] = translatedText;
+          newTranslating[id] = false;
+          
+          // Also cache in AsyncStorage
+          translationService.cacheTranslation(id, targetLanguage, translatedText);
+        });
+        
+        return {
+          translations: newTranslations,
+          translating: newTranslating,
+        };
+      });
+      
+      // Return all translations (cached + new)
+      return messages.reduce((acc, msg) => {
+        acc[msg.id] = translations[msg.id] || get().translations[msg.id]?.[targetLanguage] || msg.text;
+        return acc;
+      }, {} as Record<string, string>);
+    } catch (error) {
+      console.error('[Store] Batch translation error:', error);
+      
+      // Clear loading states
+      uncachedMessages.forEach((msg) => {
+        set((state) => ({
+          translating: { ...state.translating, [msg.id]: false },
+          errors: { ...state.errors, [`translate_${msg.id}`]: error as Error },
+        }));
+      });
+      
+      throw error;
+    }
+  },
+  
+  batchDetectLanguages: async (messages) => {
+    console.log(`[Store] Batch detecting languages for ${messages.length} messages`);
+    
+    // Set loading states
+    messages.forEach((msg) => {
+      set((state) => ({
+        detectingLanguage: { ...state.detectingLanguage, [msg.id]: true },
+      }));
+    });
+    
+    try {
+      const languages = await translationService.batchDetectLanguages(messages);
+      
+      // Clear loading states
+      messages.forEach((msg) => {
+        set((state) => ({
+          detectingLanguage: { ...state.detectingLanguage, [msg.id]: false },
+        }));
+      });
+      
+      return languages;
+    } catch (error) {
+      console.error('[Store] Batch detection error:', error);
+      
+      // Clear loading states and return fallback
+      messages.forEach((msg) => {
+        set((state) => ({
+          detectingLanguage: { ...state.detectingLanguage, [msg.id]: false },
+          errors: { ...state.errors, [`detect_${msg.id}`]: error as Error },
+        }));
+      });
+      
+      // Return fallback 'en' for all
+      return messages.reduce((acc, msg) => {
+        acc[msg.id] = 'en';
+        return acc;
+      }, {} as Record<string, string>);
     }
   },
   
