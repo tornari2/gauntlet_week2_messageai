@@ -128,6 +128,40 @@ export const ChatScreen: React.FC = () => {
     };
   }, [chatId, setActiveChatId, user]);
   
+  // Batch auto-translate effect
+  // Instead of letting each MessageBubble translate individually,
+  // we batch translate all foreign messages at once for much better performance
+  useEffect(() => {
+    const autoTranslateEnabled = translationStore.isAutoTranslateEnabled(chatId);
+    const userLanguage = translationStore.userLanguage;
+    
+    if (!autoTranslateEnabled || !chatMessages.length) return;
+    
+    // Find messages that need translation (foreign language, not sent by user, not already translated)
+    const messagesToTranslate = chatMessages.filter(msg => 
+      msg.senderId !== user?.uid && // Not our own messages
+      msg.text && 
+      msg.detectedLanguage && 
+      msg.detectedLanguage !== userLanguage &&
+      !translationStore.translations[msg.id]?.[userLanguage] // Not already translated
+    );
+    
+    if (messagesToTranslate.length === 0) return;
+    
+    console.log(`[ChatScreen] Batch auto-translating ${messagesToTranslate.length} messages`);
+    
+    // Batch translate all messages at once
+    const batchData = messagesToTranslate.map(msg => ({
+      id: msg.id,
+      text: msg.text,
+      sourceLanguage: msg.detectedLanguage
+    }));
+    
+    translationStore.batchTranslateMessages(batchData, userLanguage).catch(error => {
+      console.error('[ChatScreen] Batch auto-translate failed:', error);
+    });
+  }, [chatId, chatMessages, translationStore, user]);
+  
   // Get chat participants and their names
   useEffect(() => {
     if (currentChat) {

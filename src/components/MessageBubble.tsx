@@ -46,30 +46,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [displayText, setDisplayText] = useState(message.text);
   
   const translationStore = useTranslationStore();
-  const { userLanguage, translateMessage } = translationStore;
+  const { userLanguage, translateMessage, translations } = translationStore;
+
+  // Check if this message has been auto-translated
+  const autoTranslatedText = autoTranslateEnabled && translations[message.id]?.[userLanguage];
 
   // Reset image states when message changes (e.g., when optimistic message is replaced with real one)
   useEffect(() => {
     setImageLoading(false);
     setImageError(false);
-    setDisplayText(message.text);
-    setShowingTranslation(false);
-  }, [message.id, message.imageUrl, message.text]);
-  
-  // Auto-translate effect
-  useEffect(() => {
-    const shouldAutoTranslate = 
-      autoTranslateEnabled && 
-      message.detectedLanguage && 
-      message.detectedLanguage !== userLanguage &&
-      message.text &&
-      !showingTranslation;
     
-    if (shouldAutoTranslate) {
-      console.log(`[AutoTranslate] Translating message ${message.id} from ${message.detectedLanguage} to ${userLanguage}`);
-      handleTranslate();
+    // If auto-translate is enabled and we have a translation, show it
+    if (autoTranslateEnabled && autoTranslatedText) {
+      setDisplayText(autoTranslatedText);
+      setShowingTranslation(true);
+    } else {
+      setDisplayText(message.text);
+      setShowingTranslation(false);
     }
-  }, [autoTranslateEnabled, message.id, message.detectedLanguage, userLanguage]);
+  }, [message.id, message.imageUrl, message.text, autoTranslateEnabled, autoTranslatedText]);
+  
+  // REMOVED: Individual auto-translate effect (now handled by ChatScreen batch translate)
+  // Auto-translate is now much faster because ChatScreen batches all messages at once
 
   const handleTranslate = async () => {
     if (!message.id || !message.detectedLanguage) return;
