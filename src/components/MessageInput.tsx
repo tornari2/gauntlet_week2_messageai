@@ -13,7 +13,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FormalitySelector } from './FormalitySelector';
@@ -168,25 +167,33 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           />
         </TouchableOpacity>
 
-        {/* Formality button - REMOVED, now using long press on input */}
-
-        <Pressable 
-          style={styles.inputContainer}
-          onLongPress={handleFormalityPress}
-          delayLongPress={500}
-        >
+        <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
             value={text}
             onChangeText={handleTextChange}
-            placeholder="Type a message..."
+            placeholder="Type a message... (long press for formality)"
             placeholderTextColor="#8E8E93"
             multiline
             maxLength={1000}
             editable={!disabled}
             testID="message-input"
           />
-        </Pressable>
+          {/* Formality indicator - appears when text is present */}
+          {text.trim() && (
+            <TouchableOpacity
+              style={styles.formalityIndicator}
+              onPress={handleFormalityPress}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name="sparkles-outline"
+                size={18}
+                color="#007AFF"
+              />
+            </TouchableOpacity>
+          )}
+        </View>
         
         <TouchableOpacity
           style={[
@@ -238,6 +245,8 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
@@ -248,10 +257,15 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   input: {
+    flex: 1,
     fontSize: 16,
     lineHeight: 20,
     color: '#000000',
     minHeight: 20,
+  },
+  formalityIndicator: {
+    marginLeft: 8,
+    padding: 4,
   },
   sendButton: {
     width: 40,
