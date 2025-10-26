@@ -8,18 +8,19 @@ import en from './translations/en';
 import es from './translations/es';
 import fr from './translations/fr';
 
-// Create i18n instance
-const i18n = new I18n({
+// Create i18n instance with explicit translations
+const i18n = new I18n();
+
+// Set translations
+i18n.translations = {
   en,
   es,
   fr,
-});
+};
 
-// Set default locale
+// Configure i18n
 i18n.defaultLocale = 'en';
 i18n.locale = 'en';
-
-// Enable fallback to default locale if translation is missing
 i18n.fallbacks = true;
 
 export default i18n;
