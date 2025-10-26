@@ -8,15 +8,15 @@ import en from './translations/en';
 import es from './translations/es';
 import fr from './translations/fr';
 
-// Create i18n instance with explicit translations
+// Create i18n instance
 const i18n = new I18n();
 
-// Set translations
-i18n.translations = {
+// IMPORTANT: Store translations using the 'store' method
+i18n.store({
   en,
   es,
   fr,
-};
+});
 
 // Configure i18n
 i18n.defaultLocale = 'en';
