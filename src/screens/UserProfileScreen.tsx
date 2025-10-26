@@ -26,7 +26,8 @@ import { useTranslationStore } from '../stores/translationStore';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../services/firebase';
 import { Colors } from '../constants/Colors';
-import { COMMON_LANGUAGES } from '../services/languageService';
+import { COMMON_LANGUAGES, getNativeLanguageName } from '../services/languageService';
+import i18n from '../i18n';
 
 const AVATAR_COLORS = [
   { name: 'Green', value: '#25D366' },
@@ -329,7 +330,7 @@ export const UserProfileScreen: React.FC = () => {
                   {getLanguageFlag(selectedLanguage)}
                 </Text>
                 <Text style={styles.languageDropdownText}>
-                  {COMMON_LANGUAGES.find(l => l.code === selectedLanguage)?.name || 'English'}
+                  {getNativeLanguageName(selectedLanguage)}
                 </Text>
               </View>
               <Text style={styles.languageDropdownArrow}>▼</Text>
@@ -418,7 +419,7 @@ export const UserProfileScreen: React.FC = () => {
                       styles.modalLanguageText,
                       selectedLanguage === language.code && styles.modalLanguageTextSelected
                     ]}>
-                      {language.name}
+                      {getNativeLanguageName(language.code)}
                     </Text>
                     {selectedLanguage === language.code && (
                       <Text style={styles.modalLanguageCheck}>✓</Text>

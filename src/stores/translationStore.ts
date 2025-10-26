@@ -14,6 +14,7 @@ import {
 } from '../types/translation';
 import * as translationService from '../services/translationService';
 import * as languageService from '../services/languageService';
+import { setAppLanguage } from '../i18n';
 
 interface TranslationState {
   // User language preference
@@ -111,6 +112,8 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
     try {
       await languageService.setUserLanguage(userId, language);
       set({ userLanguage: language });
+      // Sync i18n locale
+      setAppLanguage(language);
     } catch (error) {
       console.error('Error setting user language:', error);
       set((state) => ({
@@ -118,16 +121,20 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
       }));
     }
   },
-  
+
   loadUserLanguage: async (userId) => {
     try {
       const language = await languageService.getUserLanguage(userId);
       set({ userLanguage: language });
+      // Sync i18n locale
+      setAppLanguage(language);
     } catch (error) {
       console.error('Error loading user language:', error);
       // Fallback to device language
       const deviceLanguage = languageService.getDeviceLanguage();
       set({ userLanguage: deviceLanguage });
+      // Sync i18n locale with fallback
+      setAppLanguage(deviceLanguage);
     }
   },
   
