@@ -25,11 +25,17 @@ i18n
     },
     compatibilityJSON: 'v3', // Important for React Native
     initImmediate: false, // CRITICAL: Make initialization synchronous
+    react: {
+      useSuspense: false, // Disable suspense for React Native
+    },
   });
 
-console.log('[i18n] Initialized with react-i18next');
-console.log('[i18n] Current language:', i18n.language);
-console.log('[i18n] Test translation:', i18n.t('common.create'));
+// Verify initialization succeeded
+if (!i18n.isInitialized) {
+  console.error('[i18n] FAILED to initialize!');
+} else {
+  console.log('[i18n] Successfully initialized');
+}
 
 export default i18n;
 
