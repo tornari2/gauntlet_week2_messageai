@@ -17,12 +17,10 @@ const i18n = new I18n({
 
 // Set default locale
 i18n.defaultLocale = 'en';
+i18n.locale = 'en';
 
 // Enable fallback to default locale if translation is missing
-i18n.enableFallback = true;
-
-// Set initial locale to English
-i18n.locale = 'en';
+i18n.fallbacks = true;
 
 export default i18n;
 
