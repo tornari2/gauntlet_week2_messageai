@@ -10,6 +10,7 @@ import { ChatWithDetails } from '../types';
 import { ChatListItem } from './ChatListItem';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
+import i18n from '../i18n';
 
 interface SwipeableChatListItemProps {
   chat: ChatWithDetails;
@@ -21,27 +22,27 @@ export const SwipeableChatListItem: React.FC<SwipeableChatListItemProps> = ({ ch
 
   const handleLongPress = () => {
     if (!user) {
-      Alert.alert('Error', 'You must be logged in to delete chats');
+      Alert.alert(i18n.t('common.error'), i18n.t('errors.unauthorized'));
       return;
     }
 
     Alert.alert(
-      'Delete Chat',
-      `Are you sure you want to delete this chat${chat.type === 'direct' ? ` with ${chat.otherUserName}` : ''}? This will delete all messages.`,
+      i18n.t('chatList.deleteChatConfirm'),
+      i18n.t('chatList.deleteChatMessage'),
       [
         {
-          text: 'Cancel',
+          text: i18n.t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: i18n.t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteChat(chat.id, user.uid);
             } catch (error) {
               console.error('Error deleting chat:', error);
-              Alert.alert('Error', 'Failed to delete chat. Please try again.');
+              Alert.alert(i18n.t('common.error'), i18n.t('errors.generic'));
             }
           },
         },
