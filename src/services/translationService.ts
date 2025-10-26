@@ -336,14 +336,15 @@ export async function adjustFormality(
  */
 export async function explainSlang(
   text: string,
-  detectedLanguage: string
+  detectedLanguage: string,
+  targetLanguage: string = 'en'
 ): Promise<SlangExplanation[]> {
   if (!text || text.trim().length === 0) {
     return [];
   }
 
-  // Check cache first
-  const cacheParams = { detectedLanguage };
+  // Check cache first (include targetLanguage in cache key)
+  const cacheParams = { detectedLanguage, targetLanguage };
   const cached = await getCachedResult<SlangExplanation[]>('slang', text, cacheParams);
   if (cached) {
     return cached;
@@ -356,6 +357,7 @@ export async function explainSlang(
       const result = await explainSlangFn({
         text,
         detectedLanguage,
+        targetLanguage,
       });
 
       const data = result.data as any;
@@ -378,7 +380,8 @@ export async function explainSlang(
  */
 export async function getCulturalContext(
   text: string,
-  detectedLanguage: string
+  detectedLanguage: string,
+  targetLanguage: string = 'en'
 ): Promise<CulturalContext> {
   if (!text || text.trim().length === 0) {
     throw new TranslationError(
@@ -387,8 +390,8 @@ export async function getCulturalContext(
     );
   }
 
-  // Check cache first
-  const cacheParams = { detectedLanguage };
+  // Check cache first (include targetLanguage in cache key)
+  const cacheParams = { detectedLanguage, targetLanguage };
   const cached = await getCachedResult<CulturalContext>('cultural', text, cacheParams);
   if (cached) {
     return cached;
@@ -401,6 +404,7 @@ export async function getCulturalContext(
       const result = await getCulturalContextFn({
         text,
         detectedLanguage,
+        targetLanguage,
       });
 
       const data = result.data as any;

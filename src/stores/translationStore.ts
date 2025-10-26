@@ -400,7 +400,8 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
     }));
     
     try {
-      const context = await translationService.getCulturalContext(text, detectedLanguage);
+      const userLanguage = get().userLanguage;
+      const context = await translationService.getCulturalContext(text, detectedLanguage, userLanguage);
       
       // Cache it
       await translationService.cacheCulturalContext(messageId, context);
@@ -444,7 +445,8 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
     }));
     
     try {
-      const explanations = await translationService.explainSlang(text, detectedLanguage);
+      const userLanguage = get().userLanguage;
+      const explanations = await translationService.explainSlang(text, detectedLanguage, userLanguage);
       
       // Cache it
       await translationService.cacheSlangExplanations(messageId, explanations);

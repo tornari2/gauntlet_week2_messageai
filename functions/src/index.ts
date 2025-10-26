@@ -213,21 +213,25 @@ export const explainSlang = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to explain slang');
   }
 
-  const { text, detectedLanguage } = data;
+  const { text, detectedLanguage, targetLanguage } = data;
 
   if (!text || !detectedLanguage) {
     throw new functions.https.HttpsError('invalid-argument', 'Text and detected language are required');
   }
 
+  // Default to English if no target language specified
+  const explanationLanguage = targetLanguage || 'English';
+
   try {
     const prompt = `Identify any slang, idioms, or informal expressions in this ${detectedLanguage} message.
-For each one found, provide:
+For each one found, provide (IN ${explanationLanguage}):
 1. The slang/idiom
 2. Literal meaning
 3. Actual meaning/usage
 4. Example in context
 
 If none found, return an empty array.
+ALL EXPLANATIONS MUST BE IN ${explanationLanguage}.
 
 Message: "${text}"
 
@@ -263,22 +267,27 @@ export const getCulturalContext = functions.https.onCall(async (data, context) =
     throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to get cultural context');
   }
 
-  const { text, detectedLanguage } = data;
+  const { text, detectedLanguage, targetLanguage } = data;
 
   if (!text || !detectedLanguage) {
     throw new functions.https.HttpsError('invalid-argument', 'Text and detected language are required');
   }
+
+  // Default to English if no target language specified
+  const explanationLanguage = targetLanguage || 'English';
 
   try {
     const prompt = `Analyze this message for cultural context and references.
 Consider the language (${detectedLanguage}) and provide helpful cultural insights.
 If there are no significant cultural references, say "No specific cultural context detected."
 
+ALL EXPLANATIONS MUST BE IN ${explanationLanguage}.
+
 Message: "${text}"
 
 Format your response as JSON with keys:
-- culturalInsights: string (main explanation)
-- references: array of strings (specific cultural references found)`;
+- culturalInsights: string (main explanation IN ${explanationLanguage})
+- references: array of strings (specific cultural references found, explained IN ${explanationLanguage})`;
 
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
