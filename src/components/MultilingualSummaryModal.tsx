@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MultilingualSummary } from '../types/translation';
+import i18n from '../i18n';
 
 interface MultilingualSummaryModalProps {
   visible: boolean;
@@ -65,7 +66,7 @@ export const MultilingualSummaryModal: React.FC<MultilingualSummaryModalProps> =
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>📝 Thread Summary</Text>
+            <Text style={styles.title}>📝 {i18n.t('summary.title')}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
@@ -75,7 +76,7 @@ export const MultilingualSummaryModal: React.FC<MultilingualSummaryModalProps> =
             {loading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#1976D2" />
-                <Text style={styles.loadingText}>Generating multilingual summary...</Text>
+                <Text style={styles.loadingText}>{i18n.t('summary.loading')}</Text>
               </View>
             )}
 

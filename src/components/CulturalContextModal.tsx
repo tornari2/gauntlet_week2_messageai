@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { CulturalContext } from '../types/translation';
+import i18n from '../i18n';
 
 interface CulturalContextModalProps {
   visible: boolean;
@@ -42,7 +43,7 @@ export const CulturalContextModal: React.FC<CulturalContextModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>🧠 Cultural Context</Text>
+            <Text style={styles.title}>🧠 {i18n.t('culturalContext.title')}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
@@ -52,17 +53,17 @@ export const CulturalContextModal: React.FC<CulturalContextModalProps> = ({
             {loading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#1976D2" />
-                <Text style={styles.loadingText}>Analyzing cultural context...</Text>
+                <Text style={styles.loadingText}>{i18n.t('culturalContext.loading')}</Text>
               </View>
             )}
 
             {error && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Failed to load cultural context</Text>
+                <Text style={styles.errorText}>{i18n.t('culturalContext.error')}</Text>
                 <Text style={styles.errorSubtext}>{error.message}</Text>
                 {onRetry && (
                   <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-                    <Text style={styles.retryButtonText}>Try Again</Text>
+                    <Text style={styles.retryButtonText}>{i18n.t('common.retry')}</Text>
                   </TouchableOpacity>
                 )}
               </View>

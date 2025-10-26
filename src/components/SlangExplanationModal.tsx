@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SlangExplanation } from '../types/translation';
+import i18n from '../i18n';
 
 interface SlangExplanationModalProps {
   visible: boolean;
@@ -44,7 +45,7 @@ export const SlangExplanationModal: React.FC<SlangExplanationModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>💬 Slang & Idioms</Text>
+            <Text style={styles.title}>💬 {i18n.t('slang.title')}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
@@ -54,17 +55,17 @@ export const SlangExplanationModal: React.FC<SlangExplanationModalProps> = ({
             {loading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#1976D2" />
-                <Text style={styles.loadingText}>Analyzing slang and idioms...</Text>
+                <Text style={styles.loadingText}>{i18n.t('slang.loading')}</Text>
               </View>
             )}
 
             {error && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Failed to load explanations</Text>
+                <Text style={styles.errorText}>{i18n.t('slang.error')}</Text>
                 <Text style={styles.errorSubtext}>{error.message}</Text>
                 {onRetry && (
                   <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-                    <Text style={styles.retryButtonText}>Try Again</Text>
+                    <Text style={styles.retryButtonText}>{i18n.t('common.retry')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -73,7 +74,7 @@ export const SlangExplanationModal: React.FC<SlangExplanationModalProps> = ({
             {!loading && !error && !hasExplanations && (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyIcon}>✓</Text>
-                <Text style={styles.emptyText}>No slang or idioms detected</Text>
+                <Text style={styles.emptyText}>{i18n.t('slang.noSlang')}</Text>
                 <Text style={styles.emptySubtext}>This message uses standard language.</Text>
               </View>
             )}
