@@ -54,6 +54,7 @@ export const ChatScreen: React.FC = () => {
   const [participants, setParticipants] = useState<string[]>([]);
   const [participantUsers, setParticipantUsers] = useState<User[]>([]); // For group chats
   const [senderNames, setSenderNames] = useState<Record<string, string>>({});
+  const processedMessageIds = useRef<Set<string>>(new Set()); // Track processed messages to prevent infinite loop
   
   // Typing indicator state
   const [typingUserIds, setTypingUserIds] = useState<string[]>([]);
@@ -122,6 +123,9 @@ export const ChatScreen: React.FC = () => {
     // Load auto-translate setting for this chat
     translationStore.loadAutoTranslateSetting(chatId);
     
+    // Reset processed messages when entering a new chat
+    processedMessageIds.current.clear();
+    
     return () => {
       // Clear active chat ID when leaving the screen
       setActiveChatId(null);
@@ -143,12 +147,16 @@ export const ChatScreen: React.FC = () => {
       msg.text && 
       msg.detectedLanguage && 
       msg.detectedLanguage !== userLanguage &&
-      !translationStore.translations[msg.id]?.[userLanguage] // Not already translated
+      !translationStore.translations[msg.id]?.[userLanguage] && // Not already translated
+      !processedMessageIds.current.has(msg.id) // Not already processed (prevent infinite loop)
     );
     
     if (messagesToTranslate.length === 0) return;
     
     console.log(`[ChatScreen] Batch auto-translating ${messagesToTranslate.length} messages`);
+    
+    // Mark these messages as processed BEFORE translating to prevent re-triggering
+    messagesToTranslate.forEach(msg => processedMessageIds.current.add(msg.id));
     
     // Batch translate all messages at once
     const batchData = messagesToTranslate.map(msg => ({
@@ -159,8 +167,10 @@ export const ChatScreen: React.FC = () => {
     
     translationStore.batchTranslateMessages(batchData, userLanguage).catch(error => {
       console.error('[ChatScreen] Batch auto-translate failed:', error);
+      // Remove from processed set on error so we can retry
+      messagesToTranslate.forEach(msg => processedMessageIds.current.delete(msg.id));
     });
-  }, [chatId, chatMessages, translationStore, user]);
+  }, [chatId, chatMessages.length, user?.uid]); // FIXED: Only depend on length, not the whole array
   
   // Get chat participants and their names
   useEffect(() => {
