@@ -3,7 +3,7 @@
  * Allows users to adjust message formality before sending
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { FormalityLevel } from '../types/translation';
 
 interface FormalitySelectorProps {
@@ -33,53 +34,69 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
   onPreview,
   targetLanguage,
 }) => {
-  const [selectedLevel, setSelectedLevel] = useState<FormalityLevel>('neutral');
-  const [previewText, setPreviewText] = useState<string>('');
+  const [selectedLevel, setSelectedLevel] = useState<FormalityLevel | null>(null);
+  const [previewTexts, setPreviewTexts] = useState<Record<FormalityLevel, string>>({
+    casual: '',
+    neutral: '',
+    formal: '',
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const formalityOptions: { level: FormalityLevel; icon: string; label: string; description: string }[] = [
+  const formalityOptions: { level: FormalityLevel; label: string; description: string }[] = [
     {
       level: 'casual',
-      icon: '🙂',
       label: 'Casual',
       description: 'Friendly, relaxed, conversational',
     },
     {
       level: 'neutral',
-      icon: '😐',
       label: 'Neutral',
       description: 'Professional but approachable',
     },
     {
       level: 'formal',
-      icon: '🎩',
       label: 'Formal',
       description: 'Respectful, polite, business-appropriate',
     },
   ];
 
-  const handlePreview = async (level: FormalityLevel) => {
-    setSelectedLevel(level);
+  // Load all three formality versions when modal opens
+  useEffect(() => {
+    if (visible && originalText.trim()) {
+      loadAllPreviews();
+    }
+  }, [visible, originalText]);
+
+  const loadAllPreviews = async () => {
     setLoading(true);
     setError(null);
-    setPreviewText('');
+    setPreviewTexts({ casual: '', neutral: '', formal: '' });
 
     try {
-      const adjusted = await onPreview(originalText, level);
-      setPreviewText(adjusted);
+      // Load all three formality levels in parallel
+      const [casual, neutral, formal] = await Promise.all([
+        onPreview(originalText, 'casual'),
+        onPreview(originalText, 'neutral'),
+        onPreview(originalText, 'formal'),
+      ]);
+
+      setPreviewTexts({
+        casual,
+        neutral,
+        formal,
+      });
     } catch (err) {
-      console.error('Error previewing formality:', err);
+      console.error('Error loading formality previews:', err);
       setError('Failed to adjust formality. Please try again.');
-      setPreviewText('');
     } finally {
       setLoading(false);
     }
   };
 
   const handleApply = () => {
-    if (previewText) {
-      onApply(previewText);
+    if (selectedLevel && previewTexts[selectedLevel]) {
+      onApply(previewTexts[selectedLevel]);
     } else {
       onApply(originalText);
     }
@@ -87,8 +104,8 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
   };
 
   const handleClose = () => {
-    setPreviewText('');
-    setSelectedLevel('neutral');
+    setPreviewTexts({ casual: '', neutral: '', formal: '' });
+    setSelectedLevel(null);
     setError(null);
     onClose();
   };
@@ -116,53 +133,53 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
               <Text style={styles.originalText}>{originalText}</Text>
             </View>
 
-            {/* Formality Options */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Select Formality Level:</Text>
-              <View style={styles.optionsContainer}>
-                {formalityOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.level}
-                    style={[
-                      styles.optionButton,
-                      selectedLevel === option.level && styles.optionButtonSelected,
-                    ]}
-                    onPress={() => handlePreview(option.level)}
-                    disabled={loading}
-                  >
-                    <Text style={styles.optionIcon}>{option.icon}</Text>
-                    <Text style={[
-                      styles.optionLabel,
-                      selectedLevel === option.level && styles.optionLabelSelected,
-                    ]}>
-                      {option.label}
-                    </Text>
-                    <Text style={styles.optionDescription}>{option.description}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Preview */}
+            {/* Loading State */}
             {loading && (
               <View style={styles.section}>
                 <ActivityIndicator size="large" color="#1976D2" />
-                <Text style={styles.loadingText}>Adjusting formality...</Text>
+                <Text style={styles.loadingText}>Generating formality options...</Text>
               </View>
             )}
 
+            {/* Error State */}
             {error && (
               <View style={styles.section}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
 
-            {previewText && !loading && (
+            {/* Formality Options with Previews */}
+            {!loading && !error && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Preview:</Text>
-                <View style={styles.previewContainer}>
-                  <Text style={styles.previewText}>{previewText}</Text>
-                </View>
+                <Text style={styles.sectionTitle}>Select Version:</Text>
+                {formalityOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.level}
+                    style={[
+                      styles.optionCard,
+                      selectedLevel === option.level && styles.optionCardSelected,
+                    ]}
+                    onPress={() => setSelectedLevel(option.level)}
+                  >
+                    <View style={styles.optionHeader}>
+                      <Text style={[
+                        styles.optionLabel,
+                        selectedLevel === option.level && styles.optionLabelSelected,
+                      ]}>
+                        {option.label}
+                      </Text>
+                      {selectedLevel === option.level && (
+                        <Ionicons name="checkmark-circle" size={20} color="#1976D2" />
+                      )}
+                    </View>
+                    <Text style={styles.optionDescription}>{option.description}</Text>
+                    {previewTexts[option.level] && (
+                      <View style={styles.previewContainer}>
+                        <Text style={styles.previewText}>{previewTexts[option.level]}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
           </ScrollView>
@@ -179,13 +196,13 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
               style={[
                 styles.button,
                 styles.applyButton,
-                (!previewText && !originalText) && styles.applyButtonDisabled,
+                !selectedLevel && styles.applyButtonDisabled,
               ]}
               onPress={handleApply}
-              disabled={!previewText && !originalText}
+              disabled={!selectedLevel}
             >
               <Text style={styles.applyButtonText}>
-                {previewText ? 'Apply Changes' : 'Keep Original'}
+                {selectedLevel ? 'Apply Changes' : 'Select a Version'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -245,36 +262,36 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
   },
-  optionsContainer: {
-    gap: 12,
-  },
-  optionButton: {
-    padding: 12,
-    borderRadius: 8,
+  optionCard: {
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E0E0E0',
     backgroundColor: '#FFFFFF',
+    marginBottom: 12,
   },
-  optionButtonSelected: {
+  optionCardSelected: {
     borderColor: '#1976D2',
     backgroundColor: '#E3F2FD',
   },
-  optionIcon: {
-    fontSize: 24,
+  optionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
   optionLabel: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#000',
-    marginBottom: 2,
   },
   optionLabelSelected: {
     color: '#1976D2',
   },
   optionDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#666',
+    marginBottom: 8,
   },
   loadingText: {
     textAlign: 'center',
@@ -286,15 +303,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   previewContainer: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#F9F9F9',
     padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#4CAF50',
+    marginTop: 4,
   },
   previewText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#000',
+    lineHeight: 20,
   },
   actions: {
     flexDirection: 'row',
