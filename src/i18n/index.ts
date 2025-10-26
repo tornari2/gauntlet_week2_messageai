@@ -4,29 +4,24 @@
  */
 
 import { I18n } from 'i18n-js';
-import en from './translations/en';
-import es from './translations/es';
-import fr from './translations/fr';
+
+// Lazy load translations to avoid initialization timing issues
+const getTranslations = () => ({
+  en: require('./translations/en').default,
+  es: require('./translations/es').default,
+  fr: require('./translations/fr').default,
+});
 
 // Create i18n instance
 const i18n = new I18n();
 
-// IMPORTANT: Store translations using the 'store' method
-i18n.store({
-  en,
-  es,
-  fr,
-});
+// Store translations
+i18n.store(getTranslations());
 
 // Configure i18n
 i18n.defaultLocale = 'en';
 i18n.locale = 'en';
 i18n.fallbacks = true;
-
-// Verify translations are loaded
-console.log('[i18n] Initialized with locales:', Object.keys(i18n.translations));
-console.log('[i18n] Current locale:', i18n.locale);
-console.log('[i18n] Test translation (common.create):', i18n.t('common.create'));
 
 export default i18n;
 
