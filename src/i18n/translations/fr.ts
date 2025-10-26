@@ -19,6 +19,8 @@ export default {
     close: 'Fermer',
     retry: 'Réessayer',
     search: 'Rechercher',
+    create: 'Créer',
+    offline: 'Hors ligne',
   },
 
   // Authentication
@@ -47,6 +49,9 @@ export default {
     delivered: 'Livré',
     read: 'Lu',
     sent: 'Envoyé',
+    title: 'Discussion',
+    noMessages: 'Aucun message pour le moment',
+    startConversation: 'Dites bonjour!',
   },
 
   // Message Actions (Long Press Menu)
@@ -59,6 +64,8 @@ export default {
     copy: 'Copier',
     delete: 'Supprimer',
     translatedFrom: 'Traduit de',
+    originallyIn: 'Originalement en',
+    messageIn: 'Message en',
   },
 
   // Chat List Screen
@@ -80,7 +87,12 @@ export default {
     createGroup: 'Créer un Groupe',
     startChat: 'Commencer',
     noUsers: 'Aucun utilisateur trouvé',
-    searchUsers: 'Rechercher des utilisateurs...',
+    searchUsers: 'Rechercher par nom ou email...',
+    selected: 'sélectionné(s)',
+    tryDifferentSearch: 'Essayez une autre recherche',
+    noOtherUsers: 'Aucun autre utilisateur disponible',
+    groupNameTitle: 'Nommez votre Groupe',
+    enterGroupName: 'Entrez le nom du groupe',
   },
 
   // Profile Screen
@@ -95,8 +107,11 @@ export default {
     logout: 'Se Déconnecter',
     logoutConfirm: 'Êtes-vous sûr de vouloir vous déconnecter?',
     editProfile: 'Modifier le Profil',
-    saveChanges: 'Enregistrer les Modifications',
-    changesSaved: 'Modifications enregistrées avec succès',
+    saveChanges: 'Enregistrer',
+    changesSaved: 'Succès',
+    success: 'Profil mis à jour avec succès!',
+    offlineMode: 'Mode Hors Ligne',
+    offlineChanges: 'Votre profil a été mis à jour localement. Les modifications seront synchronisées lorsque vous vous reconnecterez à internet.',
   },
 
   // Auto-translate feature
@@ -163,8 +178,8 @@ export default {
 
   // Typing Indicator
   typing: {
-    isTyping: 'est en train d\'écrire...',
-    areTyping: 'sont en train d\'écrire...',
+    isTyping: 'est en train d\'écrire',
+    areTyping: 'sont en train d\'écrire',
   },
 
   // Connection Status
@@ -184,6 +199,7 @@ export default {
     serverError: 'Erreur serveur. Réessayez plus tard.',
     timeout: 'Délai d\'attente dépassé. Réessayez.',
     invalidInput: 'Entrée invalide. Vérifiez votre saisie.',
+    displayNameRequired: 'Veuillez entrer un nom d\'affichage',
   },
 
   // Empty States

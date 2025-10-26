@@ -19,6 +19,8 @@ export default {
     close: 'Cerrar',
     retry: 'Reintentar',
     search: 'Buscar',
+    create: 'Crear',
+    offline: 'Sin conexión',
   },
 
   // Authentication
@@ -47,6 +49,9 @@ export default {
     delivered: 'Entregado',
     read: 'Leído',
     sent: 'Enviado',
+    title: 'Chat',
+    noMessages: 'No hay mensajes aún',
+    startConversation: '¡Saluda!',
   },
 
   // Message Actions (Long Press Menu)
@@ -59,11 +64,13 @@ export default {
     copy: 'Copiar',
     delete: 'Eliminar',
     translatedFrom: 'Traducido del',
+    originallyIn: 'Originalmente en',
+    messageIn: 'Mensaje en',
   },
 
   // Chat List Screen
   chatList: {
-    title: 'Chats',
+    title: 'Conversaciones',
     newChat: 'Nuevo Chat',
     noChats: 'No hay chats todavía',
     startChatting: 'Inicia una conversación',
@@ -80,7 +87,12 @@ export default {
     createGroup: 'Crear Grupo',
     startChat: 'Iniciar Chat',
     noUsers: 'No se encontraron usuarios',
-    searchUsers: 'Buscar usuarios...',
+    searchUsers: 'Buscar por nombre o correo...',
+    selected: 'seleccionado(s)',
+    tryDifferentSearch: 'Prueba una búsqueda diferente',
+    noOtherUsers: 'No hay otros usuarios disponibles',
+    groupNameTitle: 'Nombra tu Grupo',
+    enterGroupName: 'Ingresa el nombre del grupo',
   },
 
   // Profile Screen
@@ -96,7 +108,10 @@ export default {
     logoutConfirm: '¿Estás seguro de que quieres cerrar sesión?',
     editProfile: 'Editar Perfil',
     saveChanges: 'Guardar Cambios',
-    changesSaved: 'Cambios guardados exitosamente',
+    changesSaved: 'Éxito',
+    success: '¡Perfil actualizado correctamente!',
+    offlineMode: 'Modo Sin Conexión',
+    offlineChanges: 'Tu perfil se ha actualizado localmente. Los cambios se sincronizarán cuando te vuelvas a conectar a internet.',
   },
 
   // Auto-translate feature
@@ -163,8 +178,8 @@ export default {
 
   // Typing Indicator
   typing: {
-    isTyping: 'está escribiendo...',
-    areTyping: 'están escribiendo...',
+    isTyping: 'está escribiendo',
+    areTyping: 'están escribiendo',
   },
 
   // Connection Status
@@ -184,6 +199,7 @@ export default {
     serverError: 'Error del servidor. Inténtalo más tarde.',
     timeout: 'Tiempo de espera agotado. Inténtalo de nuevo.',
     invalidInput: 'Entrada inválida. Por favor verifica tu entrada.',
+    displayNameRequired: 'Por favor ingresa un nombre para mostrar',
   },
 
   // Empty States
