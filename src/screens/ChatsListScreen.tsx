@@ -28,6 +28,7 @@ import { useAuthStore } from '../stores/authStore';
 import { SwipeableChatListItem } from '../components/SwipeableChatListItem';
 import { Chat } from '../types';
 import { Colors } from '../constants/Colors';
+import i18n from '../i18n';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -72,7 +73,7 @@ export const ChatsListScreen: React.FC = () => {
       return (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading chats...</Text>
+          <Text style={styles.loadingText}>{i18n.t('common.loading')}</Text>
         </View>
       );
     }
@@ -80,9 +81,9 @@ export const ChatsListScreen: React.FC = () => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.emptyIcon}>💬</Text>
-        <Text style={styles.emptyTitle}>No Chats Yet</Text>
+        <Text style={styles.emptyTitle}>{i18n.t('chatList.noChats')}</Text>
         <Text style={styles.emptySubtitle}>
-          Start a conversation with your contacts
+          {i18n.t('chatList.startChatting')}
         </Text>
       </View>
     );
@@ -93,7 +94,7 @@ export const ChatsListScreen: React.FC = () => {
       <View style={styles.container}>
         {/* Header with logout button */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Chats</Text>
+          <Text style={styles.headerTitle}>{i18n.t('chatList.title')}</Text>
           <TouchableOpacity
             onPress={handleLogout}
             style={styles.logoutButton}
