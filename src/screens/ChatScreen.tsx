@@ -132,6 +132,16 @@ export const ChatScreen: React.FC = () => {
     };
   }, [chatId, setActiveChatId, user]);
   
+  // Clear processed messages when auto-translate is toggled on
+  // This allows re-translation of existing messages
+  useEffect(() => {
+    const autoTranslateEnabled = translationStore.isAutoTranslateEnabled(chatId);
+    if (autoTranslateEnabled) {
+      console.log('[ChatScreen] Auto-translate enabled - clearing processed message IDs');
+      processedMessageIds.current.clear();
+    }
+  }, [translationStore.autoTranslateEnabled[chatId], chatId]);
+  
   // Batch auto-translate effect
   // Instead of letting each MessageBubble translate individually,
   // we batch translate all foreign messages at once for much better performance
