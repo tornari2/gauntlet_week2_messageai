@@ -35,6 +35,7 @@ import { getUserAvatarColor } from '../utils/userColors';
 import { OnlineIndicator } from '../components/OnlineIndicator';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../services/firebase';
+import i18n from '../i18n';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -253,7 +254,7 @@ export const NewChatScreen: React.FC = () => {
       return (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading users...</Text>
+          <Text style={styles.loadingText}>{i18n.t('common.loading')}</Text>
         </View>
       );
     }
@@ -261,9 +262,9 @@ export const NewChatScreen: React.FC = () => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.emptyIcon}>👥</Text>
-        <Text style={styles.emptyTitle}>No Users Found</Text>
+        <Text style={styles.emptyTitle}>{i18n.t('newChat.noUsers')}</Text>
         <Text style={styles.emptySubtitle}>
-          {searchQuery ? 'Try a different search' : 'No other users available'}
+          {searchQuery ? i18n.t('newChat.tryDifferentSearch') : i18n.t('newChat.noOtherUsers')}
         </Text>
       </View>
     );
@@ -288,10 +289,10 @@ export const NewChatScreen: React.FC = () => {
           >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Chat</Text>
+          <Text style={styles.headerTitle}>{i18n.t('newChat.title')}</Text>
           {selectedUserIds.size > 0 && (
             <Text style={styles.selectedCount}>
-              {selectedUserIds.size} selected
+              {selectedUserIds.size} {i18n.t('newChat.selected')}
             </Text>
           )}
         </View>
@@ -300,7 +301,7 @@ export const NewChatScreen: React.FC = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name or email..."
+          placeholder={i18n.t('newChat.searchUsers')}
           placeholderTextColor="#8e8e93"
           value={searchQuery}
           onChangeText={setSearchQuery}

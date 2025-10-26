@@ -161,7 +161,7 @@ export const UserProfileScreen: React.FC = () => {
     
     // Validation
     if (!displayName.trim()) {
-      Alert.alert('Error', 'Please enter a display name');
+      Alert.alert(i18n.t('common.error'), i18n.t('errors.displayNameRequired'));
       return;
     }
 
@@ -194,9 +194,9 @@ export const UserProfileScreen: React.FC = () => {
       }
 
       Alert.alert(
-        'Offline Mode', 
-        'Your profile has been updated locally. Changes will sync when you reconnect to the internet.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        i18n.t('profile.offlineMode'), 
+        i18n.t('profile.offlineChanges'),
+        [{ text: i18n.t('common.ok'), onPress: () => navigation.goBack() }]
       );
       
       // Queue the update for when we're back online (Firestore handles this automatically)
@@ -253,12 +253,12 @@ export const UserProfileScreen: React.FC = () => {
         console.error('Error caching updated profile:', cacheError);
       }
 
-      Alert.alert('Success', 'Profile updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert(i18n.t('profile.changesSaved'), i18n.t('profile.success'), [
+        { text: i18n.t('common.ok'), onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      Alert.alert(i18n.t('common.error'), i18n.t('errors.generic'));
     } finally {
       setSaving(false);
     }
@@ -374,7 +374,7 @@ export const UserProfileScreen: React.FC = () => {
             {saving ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={styles.saveButtonText}>{i18n.t('profile.saveChanges')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -389,7 +389,7 @@ export const UserProfileScreen: React.FC = () => {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Language</Text>
+                <Text style={styles.modalTitle}>{i18n.t('profile.selectLanguage')}</Text>
                 <TouchableOpacity
                   onPress={() => setShowLanguagePicker(false)}
                   style={styles.modalCloseButton}

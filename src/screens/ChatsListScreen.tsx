@@ -100,7 +100,7 @@ export const ChatsListScreen: React.FC = () => {
             style={styles.logoutButton}
             testID="logout-button"
           >
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutText}>{i18n.t('profile.logout')}</Text>
           </TouchableOpacity>
         </View>
 

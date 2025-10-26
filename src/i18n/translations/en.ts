@@ -19,6 +19,8 @@ export default {
     close: 'Close',
     retry: 'Retry',
     search: 'Search',
+    create: 'Create',
+    offline: 'You are offline',
   },
 
   // Authentication
@@ -47,6 +49,9 @@ export default {
     delivered: 'Delivered',
     read: 'Read',
     sent: 'Sent',
+    title: 'Chat',
+    noMessages: 'No messages yet',
+    startConversation: 'Say hello!',
   },
 
   // Message Actions (Long Press Menu)
@@ -59,11 +64,13 @@ export default {
     copy: 'Copy',
     delete: 'Delete',
     translatedFrom: 'Translated from',
+    originallyIn: 'Originally in',
+    messageIn: 'Message in',
   },
 
   // Chat List Screen
   chatList: {
-    title: 'Chats',
+    title: 'Conversations',
     newChat: 'New Chat',
     noChats: 'No chats yet',
     startChatting: 'Start a conversation',
@@ -80,7 +87,12 @@ export default {
     createGroup: 'Create Group',
     startChat: 'Start Chat',
     noUsers: 'No users found',
-    searchUsers: 'Search users...',
+    searchUsers: 'Search by name or email...',
+    selected: 'selected',
+    tryDifferentSearch: 'Try a different search',
+    noOtherUsers: 'No other users available',
+    groupNameTitle: 'Name Your Group',
+    enterGroupName: 'Enter group name',
   },
 
   // Profile Screen
@@ -96,7 +108,10 @@ export default {
     logoutConfirm: 'Are you sure you want to logout?',
     editProfile: 'Edit Profile',
     saveChanges: 'Save Changes',
-    changesSaved: 'Changes saved successfully',
+    changesSaved: 'Success',
+    success: 'Profile updated successfully!',
+    offlineMode: 'Offline Mode',
+    offlineChanges: 'Your profile has been updated locally. Changes will sync when you reconnect to the internet.',
   },
 
   // Auto-translate feature
@@ -163,8 +178,8 @@ export default {
 
   // Typing Indicator
   typing: {
-    isTyping: 'is typing...',
-    areTyping: 'are typing...',
+    isTyping: 'is typing',
+    areTyping: 'are typing',
   },
 
   // Connection Status
@@ -184,6 +199,7 @@ export default {
     serverError: 'Server error. Please try again later.',
     timeout: 'Request timed out. Please try again.',
     invalidInput: 'Invalid input. Please check your entry.',
+    displayNameRequired: 'Please enter a display name',
   },
 
   // Empty States
