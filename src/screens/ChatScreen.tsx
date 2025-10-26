@@ -728,8 +728,8 @@ export const ChatScreen: React.FC = () => {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>💬</Text>
-        <Text style={styles.emptyText}>No messages yet</Text>
-        <Text style={styles.emptySubtext}>Say hi to start the conversation!</Text>
+        <Text style={styles.emptyText}>{i18n.t('chat.noMessages')}</Text>
+        <Text style={styles.emptySubtext}>{i18n.t('chat.startConversation')}</Text>
       </View>
     );
   };
@@ -749,7 +749,7 @@ export const ChatScreen: React.FC = () => {
             testID="back-button"
             hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
           >
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>← {i18n.t('common.back')}</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>

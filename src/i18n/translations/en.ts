@@ -21,6 +21,7 @@ export default {
     search: 'Search',
     create: 'Create',
     offline: 'You are offline',
+    back: 'Back',
   },
 
   // Authentication
@@ -43,6 +44,7 @@ export default {
     deleteMessage: 'Are you sure you want to delete this message?',
     online: 'Online',
     offline: 'Offline',
+    statusUnknown: 'Status unknown (you are offline)',
     lastSeen: 'Last seen',
     participants: 'participants',
     you: 'You',

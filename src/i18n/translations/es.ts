@@ -21,6 +21,7 @@ export default {
     search: 'Buscar',
     create: 'Crear',
     offline: 'Sin conexión',
+    back: 'Atrás',
   },
 
   // Authentication
@@ -43,6 +44,7 @@ export default {
     deleteMessage: '¿Estás seguro de que quieres eliminar este mensaje?',
     online: 'En línea',
     offline: 'Desconectado',
+    statusUnknown: 'Estado desconocido (estás desconectado)',
     lastSeen: 'Última vez',
     participants: 'participantes',
     you: 'Tú',

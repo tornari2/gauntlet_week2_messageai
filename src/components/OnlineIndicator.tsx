@@ -8,6 +8,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Timestamp } from 'firebase/firestore';
 import { formatLastSeen } from '../utils/dateHelpers';
 import { Colors } from '../constants/Colors';
+import i18n from '../i18n';
 
 interface OnlineIndicatorProps {
   isOnline: boolean;
@@ -34,9 +35,9 @@ export const OnlineIndicator: React.FC<OnlineIndicatorProps> = React.memo(({
 
   // Determine status text
   const getStatusText = () => {
-    if (isUnknown) return 'Status unknown (you are offline)';
+    if (isUnknown) return i18n.t('chat.statusUnknown');
     if (lastSeen) return formatLastSeen(lastSeen, isOnline);
-    return isOnline ? 'Online' : 'Offline';
+    return isOnline ? i18n.t('chat.online') : i18n.t('chat.offline');
   };
 
   if (showText) {

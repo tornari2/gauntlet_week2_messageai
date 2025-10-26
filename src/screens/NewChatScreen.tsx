@@ -340,10 +340,10 @@ export const NewChatScreen: React.FC = () => {
           >
             <Text style={styles.createButtonText}>
               {creatingChat 
-                ? 'Creating...' 
+                ? i18n.t('common.loading')
                 : selectedUserIds.size === 1 
-                  ? 'Start Chat' 
-                  : `Create Group (${selectedUserIds.size})`
+                  ? i18n.t('newChat.startChat')
+                  : `${i18n.t('newChat.createGroup')} (${selectedUserIds.size})`
               }
             </Text>
           </TouchableOpacity>
