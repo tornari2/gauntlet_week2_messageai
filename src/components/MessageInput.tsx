@@ -141,10 +141,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     return await adjustFormality(originalText, level, userLanguage);
   };
 
-  const handleFormalitySendMessage = (adjustedText: string) => {
-    stopTyping();
-    onSend(adjustedText);
-    setText('');
+  const handleFormalityApply = (adjustedText: string) => {
+    // Update the text in the input instead of sending immediately
+    setText(adjustedText);
+    setShowFormalitySelector(false);
   };
 
   return (
@@ -167,25 +167,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           />
         </TouchableOpacity>
 
-        {/* Formality button */}
-        <TouchableOpacity
-          style={styles.formalityButton}
-          onPress={handleFormalityPress}
-          disabled={disabled || !text.trim()}
-          testID="formality-button"
-        >
-          <Ionicons
-            name="chatbubble-ellipses-outline"
-            size={22}
-            color={disabled || !text.trim() ? '#C7C7CC' : '#007AFF'}
-          />
-        </TouchableOpacity>
+        {/* Formality button - REMOVED, now using long press on input */}
 
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
             value={text}
             onChangeText={handleTextChange}
+            onLongPress={handleFormalityPress}
             placeholder="Type a message..."
             placeholderTextColor="#8E8E93"
             multiline
@@ -218,7 +207,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         originalText={text}
         targetLanguage={userLanguage}
         onClose={() => setShowFormalitySelector(false)}
-        onSend={handleFormalitySendMessage}
+        onApply={handleFormalityApply}
         onPreview={handleFormalityPreview}
       />
     </KeyboardAvoidingView>
@@ -236,14 +225,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E5EA',
   },
   imageButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 4,
-  },
-  formalityButton: {
     width: 36,
     height: 36,
     borderRadius: 18,

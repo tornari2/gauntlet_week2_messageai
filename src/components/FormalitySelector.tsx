@@ -20,7 +20,7 @@ interface FormalitySelectorProps {
   originalText: string;
   visible: boolean;
   onClose: () => void;
-  onSend: (adjustedText: string) => void;
+  onApply: (adjustedText: string) => void; // Changed from onSend
   onPreview: (text: string, level: FormalityLevel) => Promise<string>;
   targetLanguage: string;
 }
@@ -29,7 +29,7 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
   originalText,
   visible,
   onClose,
-  onSend,
+  onApply, // Changed from onSend
   onPreview,
   targetLanguage,
 }) => {
@@ -77,11 +77,11 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
     }
   };
 
-  const handleSend = () => {
+  const handleApply = () => {
     if (previewText) {
-      onSend(previewText);
+      onApply(previewText);
     } else {
-      onSend(originalText);
+      onApply(originalText);
     }
     handleClose();
   };
@@ -178,14 +178,14 @@ export const FormalitySelector: React.FC<FormalitySelectorProps> = ({
             <TouchableOpacity
               style={[
                 styles.button,
-                styles.sendButton,
-                (!previewText && !originalText) && styles.sendButtonDisabled,
+                styles.applyButton,
+                (!previewText && !originalText) && styles.applyButtonDisabled,
               ]}
-              onPress={handleSend}
+              onPress={handleApply}
               disabled={!previewText && !originalText}
             >
-              <Text style={styles.sendButtonText}>
-                {previewText ? 'Send Adjusted' : 'Send Original'}
+              <Text style={styles.applyButtonText}>
+                {previewText ? 'Apply Changes' : 'Keep Original'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -324,6 +324,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#BDBDBD',
   },
   sendButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  applyButton: {
+    backgroundColor: '#25D366',
+  },
+  applyButtonDisabled: {
+    backgroundColor: '#BDBDBD',
+  },
+  applyButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
