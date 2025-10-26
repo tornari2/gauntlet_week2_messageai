@@ -13,6 +13,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FormalitySelector } from './FormalitySelector';
@@ -169,12 +170,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
         {/* Formality button - REMOVED, now using long press on input */}
 
-        <View style={styles.inputContainer}>
+        <Pressable 
+          style={styles.inputContainer}
+          onLongPress={handleFormalityPress}
+          delayLongPress={500}
+        >
           <TextInput
             style={styles.input}
             value={text}
             onChangeText={handleTextChange}
-            onLongPress={handleFormalityPress}
             placeholder="Type a message..."
             placeholderTextColor="#8E8E93"
             multiline
@@ -182,7 +186,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             editable={!disabled}
             testID="message-input"
           />
-        </View>
+        </Pressable>
         
         <TouchableOpacity
           style={[
