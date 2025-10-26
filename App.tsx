@@ -11,7 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/stores/authStore';
 import { useNotificationStore } from './src/stores/notificationStore';
-import { useTranslationStore } from './src/stores/translationStore';
+// TEMPORARILY REMOVED: import { useTranslationStore } from './src/stores/translationStore';
 import { setupPresence, updatePresence } from './src/services/presenceService';
 import { ConnectionStatus } from './src/components/ConnectionStatus';
 import { NotificationBanner } from './src/components/NotificationBanner';
@@ -35,10 +35,10 @@ export default function App(): React.ReactElement {
   // Set up presence system and real-time notifications when user logs in
   useEffect(() => {
     if (user) {
-      // Load user's language preference FIRST (before any UI renders)
-      useTranslationStore.getState().loadUserLanguage(user.uid).catch(error => {
-        console.error('Failed to load user language:', error);
-      });
+      // TEMPORARILY REMOVED: Load user's language preference
+      // useTranslationStore.getState().loadUserLanguage(user.uid).catch(error => {
+      //   console.error('Failed to load user language:', error);
+      // });
       
       // Set up presence tracking with automatic disconnect detection
       presenceCleanup.current = setupPresence(user.uid);
