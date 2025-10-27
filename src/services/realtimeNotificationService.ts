@@ -92,17 +92,17 @@ export function initializeRealtimeNotifications(userId: string): () => void {
         const lastNotification = notifications[notifications.length - 1];
         const count = notifications.length;
 
-        // Get user's auto-translate settings
+        // Get user's auto-translate settings FOR THIS SPECIFIC CHAT
         const translationState = useTranslationStore.getState();
-        const isAutoTranslateEnabled = translationState.isAutoTranslateEnabled;
+        const isAutoTranslateEnabled = translationState.autoTranslateEnabled[chatId] ?? false;
         const userLanguage = translationState.userLanguage;
         
         let messageText = lastNotification.messageText;
         
-        // Translate if auto-translate is enabled
+        // Translate if auto-translate is enabled FOR THIS CHAT
         if (isAutoTranslateEnabled && messageText) {
           try {
-            console.log('[Notification] Auto-translate enabled, translating notification...');
+            console.log(`[Notification] Auto-translate enabled for chat ${chatId}, translating notification...`);
             
             // Detect language of the message
             const detectedLanguage = await detectLanguage(messageText);

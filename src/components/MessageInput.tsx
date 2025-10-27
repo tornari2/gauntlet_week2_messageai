@@ -13,6 +13,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FormalitySelector } from './FormalitySelector';
@@ -25,13 +26,15 @@ interface MessageInputProps {
   onImagePick?: () => void;
   onTypingChange?: (isTyping: boolean) => void;
   disabled?: boolean;
+  chatId: string; // Added for auto-translate toggle
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({ 
   onSend, 
   onImagePick,
   onTypingChange,
-  disabled = false 
+  disabled = false,
+  chatId
 }) => {
   const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -41,6 +44,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   
   const translationStore = useTranslationStore();
   const { userLanguage, adjustFormality } = translationStore;
+  const isAutoTranslateEnabled = translationStore.isAutoTranslateEnabled(chatId);
 
   // Cleanup on unmount only
   useEffect(() => {
@@ -132,8 +136,28 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const handleFormalityPress = () => {
-    if (text.trim()) {
+  const handleFormalityPress = async () => {
+    if (!text.trim()) return;
+    
+    // Detect language of the text first
+    try {
+      const detectedLang = await translationStore.detectLanguage('temp', text);
+      
+      // Check if language is unknown/undefined
+      const isUnknownLanguage = !detectedLang || detectedLang === 'und' || detectedLang === 'unknown' || detectedLang === 'xx';
+      
+      if (isUnknownLanguage) {
+        Alert.alert(
+          i18n.t('errors.languageUnknown'),
+          i18n.t('errors.languageUnknownMessage')
+        );
+        return;
+      }
+      
+      setShowFormalitySelector(true);
+    } catch (error) {
+      console.error('Error detecting language:', error);
+      // If detection fails, still allow them to try
       setShowFormalitySelector(true);
     }
   };
@@ -165,6 +189,27 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             name="image-outline"
             size={24}
             color={disabled ? '#C7C7CC' : '#007AFF'}
+          />
+        </TouchableOpacity>
+
+        {/* Auto-translate toggle button */}
+        <TouchableOpacity
+          style={[
+            styles.autoTranslateButton,
+            isAutoTranslateEnabled && styles.autoTranslateButtonActive
+          ]}
+          onPress={() => {
+            const currentSetting = translationStore.isAutoTranslateEnabled(chatId);
+            translationStore.setAutoTranslate(chatId, !currentSetting);
+          }}
+          disabled={disabled}
+          testID="auto-translate-button"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons
+            name={isAutoTranslateEnabled ? "language" : "language-outline"}
+            size={20}
+            color={isAutoTranslateEnabled ? '#FFFFFF' : (disabled ? '#C7C7CC' : '#007AFF')}
           />
         </TouchableOpacity>
 
@@ -235,6 +280,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6F6F6',
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
+  },
+  autoTranslateButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.2)',
+  },
+  autoTranslateButtonActive: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
   },
   imageButton: {
     width: 36,

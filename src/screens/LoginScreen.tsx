@@ -64,8 +64,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+          <Text style={styles.title}>GlossAI</Text>
         </View>
 
         {/* Form */}
@@ -137,7 +136,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#C8E6C9', // Darker light green background
   },
   content: {
     flex: 1,
@@ -146,11 +145,12 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 32,
+    alignItems: 'center', // Center the title
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#000', // Black
     marginBottom: 8,
   },
   subtitle: {
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    color: Colors.primary,
+    color: Colors.primaryDark, // Dark brown matching profile/chat buttons
     fontWeight: '600',
   },
 });

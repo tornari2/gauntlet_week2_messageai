@@ -1,18 +1,19 @@
-// Metro configuration for React Native
-// Includes workarounds for Firebase compatibility
-
 const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Workaround for Firebase + Metro bundler issues
-config.resolver.sourceExts = [...config.resolver.sourceExts, 'cjs'];
-
-config.resolver.resolverMainFields = [
-  'react-native',
-  'browser',
-  'main'
-];
+// Suppress the "runtime not ready" error
+config.transformer = {
+  ...config.transformer,
+  minifierConfig: {
+    ...config.transformer.minifierConfig,
+    keep_classnames: true,
+    keep_fnames: true,
+    mangle: {
+      keep_classnames: true,
+      keep_fnames: true,
+    },
+  },
+};
 
 module.exports = config;
-

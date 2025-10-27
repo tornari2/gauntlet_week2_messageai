@@ -186,7 +186,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#C8E6C9', // Same green background as login screen
   },
   scrollContent: {
     flexGrow: 1,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    color: Colors.primary,
+    color: Colors.primaryDark, // Dark brown matching profile/chat buttons
     fontWeight: '600',
   },
 });

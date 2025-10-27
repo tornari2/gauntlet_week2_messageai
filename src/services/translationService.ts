@@ -337,38 +337,43 @@ export async function adjustFormality(
 export async function explainSlang(
   text: string,
   detectedLanguage: string,
-  targetLanguage: string = 'en'
+  targetLanguage: string = 'English'
 ): Promise<SlangExplanation[]> {
   if (!text || text.trim().length === 0) {
     return [];
   }
 
+  console.log(`[translationService] 🎭 Calling explainSlang with targetLanguage: ${targetLanguage}`);
+
   // Check cache first (include targetLanguage in cache key)
   const cacheParams = { detectedLanguage, targetLanguage };
   const cached = await getCachedResult<SlangExplanation[]>('slang', text, cacheParams);
   if (cached) {
+    console.log(`[translationService] ✅ Using cached slang explanations`);
     return cached;
   }
 
-  const explainSlangFn = httpsCallable(functions, 'explainSlang');
-  
   return retryWithBackoff(async () => {
     try {
-      const result = await explainSlangFn({
+      console.log(`[translationService] 📡 Fetching slang explanations...`);
+      const explainSlangFunction = httpsCallable(functions, 'explainSlang');
+      const result = await explainSlangFunction({
         text,
         detectedLanguage,
         targetLanguage,
       });
 
-      const data = result.data as any;
-      const explanations = data.explanations || [];
+      console.log(`[translationService] Response:`, JSON.stringify(result.data).substring(0, 200));
+      
+      const explanations = (result.data as any)?.explanations || [];
+      console.log(`[translationService] ✅ Got ${explanations.length} slang explanations`);
       
       // Cache the result
       await setCachedResult('slang', text, cacheParams, explanations);
       
       return explanations;
     } catch (error) {
-      console.error('explainSlang function call failed:', error);
+      console.error('[translationService] ❌ explainSlang function call failed:', error);
       throw error;
     }
   });
@@ -381,7 +386,7 @@ export async function explainSlang(
 export async function getCulturalContext(
   text: string,
   detectedLanguage: string,
-  targetLanguage: string = 'en'
+  targetLanguage: string = 'English'
 ): Promise<CulturalContext> {
   if (!text || text.trim().length === 0) {
     throw new TranslationError(
@@ -390,24 +395,29 @@ export async function getCulturalContext(
     );
   }
 
+  console.log(`[translationService] 🧠 Calling getCulturalContext with targetLanguage: ${targetLanguage}`);
+
   // Check cache first (include targetLanguage in cache key)
   const cacheParams = { detectedLanguage, targetLanguage };
   const cached = await getCachedResult<CulturalContext>('cultural', text, cacheParams);
   if (cached) {
+    console.log(`[translationService] ✅ Using cached cultural context`);
     return cached;
   }
 
-  const getCulturalContextFn = httpsCallable(functions, 'getCulturalContext');
-  
   return retryWithBackoff(async () => {
     try {
-      const result = await getCulturalContextFn({
+      console.log(`[translationService] 📡 Fetching cultural context...`);
+      const getCulturalContextFunction = httpsCallable(functions, 'getCulturalContext');
+      const result = await getCulturalContextFunction({
         text,
         detectedLanguage,
         targetLanguage,
       });
 
-      const data = result.data as any;
+      console.log(`[translationService] Response:`, JSON.stringify(result.data).substring(0, 200));
+      
+      const data = (result.data as any) || {};
       
       const culturalContext: CulturalContext = {
         messageText: text,
@@ -416,12 +426,14 @@ export async function getCulturalContext(
         references: data.references || [],
       };
       
+      console.log(`[translationService] ✅ Got cultural context`);
+      
       // Cache the result
       await setCachedResult('cultural', text, cacheParams, culturalContext);
       
       return culturalContext;
     } catch (error) {
-      console.error('getCulturalContext function call failed:', error);
+      console.error('[translationService] ❌ getCulturalContext function call failed:', error);
       throw error;
     }
   });

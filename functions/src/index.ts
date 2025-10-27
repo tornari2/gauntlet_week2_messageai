@@ -111,7 +111,7 @@ Translation:`;
 
 /**
  * 2. Detect Language
- * Detects the language of a text
+ * Detects the language of a text using OpenAI
  */
 export const detectLanguage = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
@@ -128,6 +128,7 @@ export const detectLanguage = functions.https.onCall(async (data, context) => {
   try {
     const prompt = `Detect the language of this text. 
 Respond with ONLY the ISO 639-1 language code (e.g., 'en', 'es', 'fr', 'zh', 'ar').
+If the text is nonsensical, contains only numbers/symbols, or cannot be identified, respond with 'und' (undefined).
 
 Text: "${text}"
 
@@ -140,7 +141,7 @@ Language code:`;
       max_tokens: 10,
     });
 
-    const languageCode = response.choices[0].message.content?.trim().toLowerCase() || 'en';
+    const languageCode = response.choices[0].message.content?.trim().toLowerCase() || 'und';
 
     return {
       languageCode,
@@ -152,34 +153,34 @@ Language code:`;
 });
 
 /**
- * 3. Adjust Formality
- * Rewrites text with specified formality level
+ * 3. Adjust Tone (formerly Formality)
+ * Rewrites text with specified tone level
  */
 export const adjustFormality = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
     console.error('Unauthenticated request to adjustFormality');
-    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to adjust formality');
+    throw new functions.https.HttpsError('unauthenticated', 'Must be logged in to adjust tone');
   }
 
   const { text, formalityLevel, targetLanguage } = data;
 
   if (!text || !formalityLevel || !targetLanguage) {
-    throw new functions.https.HttpsError('invalid-argument', 'Text, formality level, and target language are required');
+    throw new functions.https.HttpsError('invalid-argument', 'Text, tone level, and target language are required');
   }
 
   try {
-    const formalityDescriptions = {
-      casual: 'Friendly, relaxed, conversational',
-      neutral: 'Professional but approachable',
-      formal: 'Respectful, polite, business-appropriate',
+    const toneDescriptions = {
+      casual: 'Friendly, relaxed, conversational (can include slang and idiomatic expressions)',
+      neutral: 'Polite, professional, approachable. Must be free of slang or idiomatic expressions - rephrase any slang or idioms into clear, standard language',
+      formal: 'Precise, technical, academic. Must be free of slang or idiomatic expressions - rephrase any slang or idioms into clear, standard language',
     };
 
     const prompt = `Rewrite this message in a ${formalityLevel} tone in ${targetLanguage}.
-Maintain the core meaning but adjust the formality level appropriately.
+Maintain the core meaning but adjust the tone appropriately.
 
-IMPORTANT: Return ONLY the rephrased sentence or message. Do NOT add any letter formatting, greetings, or closings like "Dear X" or "Sincerely". Just rephrase the original message with the appropriate level of formality.
+IMPORTANT: Return ONLY the rephrased sentence or message. Do NOT add any letter formatting, greetings, or closings like "Dear X" or "Sincerely". Just rephrase the original message with the appropriate tone.
 
-Formality level: ${formalityLevel} - ${formalityDescriptions[formalityLevel as keyof typeof formalityDescriptions]}
+Tone level: ${formalityLevel} - ${toneDescriptions[formalityLevel as keyof typeof toneDescriptions]}
 
 Original: "${text}"
 
@@ -198,8 +199,8 @@ ${formalityLevel.charAt(0).toUpperCase() + formalityLevel.slice(1)} version:`;
       adjustedText,
     };
   } catch (error) {
-    console.error('Error adjusting formality:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to adjust formality');
+    console.error('Error adjusting tone:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to adjust tone');
   }
 });
 

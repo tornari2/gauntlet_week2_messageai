@@ -124,23 +124,29 @@ export default {
     description: 'Traducir automáticamente mensajes entrantes',
   },
 
-  // Formality Adjustment
+  // Translation Badge
+  translation: {
+    translating: 'Traduciendo...',
+    tapToTranslate: 'Toca para traducir',
+  },
+
+  // Tone Adjustment
   formality: {
-    title: 'Ajustar Formalidad',
-    subtitle: 'Elige qué tan formal quieres que suene tu mensaje',
+    title: 'Ajustar Tono',
+    subtitle: 'Elige cómo quieres que suene tu mensaje',
     original: 'Mensaje Original',
     select: 'Seleccionar Versión',
     casual: 'Casual',
     neutral: 'Neutral',
     formal: 'Formal',
     casualDesc: 'Amigable, relajado, conversacional',
-    neutralDesc: 'Profesional pero accesible',
-    formalDesc: 'Respetuoso, cortés, apropiado para negocios',
+    neutralDesc: 'Cortés, profesional, accesible\n(sin jerga ni expresiones idiomáticas)',
+    formalDesc: 'Preciso, técnico, académico\n(sin jerga ni expresiones idiomáticas)',
     applyChanges: 'Aplicar Cambios',
     selectVersion: 'Seleccionar una Versión',
     keepOriginal: 'Mantener Original',
-    loading: 'Generando opciones de formalidad...',
-    error: 'Error al ajustar la formalidad. Inténtalo de nuevo.',
+    loading: 'Generando opciones de tono...',
+    error: 'Error al ajustar el tono. Inténtalo de nuevo.',
   },
 
   // Cultural Context Modal
@@ -148,7 +154,11 @@ export default {
     title: 'Contexto Cultural',
     loading: 'Analizando contexto cultural...',
     error: 'Error al obtener el contexto cultural',
-    noContext: 'No se encontró contexto cultural',
+    noContext: 'No se detectó contexto cultural específico',
+    message: 'Mensaje',
+    language: 'Idioma',
+    insights: 'Perspectivas Culturales',
+    references: 'Referencias',
   },
 
   // Slang Explanation Modal
@@ -157,6 +167,11 @@ export default {
     loading: 'Explicando jerga...',
     error: 'Error al explicar la jerga',
     noSlang: 'No se detectó jerga',
+    standardLanguage: 'Este mensaje usa lenguaje estándar.',
+    found: 'jerga/modismo(s) encontrado(s)',
+    literal: 'Literal',
+    meaning: 'Significado',
+    example: 'Ejemplo',
   },
 
   // Multilingual Summary Modal
@@ -202,6 +217,9 @@ export default {
     timeout: 'Tiempo de espera agotado. Inténtalo de nuevo.',
     invalidInput: 'Entrada inválida. Por favor verifica tu entrada.',
     displayNameRequired: 'Por favor ingresa un nombre para mostrar',
+    languageUnknown: 'Idioma Desconocido',
+    languageUnknownMessage: 'No se puede identificar el idioma de este mensaje. Las funciones de IA requieren texto reconocible en un idioma compatible.',
+    untranslatableText: 'Este texto no se puede analizar porque su idioma es desconocido o indefinido.',
   },
 
   // Empty States
@@ -247,6 +265,7 @@ export default {
     th: 'Tailandés',
     vi: 'Vietnamita',
     id: 'Indonesio',
+    unknown: 'Desconocido',
   },
 
   // Last Seen Timestamps

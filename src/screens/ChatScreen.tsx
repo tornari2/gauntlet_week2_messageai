@@ -787,26 +787,6 @@ export const ChatScreen: React.FC = () => {
             ) : null}
           </View>
           <View style={styles.headerRight}>
-            {/* Auto-translate toggle */}
-            <TouchableOpacity
-              onPress={() => {
-                const currentSetting = translationStore.isAutoTranslateEnabled(chatId);
-                translationStore.setAutoTranslate(chatId, !currentSetting);
-              }}
-              style={[
-                styles.autoTranslateButton,
-                translationStore.isAutoTranslateEnabled(chatId) && styles.autoTranslateButtonActive
-              ]}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={[
-                styles.autoTranslateIcon,
-                translationStore.isAutoTranslateEnabled(chatId) && styles.autoTranslateIconActive
-              ]}>
-                🌐
-              </Text>
-            </TouchableOpacity>
-            
             {/* Summary button */}
             <TouchableOpacity
               onPress={handleSummary}
@@ -860,7 +840,8 @@ export const ChatScreen: React.FC = () => {
         onSend={handleSend}
         onImagePick={handleImagePick}
         onTypingChange={handleTypingChange}
-        disabled={!user} 
+        disabled={!user}
+        chatId={chatId}
       />
       
       {/* Read Receipt Modal */}
@@ -998,27 +979,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    minWidth: 80, // Increased to accommodate both buttons
-  },
-  autoTranslateButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  autoTranslateButtonActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
-  },
-  autoTranslateIcon: {
-    fontSize: 16,
-  },
-  autoTranslateIconActive: {
-    // Can add any style changes for active state
+    minWidth: 40,
   },
   summaryButton: {
     width: 36,

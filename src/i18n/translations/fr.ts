@@ -124,23 +124,29 @@ export default {
     description: 'Traduire automatiquement les messages entrants',
   },
 
-  // Formality Adjustment
+  // Translation Badge
+  translation: {
+    translating: 'Traduction en cours...',
+    tapToTranslate: 'Appuyez pour traduire',
+  },
+
+  // Tone Adjustment
   formality: {
-    title: 'Ajuster la Formalité',
-    subtitle: 'Choisissez le niveau de formalité de votre message',
+    title: 'Ajuster le Ton',
+    subtitle: 'Choisissez comment vous voulez que votre message sonne',
     original: 'Message Original',
     select: 'Sélectionner la Version',
     casual: 'Décontracté',
     neutral: 'Neutre',
     formal: 'Formel',
     casualDesc: 'Amical, détendu, conversationnel',
-    neutralDesc: 'Professionnel mais accessible',
-    formalDesc: 'Respectueux, poli, adapté aux affaires',
+    neutralDesc: 'Poli, professionnel, accessible\n(sans argot ni expressions idiomatiques)',
+    formalDesc: 'Précis, technique, académique\n(sans argot ni expressions idiomatiques)',
     applyChanges: 'Appliquer les Modifications',
     selectVersion: 'Sélectionner une Version',
     keepOriginal: 'Garder l\'Original',
-    loading: 'Génération des options de formalité...',
-    error: 'Échec de l\'ajustement de la formalité. Réessayez.',
+    loading: 'Génération des options de ton...',
+    error: 'Échec de l\'ajustement du ton. Réessayez.',
   },
 
   // Cultural Context Modal
@@ -148,7 +154,11 @@ export default {
     title: 'Contexte Culturel',
     loading: 'Analyse du contexte culturel...',
     error: 'Échec de l\'obtention du contexte culturel',
-    noContext: 'Aucun contexte culturel trouvé',
+    noContext: 'Aucun contexte culturel spécifique détecté',
+    message: 'Message',
+    language: 'Langue',
+    insights: 'Perspectives Culturelles',
+    references: 'Références',
   },
 
   // Slang Explanation Modal
@@ -157,6 +167,11 @@ export default {
     loading: 'Explication de l\'argot...',
     error: 'Échec de l\'explication de l\'argot',
     noSlang: 'Aucun argot détecté',
+    standardLanguage: 'Ce message utilise un langage standard.',
+    found: 'argot/expression(s) trouvé(s)',
+    literal: 'Littéral',
+    meaning: 'Signification',
+    example: 'Exemple',
   },
 
   // Multilingual Summary Modal
@@ -202,6 +217,9 @@ export default {
     timeout: 'Délai d\'attente dépassé. Réessayez.',
     invalidInput: 'Entrée invalide. Vérifiez votre saisie.',
     displayNameRequired: 'Veuillez entrer un nom d\'affichage',
+    languageUnknown: 'Langue Inconnue',
+    languageUnknownMessage: 'Impossible d\'identifier la langue de ce message. Les fonctionnalités IA nécessitent un texte reconnaissable dans une langue prise en charge.',
+    untranslatableText: 'Ce texte ne peut pas être analysé car sa langue est inconnue ou indéfinie.',
   },
 
   // Empty States
@@ -247,6 +265,7 @@ export default {
     th: 'Thaï',
     vi: 'Vietnamien',
     id: 'Indonésien',
+    unknown: 'Inconnu',
   },
 
   // Last Seen Timestamps

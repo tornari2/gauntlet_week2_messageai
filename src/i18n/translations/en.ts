@@ -124,23 +124,29 @@ export default {
     description: 'Automatically translate incoming messages',
   },
 
-  // Formality Adjustment
+  // Translation Badge
+  translation: {
+    translating: 'Translating...',
+    tapToTranslate: 'Tap to translate',
+  },
+
+  // Tone Adjustment
   formality: {
-    title: 'Adjust Formality',
-    subtitle: 'Choose how formal you want your message to sound',
+    title: 'Adjust Tone',
+    subtitle: 'Choose how you want your message to sound',
     original: 'Original Message',
     select: 'Select Version',
     casual: 'Casual',
     neutral: 'Neutral',
     formal: 'Formal',
     casualDesc: 'Friendly, relaxed, conversational',
-    neutralDesc: 'Professional but approachable',
-    formalDesc: 'Respectful, polite, business-appropriate',
+    neutralDesc: 'Polite, professional, approachable\n(free of slang or idiomatic expressions)',
+    formalDesc: 'Precise, technical, academic\n(free of slang or idiomatic expressions)',
     applyChanges: 'Apply Changes',
     selectVersion: 'Select a Version',
     keepOriginal: 'Keep Original',
-    loading: 'Generating formality options...',
-    error: 'Failed to adjust formality. Please try again.',
+    loading: 'Generating tone options...',
+    error: 'Failed to adjust tone. Please try again.',
   },
 
   // Cultural Context Modal
@@ -148,7 +154,11 @@ export default {
     title: 'Cultural Context',
     loading: 'Analyzing cultural context...',
     error: 'Failed to get cultural context',
-    noContext: 'No cultural context found',
+    noContext: 'No specific cultural context detected',
+    message: 'Message',
+    language: 'Language',
+    insights: 'Cultural Insights',
+    references: 'References',
   },
 
   // Slang Explanation Modal
@@ -157,6 +167,11 @@ export default {
     loading: 'Explaining slang...',
     error: 'Failed to explain slang',
     noSlang: 'No slang detected',
+    standardLanguage: 'This message uses standard language.',
+    found: 'slang/idiom(s) found',
+    literal: 'Literal',
+    meaning: 'Meaning',
+    example: 'Example',
   },
 
   // Multilingual Summary Modal
@@ -202,6 +217,9 @@ export default {
     timeout: 'Request timed out. Please try again.',
     invalidInput: 'Invalid input. Please check your entry.',
     displayNameRequired: 'Please enter a display name',
+    languageUnknown: 'Language Unknown',
+    languageUnknownMessage: 'Unable to identify the language of this message. AI features require recognizable text in a supported language.',
+    untranslatableText: 'This text cannot be analyzed because its language is unknown or undefined.',
   },
 
   // Empty States
@@ -247,6 +265,7 @@ export default {
     th: 'Thai',
     vi: 'Vietnamese',
     id: 'Indonesian',
+    unknown: 'Unknown',
   },
 
   // Last Seen Timestamps

@@ -11,7 +11,6 @@ import { Message } from '../types';
 import { formatBubbleTime } from '../utils/dateHelpers';
 import { Colors } from '../constants/Colors';
 import { useTranslationStore } from '../stores/translationStore';
-import { getLanguageName, getLanguageFlag } from '../services/languageService';
 import i18n from '../i18n';
 
 interface MessageBubbleProps {
@@ -112,8 +111,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     if (!message.text || message.text.trim().length === 0) return;
 
     const detectedLanguage = message.detectedLanguage || userLanguage;
-    const languageName = getLanguageName(detectedLanguage);
-    const languageFlag = getLanguageFlag(detectedLanguage);
+    
+    // Check if language is unknown/undefined
+    const isUnknownLanguage = !detectedLanguage || detectedLanguage === 'und' || detectedLanguage === 'unknown' || detectedLanguage === 'xx';
+    
+    // Get language name, showing "Language Unknown" for unknown languages
+    const languageName = isUnknownLanguage 
+      ? i18n.t('errors.languageUnknown')
+      : (i18n.t(`languages.${detectedLanguage}`) || detectedLanguage.toUpperCase());
+    
     const options = [i18n.t('common.cancel')];
     
     // Cultural context option
@@ -125,8 +131,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     // Create the subtitle showing the language information
     let subtitle = '';
     if (showingTranslation && detectedLanguage && detectedLanguage !== userLanguage) {
-      // If currently showing translation, show the flag and "Translated from..."
-      subtitle = `${languageFlag} ${i18n.t('messageActions.translatedFrom')} ${languageName}`;
+      // If currently showing translation, show "Translated from..." (removed flag)
+      subtitle = `${i18n.t('messageActions.translatedFrom')} ${languageName}`;
+    } else if (isUnknownLanguage) {
+      // If language is unknown
+      subtitle = languageName; // Just show "Language Unknown"
     } else if (detectedLanguage && detectedLanguage !== userLanguage) {
       // If not translated but message is in foreign language
       subtitle = `${i18n.t('messageActions.originallyIn')} ${languageName}`;
@@ -144,12 +153,32 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         } else if (option === `🧠 ${i18n.t('messageActions.culturalContext')}`) {
           return { 
             text: option, 
-            onPress: () => onCulturalContext?.(message.id, message.text, detectedLanguage)
+            onPress: () => {
+              // Check for unknown language before calling AI features
+              if (isUnknownLanguage) {
+                Alert.alert(
+                  i18n.t('errors.languageUnknown'),
+                  i18n.t('errors.languageUnknownMessage')
+                );
+                return;
+              }
+              onCulturalContext?.(message.id, message.text, detectedLanguage);
+            }
           };
         } else if (option === `💬 ${i18n.t('messageActions.explainSlang')}`) {
           return { 
             text: option, 
-            onPress: () => onSlangExplanation?.(message.id, message.text, detectedLanguage)
+            onPress: () => {
+              // Check for unknown language before calling AI features
+              if (isUnknownLanguage) {
+                Alert.alert(
+                  i18n.t('errors.languageUnknown'),
+                  i18n.t('errors.languageUnknownMessage')
+                );
+                return;
+              }
+              onSlangExplanation?.(message.id, message.text, detectedLanguage);
+            }
           };
         }
         return { text: option };

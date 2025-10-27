@@ -75,14 +75,14 @@ export const SlangExplanationModal: React.FC<SlangExplanationModalProps> = ({
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyIcon}>✓</Text>
                 <Text style={styles.emptyText}>{i18n.t('slang.noSlang')}</Text>
-                <Text style={styles.emptySubtext}>This message uses standard language.</Text>
+                <Text style={styles.emptySubtext}>{i18n.t('slang.standardLanguage')}</Text>
               </View>
             )}
 
             {hasExplanations && !loading && !error && (
               <View>
                 <Text style={styles.introText}>
-                  {explanations.length} slang/idiom{explanations.length > 1 ? 's' : ''} found:
+                  {explanations.length} {i18n.t('slang.found')}:
                 </Text>
                 {explanations.map((explanation, index) => (
                   <View key={index} style={styles.explanationCard}>
@@ -93,20 +93,20 @@ export const SlangExplanationModal: React.FC<SlangExplanationModalProps> = ({
 
                     {/* Literal Meaning */}
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Literal:</Text>
+                      <Text style={styles.detailLabel}>{i18n.t('slang.literal')}:</Text>
                       <Text style={styles.detailText}>{explanation.literal}</Text>
                     </View>
 
                     {/* Actual Meaning */}
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Meaning:</Text>
+                      <Text style={styles.detailLabel}>{i18n.t('slang.meaning')}:</Text>
                       <Text style={styles.detailText}>{explanation.meaning}</Text>
                     </View>
 
                     {/* Example */}
                     {explanation.example && (
                       <View style={styles.exampleContainer}>
-                        <Text style={styles.exampleLabel}>Example:</Text>
+                        <Text style={styles.exampleLabel}>{i18n.t('slang.example')}:</Text>
                         <Text style={styles.exampleText}>"{explanation.example}"</Text>
                       </View>
                     )}
@@ -118,7 +118,7 @@ export const SlangExplanationModal: React.FC<SlangExplanationModalProps> = ({
 
           <View style={styles.footer}>
             <TouchableOpacity style={styles.closeFooterButton} onPress={onClose}>
-              <Text style={styles.closeFooterButtonText}>Close</Text>
+              <Text style={styles.closeFooterButtonText}>{i18n.t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

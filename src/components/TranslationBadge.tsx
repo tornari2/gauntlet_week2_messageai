@@ -6,7 +6,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { Message } from '../types';
-import { getLanguageName, getLanguageFlag } from '../services/languageService';
+import i18n from '../i18n';
 
 interface TranslationBadgeProps {
   message: Message;
@@ -28,8 +28,9 @@ export const TranslationBadge: React.FC<TranslationBadgeProps> = ({
   onShowOriginal,
 }) => {
   const detectedLanguage = message.detectedLanguage || 'unknown';
-  // Treat 'xx' (OpenAI's unknown language code) as 'unknown'
-  const normalizedLanguage = detectedLanguage === 'xx' ? 'unknown' : detectedLanguage;
+  // Treat 'xx' (OpenAI's unknown language code) and 'und' as 'unknown'
+  const isUnknownLanguage = detectedLanguage === 'xx' || detectedLanguage === 'und' || detectedLanguage === 'unknown' || !detectedLanguage;
+  const normalizedLanguage = isUnknownLanguage ? 'unknown' : detectedLanguage;
   const isDifferentLanguage = normalizedLanguage !== userLanguage && normalizedLanguage !== 'unknown';
   
   // Debug check for any message with detected language
@@ -41,7 +42,10 @@ export const TranslationBadge: React.FC<TranslationBadgeProps> = ({
     return null;
   }
 
-  const languageName = getLanguageName(normalizedLanguage);
+  // Get language name, showing "Language Unknown" for unknown languages
+  const languageName = isUnknownLanguage 
+    ? i18n.t('errors.languageUnknown')
+    : (i18n.t(`languages.${normalizedLanguage}`) || normalizedLanguage.toUpperCase());
 
   if (translated) {
     return (
@@ -49,7 +53,7 @@ export const TranslationBadge: React.FC<TranslationBadgeProps> = ({
         <View style={[styles.badge, styles.translatedBadge]}>
           <Text style={styles.translatedText}>
             {autoTranslated ? '🤖 ' : '✓ '}
-            Translated from {languageName}
+            {i18n.t('messageActions.translatedFrom')} {languageName}
           </Text>
         </View>
         {onShowOriginal && (
@@ -58,7 +62,7 @@ export const TranslationBadge: React.FC<TranslationBadgeProps> = ({
             style={styles.showOriginalButton}
             hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
           >
-            <Text style={styles.showOriginalText}>Show Original</Text>
+            <Text style={styles.showOriginalText}>{i18n.t('messageActions.showOriginal')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -75,13 +79,12 @@ export const TranslationBadge: React.FC<TranslationBadgeProps> = ({
       {translating ? (
         <>
           <ActivityIndicator size="small" color="#1976D2" style={styles.spinner} />
-          <Text style={styles.untranslatedText}>Translating...</Text>
+          <Text style={styles.untranslatedText}>{i18n.t('translation.translating')}</Text>
         </>
       ) : (
         <>
-          <Text style={styles.icon}>{getLanguageFlag(normalizedLanguage)}</Text>
           <Text style={styles.untranslatedText}>{languageName.toUpperCase()}</Text>
-          <Text style={styles.tapHint}> • Tap to translate</Text>
+          <Text style={styles.tapHint}> • {i18n.t('translation.tapToTranslate')}</Text>
         </>
       )}
     </TouchableOpacity>

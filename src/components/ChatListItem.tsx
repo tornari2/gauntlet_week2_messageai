@@ -5,8 +5,8 @@
  * Shows participant name, last message preview, timestamp, and online indicator
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChatWithDetails } from '../types';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,7 +15,7 @@ import { OnlineIndicator } from './OnlineIndicator';
 import { Colors } from '../constants/Colors';
 import { useNetworkStore } from '../stores/networkStore';
 import { useTranslationStore } from '../stores/translationStore';
-import { detectLanguage, translateText } from '../services/translationService';
+import * as translationService from '../services/translationService';
 
 type ChatListItemNavigationProp = NativeStackNavigationProp<MainStackParamList, 'ChatsList'>;
 
@@ -28,37 +28,9 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat, onL
   const navigation = useNavigation<ChatListItemNavigationProp>();
   const isConnected = useNetworkStore((state) => state.isConnected);
   const userLanguage = useTranslationStore((state) => state.userLanguage);
-  const [translatedMessage, setTranslatedMessage] = useState<string | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
-
-  // Translate last message if needed
-  useEffect(() => {
-    const translateLastMessage = async () => {
-      if (!chat.lastMessage || isTranslating) return;
-      
-      try {
-        setIsTranslating(true);
-        
-        // Detect language
-        const detectedLanguage = await detectLanguage(chat.lastMessage);
-        
-        // Only translate if it's a different language
-        if (detectedLanguage !== userLanguage) {
-          const result = await translateText(chat.lastMessage, userLanguage);
-          setTranslatedMessage(result.translatedText);
-        } else {
-          setTranslatedMessage(null); // Same language, no translation needed
-        }
-      } catch (error) {
-        console.error('[ChatListItem] Translation error:', error);
-        setTranslatedMessage(null); // Fall back to original on error
-      } finally {
-        setIsTranslating(false);
-      }
-    };
-
-    translateLastMessage();
-  }, [chat.lastMessage, userLanguage]);
+  const autoTranslate = useTranslationStore((state) => state.autoTranslateEnabled[chat.id] ?? false);
+  
+  const [translatedPreview, setTranslatedPreview] = useState<string | null>(null);
 
   const handlePress = () => {
     navigation.navigate('Chat', { chatId: chat.id, chatName: getChatName() });
@@ -107,13 +79,41 @@ export const ChatListItem: React.FC<ChatListItemProps> = React.memo(({ chat, onL
     }
   };
 
+  // Effect to translate the last message preview when auto-translate is enabled
+  useEffect(() => {
+    const translatePreview = async () => {
+      // Only translate if auto-translate is enabled and there's a message
+      if (!autoTranslate || !chat.lastMessage || chat.lastMessage === 'No messages yet') {
+        setTranslatedPreview(null);
+        return;
+      }
+      
+      // Don't translate if already in user's language
+      // We can't detect language of the preview easily, so we'll just translate it
+      // The translation service will handle caching
+      
+      try {
+        const result = await translationService.translateText(
+          chat.lastMessage,
+          userLanguage
+        );
+        setTranslatedPreview(result.translatedText);
+      } catch (error) {
+        console.error('Error translating chat preview:', error);
+        setTranslatedPreview(null);
+      }
+    };
+    
+    translatePreview();
+  }, [chat.lastMessage, autoTranslate, userLanguage, chat.id]);
+
   const getLastMessagePreview = () => {
     if (!chat.lastMessage) {
       return 'No messages yet';
     }
     
-    // Use translated message if available, otherwise use original
-    const messageToDisplay = translatedMessage || chat.lastMessage;
+    // Use translated preview if available
+    const messageToDisplay = (autoTranslate && translatedPreview) ? translatedPreview : chat.lastMessage;
     
     // Truncate long messages
     if (messageToDisplay.length > 40) {

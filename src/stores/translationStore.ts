@@ -111,9 +111,20 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
   setUserLanguage: async (language, userId) => {
     try {
       await languageService.setUserLanguage(userId, language);
-      set({ userLanguage: language });
+      set({ 
+        userLanguage: language,
+        // Clear cached cultural contexts and slang explanations when language changes
+        culturalContexts: {},
+        slangExplanations: {},
+      });
       // Sync i18n locale
       setAppLanguage(language);
+      
+      // Clear AsyncStorage cache for cultural context and slang
+      await AsyncStorage.multiRemove([
+        'cultural_cache',
+        'slang_cache',
+      ]);
     } catch (error) {
       console.error('Error setting user language:', error);
       set((state) => ({
@@ -401,7 +412,9 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
     
     try {
       const userLanguage = get().userLanguage;
-      const context = await translationService.getCulturalContext(text, detectedLanguage, userLanguage);
+      const languageName = languageService.getLanguageName(userLanguage);
+      console.log(`[translationStore] Getting cultural context for language: ${userLanguage} (${languageName})`);
+      const context = await translationService.getCulturalContext(text, detectedLanguage, languageName);
       
       // Cache it
       await translationService.cacheCulturalContext(messageId, context);
@@ -446,7 +459,9 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
     
     try {
       const userLanguage = get().userLanguage;
-      const explanations = await translationService.explainSlang(text, detectedLanguage, userLanguage);
+      const languageName = languageService.getLanguageName(userLanguage);
+      console.log(`[translationStore] Getting slang explanations for language: ${userLanguage} (${languageName})`);
+      const explanations = await translationService.explainSlang(text, detectedLanguage, languageName);
       
       // Cache it
       await translationService.cacheSlangExplanations(messageId, explanations);
@@ -530,10 +545,31 @@ export const useTranslationStore = create<TranslationState & TranslationActions>
     if (messageId) {
       set((state) => {
         const { [messageId]: _, ...restTranslations } = state.translations;
-        return { translations: restTranslations };
+        const { [messageId]: _c, ...restCultural } = state.culturalContexts;
+        const { [messageId]: _s, ...restSlang } = state.slangExplanations;
+        return { 
+          translations: restTranslations,
+          culturalContexts: restCultural,
+          slangExplanations: restSlang,
+        };
       });
+      // Clear AsyncStorage cache for this message
+      AsyncStorage.multiRemove([
+        `cultural_cache_${messageId}`,
+        `slang_cache_${messageId}`,
+      ]);
     } else {
-      set({ translations: {} });
+      // Clear all caches
+      set({ 
+        translations: {},
+        culturalContexts: {},
+        slangExplanations: {},
+      });
+      // Clear AsyncStorage cache
+      AsyncStorage.multiRemove([
+        'cultural_cache',
+        'slang_cache',
+      ]);
     }
   },
   

@@ -1,48 +1,53 @@
 /**
- * i18n Configuration - MINIMAL STUB FOR DEBUGGING
- * NO external dependencies - just pure JavaScript
+ * i18n Configuration
+ * Configures internationalization for the app
  */
 
-console.log('[i18n] 🟢 Module loading started');
+import { I18n } from 'i18n-js';
+import en from './translations/en';
+import es from './translations/es';
+import fr from './translations/fr';
 
-// Create a minimal mock i18n object
-const i18n = {
-  t: (key: string, options?: any) => {
-    console.log(`[i18n-stub] t() called with key: ${key}`);
-    // Just return the key for now
-    return key || 'MISSING_KEY';
-  },
-  language: 'en',
-  changeLanguage: (lng: string) => {
-    console.log(`[i18n-stub] changeLanguage() called with: ${lng}`);
-  },
-  isInitialized: true,
-};
+// Create i18n instance
+const i18n = new I18n({
+  en,
+  es,
+  fr,
+});
 
-console.log('[i18n] 🟢 i18n object created successfully');
-console.log('[i18n] 🟢 Exporting default...');
+// Set default locale
+i18n.defaultLocale = 'en';
+
+// Enable fallback to default locale if translation is missing
+i18n.enableFallback = true;
+
+// Set initial locale to English
+i18n.locale = 'en';
 
 export default i18n;
 
-console.log('[i18n] 🟢 Default exported');
-
 /**
  * Set the app's language
+ * @param languageCode ISO 639-1 language code (e.g., 'en', 'es', 'fr')
  */
 export function setAppLanguage(languageCode: string): void {
-  console.log(`[i18n] setAppLanguage() called with: ${languageCode}`);
-  i18n.changeLanguage(languageCode);
+  i18n.locale = languageCode;
+  console.log(`[i18n] Language set to: ${languageCode}`);
 }
 
 /**
  * Get the current app language
+ * @returns Current language code
  */
 export function getAppLanguage(): string {
-  return i18n.language;
+  return i18n.locale;
 }
 
 /**
  * Translate a key
+ * @param key Translation key (e.g., 'common.cancel')
+ * @param options Optional parameters for interpolation
+ * @returns Translated string
  */
 export function translate(key: string, options?: object): string {
   return i18n.t(key, options);
@@ -50,6 +55,8 @@ export function translate(key: string, options?: object): string {
 
 /**
  * Check if a language is supported
+ * @param languageCode ISO 639-1 language code
+ * @returns true if supported, false otherwise
  */
 export function isLanguageSupported(languageCode: string): boolean {
   return ['en', 'es', 'fr'].includes(languageCode);
@@ -57,13 +64,9 @@ export function isLanguageSupported(languageCode: string): boolean {
 
 /**
  * Get list of supported languages
+ * @returns Array of supported language codes
  */
 export function getSupportedLanguages(): string[] {
   return ['en', 'es', 'fr'];
 }
-
-console.log('[i18n] 🟢 Module loading complete - all exports ready');
-
-
-
 

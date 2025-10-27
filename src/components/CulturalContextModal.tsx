@@ -69,20 +69,27 @@ export const CulturalContextModal: React.FC<CulturalContextModalProps> = ({
               </View>
             )}
 
+            {!loading && !error && !context && (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>✓</Text>
+                <Text style={styles.emptyText}>{i18n.t('culturalContext.noContext')}</Text>
+              </View>
+            )}
+
             {context && !loading && !error && (
               <>
                 {/* Original Message */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Message:</Text>
+                  <Text style={styles.sectionTitle}>{i18n.t('culturalContext.message')}:</Text>
                   <Text style={styles.messageText}>{context.messageText}</Text>
                   <Text style={styles.languageTag}>
-                    Language: {context.detectedLanguage.toUpperCase()}
+                    {i18n.t('culturalContext.language')}: {context.detectedLanguage.toUpperCase()}
                   </Text>
                 </View>
 
                 {/* Cultural Insights */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Cultural Insights:</Text>
+                  <Text style={styles.sectionTitle}>{i18n.t('culturalContext.insights')}:</Text>
                   <View style={styles.insightsContainer}>
                     <Text style={styles.insightsText}>{context.culturalInsights}</Text>
                   </View>
@@ -91,7 +98,7 @@ export const CulturalContextModal: React.FC<CulturalContextModalProps> = ({
                 {/* References */}
                 {context.references && context.references.length > 0 && (
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>References:</Text>
+                    <Text style={styles.sectionTitle}>{i18n.t('culturalContext.references')}:</Text>
                     {context.references.map((ref, index) => (
                       <View key={index} style={styles.referenceItem}>
                         <Text style={styles.referenceBullet}>•</Text>
@@ -106,7 +113,7 @@ export const CulturalContextModal: React.FC<CulturalContextModalProps> = ({
 
           <View style={styles.footer}>
             <TouchableOpacity style={styles.closeFooterButton} onPress={onClose}>
-              <Text style={styles.closeFooterButtonText}>Close</Text>
+              <Text style={styles.closeFooterButtonText}>{i18n.t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -184,6 +191,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 20,
