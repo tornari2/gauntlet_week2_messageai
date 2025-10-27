@@ -461,9 +461,9 @@ Before you begin, ensure you have the following installed:
 
 ---
 
-## 🔐 Environment Setup
+## 🔐 ironment Setup
 
-### 1. Create Environment Files
+### 1. Create ironment Files
 
 Create a `.env` file in the **root directory** (not in `functions/`):
 
@@ -487,6 +487,7 @@ Create `functions/.env`:
 
 ```bash
 OPENAI_API_KEY=sk-your-openai-api-key-here
+PINCONE_API_KEY=your-pinecone-api-key-here
 ```
 
 ### 3. Set Firebase Functions Config (Alternative)
@@ -496,6 +497,7 @@ If you prefer Firebase config over `.env`:
 ```bash
 cd functions
 firebase functions:config:set openai.key="sk-your-openai-api-key-here"
+firebase functions:config:set pinecone.key="your-pinecone-api-key-here"
 cd ..
 ```
 
