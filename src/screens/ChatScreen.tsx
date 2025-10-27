@@ -33,12 +33,15 @@ import { TypingIndicator } from '../components/TypingIndicator';
 import { ReadReceiptModal } from '../components/ReadReceiptModal';
 import { CulturalContextModal } from '../components/CulturalContextModal';
 import { SlangExplanationModal } from '../components/SlangExplanationModal';
-import { MultilingualSummaryModal } from '../components/MultilingualSummaryModal';
+import { AIAssistantInput } from '../components/AIAssistantInput';
+import { AIResponseModal } from '../components/AIResponseModal';
 import { Message, User } from '../types';
+import { AIAssistantResponse } from '../types/assistant';
 import { firestore, database } from '../services/firebase';
 import { chatService } from '../services/chatService';
 import { typingService } from '../services/typingService';
 import { notificationService } from '../services/notificationService';
+import { queryAIAssistant } from '../services/aiAssistantService';
 import { Colors } from '../constants/Colors';
 import { getUserAvatarColor } from '../utils/userColors';
 import i18n from '../i18n';
@@ -70,7 +73,12 @@ export const ChatScreen: React.FC = () => {
   const [selectedMessageForContext, setSelectedMessageForContext] = useState<Message | null>(null);
   const [showCulturalContextModal, setShowCulturalContextModal] = useState(false);
   const [showSlangModal, setShowSlangModal] = useState(false);
-  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  
+  // AI Assistant state
+  const [showAIInput, setShowAIInput] = useState(false);
+  const [showAIResponseModal, setShowAIResponseModal] = useState(false);
+  const [aiResponse, setAiResponse] = useState<AIAssistantResponse | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   
   const { user } = useAuthStore();
   const { chats } = useChatStore();
@@ -655,32 +663,33 @@ export const ChatScreen: React.FC = () => {
     }
   };
 
-  const handleSummary = async () => {
-    if (!user || chatMessages.length < 5) {
-      return;
-    }
+  // AI Assistant handlers
+  const handleAIQuery = async (query: string) => {
+    if (!user) return;
 
-    setShowSummaryModal(true);
+    setAiLoading(true);
 
     try {
-      // Build users map
-      const usersMap: Record<string, User> = {};
-      if (currentChat?.type === 'group') {
-        participantUsers.forEach(u => {
-          usersMap[u.uid] = u;
-        });
-      } else if (otherUser) {
-        usersMap[otherUser.uid] = otherUser;
-      }
-      usersMap[user.uid] = user;
-
-      await translationStore.getSummary(chatId, chatMessages, usersMap, true);
+      console.log('🤖 Querying AI assistant:', query);
+      const response = await queryAIAssistant(
+        chatId,
+        query,
+        translationStore.userLanguage
+      );
+      
+      setAiResponse(response);
+      setShowAIResponseModal(true);
+      setShowAIInput(false); // Hide AI input after query
+      console.log('✅ AI assistant response received');
     } catch (error) {
-      console.error('Error generating summary:', error);
+      console.error('❌ Error querying AI assistant:', error);
+      alert('Failed to get AI response. Please try again.');
+    } finally {
+      setAiLoading(false);
     }
   };
 
-  const handleShareSummaryToChat = (text: string) => {
+  const handlePasteAIResponse = (text: string) => {
     if (user) {
       handleSend(text);
     }
@@ -787,22 +796,26 @@ export const ChatScreen: React.FC = () => {
             ) : null}
           </View>
           <View style={styles.headerRight}>
-            {/* Summary button */}
+            {/* AI Assistant button */}
             <TouchableOpacity
-              onPress={handleSummary}
-              style={styles.summaryButton}
-              disabled={chatMessages.length < 5}
+              onPress={() => setShowAIInput(!showAIInput)}
+              style={styles.aiAssistantButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={[
-                styles.summaryButtonText,
-                chatMessages.length < 5 && styles.summaryButtonDisabled
-              ]}>
-                📝
+              <Text style={styles.aiAssistantButtonText}>
+                🤖
               </Text>
             </TouchableOpacity>
           </View>
       </View>
+
+      {/* AI Assistant Input - Only show when toggled */}
+      {showAIInput && (
+        <AIAssistantInput
+          onQuery={handleAIQuery}
+          loading={aiLoading}
+        />
+      )}
 
       {/* Messages List */}
       {isLoading && chatMessages.length === 0 ? (
@@ -891,15 +904,12 @@ export const ChatScreen: React.FC = () => {
         )}
       />
 
-      {/* Multilingual Summary Modal */}
-      <MultilingualSummaryModal
-        visible={showSummaryModal}
-        summary={translationStore.summaries[chatId] || null}
-        loading={translationStore.loadingSummary[chatId] || false}
-        error={translationStore.errors[`summary_${chatId}`] || null}
-        onClose={() => setShowSummaryModal(false)}
-        onRetry={handleSummary}
-        onShareToChat={handleShareSummaryToChat}
+      {/* AI Response Modal */}
+      <AIResponseModal
+        visible={showAIResponseModal}
+        response={aiResponse}
+        onClose={() => setShowAIResponseModal(false)}
+        onPasteInChat={handlePasteAIResponse}
       />
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -981,19 +991,16 @@ const styles = StyleSheet.create({
     gap: 8,
     minWidth: 40,
   },
-  summaryButton: {
+  aiAssistantButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#EDE9FE',
   },
-  summaryButtonText: {
+  aiAssistantButtonText: {
     fontSize: 20,
-  },
-  summaryButtonDisabled: {
-    opacity: 0.3,
   },
   aiButton: {
     paddingHorizontal: 8,

@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { User } from '../types';
 import * as authService from '../services/authService';
+import { useTranslationStore } from './translationStore';
 
 interface AuthState {
   user: User | null;
@@ -51,13 +52,22 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({ loading: true });
       
       // Set up auth state listener
-      await authService.onAuthStateChange((user) => {
+      await authService.onAuthStateChange(async (user) => {
         set({ 
           user, 
           loading: false, 
           initialized: true,
           error: null 
         });
+        
+        // Load user's language preference immediately after login
+        if (user) {
+          try {
+            await useTranslationStore.getState().loadUserLanguage(user.uid);
+          } catch (error) {
+            console.error('Error loading user language on login:', error);
+          }
+        }
       });
     } catch (error) {
       console.error('Auth initialization error:', error);

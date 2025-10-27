@@ -277,5 +277,28 @@ export default {
     daysAgo: 'Active {{days}} days ago',
     aWhileAgo: 'Active a while ago',
   },
+
+  // AI Assistant
+  aiAssistant: {
+    placeholder: 'Ask AI about this conversation...',
+    exampleSummarize: 'Summarize this conversation',
+    exampleTodo: 'Give me my to-do list',
+    exampleDates: 'Extract important dates and times',
+    exampleMood: 'Analyze the mood of the chat',
+    title: 'AI Analysis',
+    summary: 'Summary',
+    actionItems: 'Action Items',
+    importantDates: 'Important Dates',
+    conversationTone: 'Conversation Tone',
+    pasteInChat: 'Paste in Chat',
+    saveAsImage: 'Save as Image',
+    high: 'HIGH',
+    medium: 'MEDIUM',
+    low: 'LOW',
+    deadline: 'DEADLINE',
+    positive: 'POSITIVE',
+    neutral: 'NEUTRAL',
+    negative: 'NEGATIVE',
+  },
 };
 

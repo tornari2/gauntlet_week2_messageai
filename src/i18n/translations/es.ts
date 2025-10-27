@@ -277,5 +277,28 @@ export default {
     daysAgo: 'Activo hace {{days}} días',
     aWhileAgo: 'Activo hace un tiempo',
   },
+
+  // AI Assistant
+  aiAssistant: {
+    placeholder: 'Pregunta a la IA sobre esta conversación...',
+    exampleSummarize: 'Resume esta conversación',
+    exampleTodo: 'Dame mi lista de tareas',
+    exampleDates: 'Extraer fechas y horas importantes',
+    exampleMood: 'Analiza el estado de ánimo del chat',
+    title: 'Análisis de IA',
+    summary: 'Resumen',
+    actionItems: 'Elementos de Acción',
+    importantDates: 'Fechas Importantes',
+    conversationTone: 'Tono de Conversación',
+    pasteInChat: 'Pegar en el Chat',
+    saveAsImage: 'Guardar como Imagen',
+    high: 'ALTA',
+    medium: 'MEDIA',
+    low: 'BAJA',
+    deadline: 'FECHA LÍMITE',
+    positive: 'POSITIVO',
+    neutral: 'NEUTRAL',
+    negative: 'NEGATIVO',
+  },
 };
 
