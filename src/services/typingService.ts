@@ -30,13 +30,11 @@ export const setUserTyping = async (
   try {
     const typingRef = ref(database, `typing/${chatId}/${userId}`);
     const timestamp = Date.now();
-    console.log(`🟠 [TypingService] Writing typing status: chat=${chatId}, user=${userId}, timestamp=${timestamp}`);
     await set(typingRef, {
       timestamp,
     });
-    console.log(`🟠 [TypingService] ✅ Successfully wrote typing status for user ${userId}`);
   } catch (error) {
-    console.error('❌ Error setting typing status:', error);
+    console.error('Error setting typing status:', error);
   }
 };
 
@@ -51,11 +49,9 @@ export const setUserStoppedTyping = async (
 ): Promise<void> => {
   try {
     const typingRef = ref(database, `typing/${chatId}/${userId}`);
-    console.log(`🟠 [TypingService] Removing typing status: chat=${chatId}, user=${userId}`);
     await remove(typingRef);
-    console.log(`🟠 [TypingService] ✅ Successfully removed typing status for user ${userId}`);
   } catch (error) {
-    console.error('❌ Error removing typing status:', error);
+    console.error('Error removing typing status:', error);
   }
 };
 
@@ -81,12 +77,9 @@ export const subscribeToTypingIndicators = (
   
   // Process and filter typing indicators
   const processTypingData = (data: any) => {
-    console.log(`🔵 [Typing] Chat ${chatId}: Raw RTDB data for currentUser=${currentUserId}:`, JSON.stringify(data, null, 2));
-    
     if (!data) {
       // Only callback if there's a change
       if (lastTypingUsers.length > 0) {
-        console.log(`🔵 [Typing] Chat ${chatId}: No typing data, clearing indicators`);
         lastTypingUsers = [];
         callback([]);
       }
@@ -100,29 +93,22 @@ export const subscribeToTypingIndicators = (
     Object.entries(data).forEach(([userId, state]) => {
       const typingState = state as TypingState;
       
-      console.log(`🔵 [Typing] Chat ${chatId}: Examining user ${userId}, timestamp: ${typingState.timestamp}, age: ${now - typingState.timestamp}ms`);
-      
       // Skip current user
       if (userId === currentUserId) {
-        console.log(`🔵 [Typing] Chat ${chatId}: ❌ Skipping current user ${userId}`);
         return;
       }
 
       // Check if stale (>5 seconds old) - just filter it out
       const age = now - typingState.timestamp;
       if (age > TYPING_TIMEOUT) {
-        console.log(`🔵 [Typing] Chat ${chatId}: ❌ User ${userId} is STALE (${age}ms > ${TYPING_TIMEOUT}ms)`);
         return;
       }
 
-      console.log(`🔵 [Typing] Chat ${chatId}: ✅ User ${userId} is TYPING (${age}ms old)`);
       typingUsers.push(userId);
     });
 
     // Sort for consistent comparison
     typingUsers.sort();
-    
-    console.log(`🔵 [Typing] Chat ${chatId}: Final typing users array:`, typingUsers);
     
     // Only callback if the list actually changed
     const hasChanged = 
@@ -130,11 +116,8 @@ export const subscribeToTypingIndicators = (
       typingUsers.some((userId, index) => userId !== lastTypingUsers[index]);
     
     if (hasChanged) {
-      console.log(`🔵 [Typing] Chat ${chatId}: ✅ CHANGED from [${lastTypingUsers.join(', ')}] to [${typingUsers.join(', ')}]`);
       lastTypingUsers = typingUsers;
       callback([...typingUsers]); // Clone array to prevent external mutation
-    } else {
-      console.log(`🔵 [Typing] Chat ${chatId}: ⏸️  UNCHANGED: [${typingUsers.join(', ')}]`);
     }
   };
   

@@ -61,8 +61,6 @@ export async function saveToPhotos(
         await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
       }
     }
-
-    console.log('✅ Saved image to photo library');
     
     Alert.alert(
       'Success',

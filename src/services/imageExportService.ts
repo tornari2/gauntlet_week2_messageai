@@ -29,7 +29,6 @@ export async function captureViewAsImage(
       result: 'tmpfile',
     });
 
-    console.log('✅ Captured view as image:', uri);
     return uri;
   } catch (error) {
     console.error('Error capturing view as image:', error);

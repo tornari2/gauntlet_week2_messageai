@@ -38,13 +38,14 @@ A production-ready, AI-powered real-time messaging application built with React 
 ### What Makes This Special?
 
 - 🌍 **Automatic Language Detection**: AI-powered detection with country flag badges (🇫🇷 🇪🇸 🇺🇸)
-- 🤖 **Auto-Translation**: Per-chat toggleable translation for convenience or learning
+- 🤖 **Auto-Translation**: Per-chat toggleable translation for convenience or learning  
 - 🎭 **Cultural Context Analysis**: Understand idioms, slang, and cultural nuances
-- 🗣️ **Formality Adjustment**: Rephrase messages as casual, neutral, or formal
-- 📝 **Multilingual Summaries**: Summarize entire conversations in any language
+- 🗣️ **Tone Adjustment**: Rephrase messages as casual, neutral, or formal before sending
+- 🤖 **AI Chat Assistant**: Ask AI to summarize conversations, extract dates, generate to-do lists, or analyze mood with RAG-powered semantic search
 - ⚡ **Real-time Performance**: < 1 second message latency
 - 📱 **Offline-First**: Queue messages and sync when connected
 - 🔔 **Smart Notifications**: Grouped by chat to prevent spam
+- 🌐 **Full Internationalization**: Static UI available in English, Spanish, and French
 
 This is a **GauntletAI Week 2 project** demonstrating production-ready mobile development with AI integration.
 
@@ -70,15 +71,19 @@ This is a **GauntletAI Week 2 project** demonstrating production-ready mobile de
 #### 3. **Auto-Translation Toggle**
 - **Per-chat setting** - enable for convenience, disable for learning
 - **Persistent settings** via AsyncStorage
-- **Header toggle button** for quick on/off
+- **In-message toggle button** - Located left of the message input field
+- **Visual indicator** - Language icon (🌐) shows active/inactive state
 - **Intelligent triggering** - only translates when language differs from your preference
 - **Manual override** - always can view original text
 
-#### 4. **Formality Adjustment**
-- **Three formality levels**: Casual, Neutral, Formal
+#### 4. **Tone Adjustment**
+- **Three tone levels**: Casual (friendly, may include slang), Neutral (polite, free of slang), Formal (precise, professional)
 - **Context-aware rephrasing** - maintains meaning while adjusting tone
-- **No letter formatting** - rephrases sentences naturally, not as formal letters
+- **Pre-send editing** - Adjust tone before sending via sparkles icon (✨) in message input
+- **Natural rephrasing** - rewrites sentences naturally, not as formal letters
+- **Slang removal** - Neutral and Formal tones remove idioms and slang expressions
 - **Firebase Cloud Function** powered by OpenAI
+- **Fully internationalized** - Descriptions and results in user's preferred language
 - **Use cases**: Professional emails, casual chats, diplomatic messages
 
 #### 5. **Cultural Context Analysis**
@@ -94,13 +99,24 @@ This is a **GauntletAI Week 2 project** demonstrating production-ready mobile de
 - **Regional slang** (AAVE, UK slang, Aussie slang)
 - **Context-aware** - explains in context of the conversation
 - **Educational tool** for cross-generational communication
+- **Long-press message** to access from context menu
+- **Fully internationalized** - Results displayed in user's preferred language
 
-#### 7. **Multilingual Thread Summarization**
-- **Summarize entire conversations** in any language
-- **Mixed-language support** - handles conversations in multiple languages
-- **Configurable length** - brief overview or detailed summary
-- **Key points extraction** - highlights important decisions and action items
-- **Export-ready** - perfect for meeting notes or documentation
+#### 7. **AI Chat Assistant (RAG-Powered)**
+- **Robot icon (🤖)** in chat header toggles AI assistant panel
+- **Natural language queries** - Ask anything about the conversation
+- **Four intelligent query types**:
+  1. **"Summarize this conversation"** - General overview + breakdown by participant with bullet points
+  2. **"Give me my to-do list"** - Extracts action items specific to the current user
+  3. **"Extract important dates and times"** - Lists all temporal references (no date assumptions)
+  4. **"Analyze the mood of the chat"** - Overall mood + per-participant emotional analysis
+- **RAG (Retrieval-Augmented Generation)** with Pinecone vector database for semantic search
+- **OpenAI function calling** - Intelligently queries conversation data using date filtering, participant filtering, and semantic search
+- **Automatic message indexing** - Messages indexed to Pinecone with embeddings (text-embedding-3-small)
+- **"Paste in Chat" feature** - Insert AI responses directly into message input
+- **Clean, plain-text format** - No markdown formatting, clear bullet point separation
+- **Strict date accuracy** - Only extracts explicitly stated or derivable dates
+- **Fully internationalized** - All UI and AI responses in user's preferred language (EN/ES/FR)
 
 ### 💬 Core Messaging Features
 
@@ -202,7 +218,8 @@ This is a **GauntletAI Week 2 project** demonstrating production-ready mobile de
     │  │ • adjustFormality           │              │
     │  │ • explainCulturalContext    │              │
     │  │ • explainSlang              │              │
-    │  │ • summarizeThread           │              │
+    │  │ • intelligentChatAssistant  │              │
+    │  │ • indexMessageToPinecone    │              │
     │  └──────────────────────────────┘              │
     │                                                  │
     └──────────────────┬───────────────────────────┘
@@ -211,7 +228,13 @@ This is a **GauntletAI Week 2 project** demonstrating production-ready mobile de
                  │  OPENAI   │
                  │  GPT-4o   │
                  │   mini    │
-                 └───────────┘
+                 └─────┬─────┘
+                       │
+                 ┌─────▼─────────┐
+                 │   PINECONE    │
+                 │ Vector Store  │
+                 │  (RAG Index)  │
+                 └───────────────┘
 ```
 
 ### Data Flow: Message Sending with Translation
@@ -282,6 +305,8 @@ User taps badge → translateText Cloud Function
 - **Storage**: Firebase Storage (images, avatars)
 - **Cloud Functions**: Firebase Cloud Functions (Node.js 20)
 - **AI Provider**: OpenAI GPT-4o-mini
+- **Vector Database**: Pinecone (RAG message indexing with text-embedding-3-small)
+- **Internationalization**: i18n-js (English, Spanish, French)
 - **Local Storage**: AsyncStorage (message cache, settings)
 
 ### Development Tools
@@ -303,9 +328,43 @@ User taps badge → translateText Cloud Function
   "expo-notifications": "~0.32.12",
   "@react-native-community/netinfo": "^11.4.1",
   "expo-image-picker": "~16.0.3",
-  "openai": "^4.77.3"
+  "openai": "^4.77.3",
+  "@pinecone-database/pinecone": "^4.0.0",
+  "i18n-js": "^4.4.3"
 }
 ```
+
+### UI Design
+
+**MessageAI** features a clean, modern interface with thoughtful attention to UX details:
+
+- **Brand Identity**: 
+  - App name: **GlossAI** (displayed on login screen)
+  - Primary color: Dark brown (#B8956B)
+  - Accent color: Lighter green (#C8E6C9) for backgrounds
+  
+- **Chat Interface**:
+  - WhatsApp-inspired message bubbles with sender colors
+  - Country flag badges for automatic language detection
+  - Translation badges with one-tap toggle
+  - Typing indicators with real-time presence
+  - Read receipts with WhatsApp-style checkmarks
+  
+- **Input Bar**:
+  - Auto-translate toggle (🌐) positioned left of message input
+  - Tone adjustment sparkles icon (✨) when text is present
+  - Image picker and send button
+  
+- **AI Assistant**:
+  - Robot icon (🤖) in chat header for AI assistant toggle
+  - Clean example query bubbles
+  - Plain-text AI responses with clear bullet point formatting
+  - "Paste in Chat" action for inserting AI responses
+  
+- **Accessibility**:
+  - High contrast ratios for readability
+  - Touch targets sized appropriately (min 44x44pt)
+  - Clear visual feedback for all interactions
 
 ---
 
@@ -757,6 +816,23 @@ npm run format
 - No original quality option
 - No video support
 - No document sharing
+
+### Translation & Internationalization
+
+**Static UI Translation Support**:
+- Full translation of static UI components is currently available in **English, Spanish, and French only**
+- All app interface elements (buttons, labels, menus, AI assistant text) are translated to these three languages
+- User's preferred language setting controls which translation is displayed
+
+**Dynamic Content Translation**:
+- Message translation via OpenAI supports **50+ languages** (any language pair)
+- AI features (slang explanation, cultural context, tone adjustment) work with all supported languages
+- Language detection works for all 50+ languages
+
+**Why the Limitation?**:
+- Creating and maintaining high-quality UI translations requires native speaker review
+- Each new language adds ~500-1000 translation keys
+- Future expansion to more languages is planned based on user demand
 
 ---
 
